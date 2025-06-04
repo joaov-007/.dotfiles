@@ -4,5 +4,6 @@ alias ls='eza -1 --icons=auto'                                         # short l
 alias ll='eza -lha --icons=auto --sort=name --group-directories-first' # long list all
 alias ld='eza -lhD --icons=auto'                                       # long list dirs
 alias lt='eza --icons=auto --tree'                                     # list folder as tree
-alias v='nvim'                                     # list folder as tree
-alias ch='chezmoi'
+alias lt='eza --icons=auto --almost-all'                               # list folder as 
+alias v='nvim'                                                         # short name for editor
+alias cz='chezmoi'                                                     # short name for dotfiler manager
