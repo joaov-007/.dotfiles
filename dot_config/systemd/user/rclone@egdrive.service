@@ -1,0 +1,16 @@
+# User service for sync one direction my docs
+#
+
+[Unit]
+Description=rclone: Start sync for %i
+Documentation=man:rclone(1)
+After=network-online.target
+Wants=network-online.target 
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/bash -c "/usr/bin/rclone sync --config=%h/.config/rclone/rclone.conf  %h/Documents/ %i:"
+ExecStop=/usr/bin/bash -c "/usr/bin/killall -s KILL rclone"
+
+[Install]
+WantedBy=default.target
