@@ -1,5 +1,5 @@
 # All my home config
-I use [yadm](https://yadm.io/) for manage all this files
+I use [chezmoi](https://www.chezmoi.io) for manage all this files
 
 ## enviroment
 the os I prefer for now is archlinux, but has this tools:
