@@ -1,0 +1,26 @@
+# Enable Powerlevel10k instant prompt. Should stay close to the top of ~/.zshrc.
+# Initialization code that may require console input (password prompts, [y/n]
+# confirmations, etc.) must go above this block; everything else may go below.
+if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]; then
+  source "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh"
+fi
+
+# To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
+[[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
+
+source $HOME/.config/zsh/enviroment.zsh
+
+typeset -ga sources
+
+sources+="$ZSH_CONFIG_DIR/pluggin-maneger.zsh"
+sources+="$ZSH_CONFIG_DIR/completions-styles.zsh"
+sources+="$ZSH_CONFIG_DIR/eval-programs.zsh"
+sources+="$ZSH_CONFIG_DIR/aliases.zsh"
+sources+="$ZSH_CONFIG_DIR/compinit.zsh"
+
+# try to include all sources
+foreach file (`echo $sources`)
+    if [[ -a $file ]]; then
+        source $file
+    fi
+end
