@@ -9,7 +9,7 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-ExecStart=/usr/bin/bash -c "/usr/bin/rclone sync --config=%h/.config/rclone/rclone.conf  %h/Documents/ %i:"
+ExecStart=/usr/bin/bash -c "/usr/bin/rclone sync --config=%h/.config/rclone/rclone.conf  %h/Documents/ %i: | tee"
 ExecStop=/usr/bin/bash -c "/usr/bin/killall -s KILL rclone"
 
 [Install]
