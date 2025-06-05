@@ -3,7 +3,8 @@ alias l='eza -lh --icons=auto'                                         # long li
 alias ls='eza -1 --icons=auto'                                         # short list
 alias ll='eza -lha --icons=auto --sort=name --group-directories-first' # long list all
 alias ld='eza -lhD --icons=auto'                                       # long list dirs
+alias la='eza -la --icons=auto'                                        # show hidden files
 alias lt='eza --icons=auto --tree'                                     # list folder as tree
-alias lt='eza --icons=auto --almost-all'                               # list folder as 
+alias la='eza --icons=auto --almost-all'                               # list all files
 alias v='nvim'                                                         # short name for editor
 alias cz='chezmoi'                                                     # short name for dotfiler manager

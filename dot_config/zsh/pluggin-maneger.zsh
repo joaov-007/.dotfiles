@@ -14,14 +14,21 @@ zinit snippet OMZL::git.zsh
 #zinit snippet OMZP::kubectx
 zinit snippet OMZP::command-not-found
 
-# Add in Powerlevel10k
-zinit ice depth=1; zinit light romkatv/powerlevel10k
 
-# Add in zsh plugins
-zinit ice depth=1;
-zinit lucid wait for \
+zinit ice depth=1
+zinit wait for \
+  id-as"plugins-stack" \
+  light-mode \
+  romkatv/powerlevel10k \
+  light-mode \
   zdharma-continuum/fast-syntax-highlighting \
+  light-mode \
   zsh-users/zsh-completions \
+  light-mode \
   zsh-users/zsh-autosuggestions \
+  light-mode \
   Aloxaf/fzf-tab \
+  light-mode \
   thirteen37/fzf-alias
+
+zinit ice wait creinstall ${HOME}/.completions.d/
