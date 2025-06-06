@@ -15,7 +15,7 @@ zinit snippet OMZL::git.zsh
 zinit snippet OMZP::command-not-found
 
 zinit ice depth"1" wait lucid
-zinit light romkatv/powerlevel10k
+zinit load romkatv/powerlevel10k
 
 zinit ice depth"1"
 zinit wait lucid for \

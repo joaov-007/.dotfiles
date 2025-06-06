@@ -11,11 +11,8 @@ export MANPAGER="nvim +Man!"
 
 
 ## Fzf
-export FZF_DEFAULT_COMMAND="bfs . $HOME"
-export FZF_CTRL_T_COMMAND="$FZF_DEFAULT_COMMAND"
-export FZF_ALT_C_COMMAND="bfs -t d . $HOME"
+export FZF_DEFAULT_COMMAND="bfs --type f"
 
-# Shell integrations
 
 ## for asdf completions
 export PATH="${ASDF_DATA_DIR:-$HOME/.asdf}/shims:$PATH"

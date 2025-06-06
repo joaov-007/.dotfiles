@@ -8,19 +8,11 @@ fi
 # To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
 [[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
 
-source $HOME/.config/zsh/enviroment.zsh
-
-typeset -ga sources
-
-sources+="$ZSH_CONFIG_DIR/pluggin-maneger.zsh"
-sources+="$ZSH_CONFIG_DIR/completions-styles.zsh"
-sources+="$ZSH_CONFIG_DIR/eval-programs.zsh"
-sources+="$ZSH_CONFIG_DIR/aliases.zsh"
-sources+="$ZSH_CONFIG_DIR/compinit.zsh"
-
-# try to include all sources
-foreach file (`echo $sources`)
-    if [[ -a $file ]]; then
-        source $file
+SOURCES=$HOME/.config/zsh
+if [ -d $SOURCES ]; then
+  for file in ~/.bash_completion.d/*; do
+    if [ -f $file ]; then
+      source $file
     fi
-end
+  done
+fi
