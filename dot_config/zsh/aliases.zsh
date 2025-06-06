@@ -7,4 +7,9 @@ alias c='clear' \
  lt='eza --icons=auto --tree' \
  la='eza --icons=auto --almost-all' \
  v='nvim' \
- cz='chezmoi'
+ cz='chezmoi' \
+ rr='trash'
+
+# git section
+alias gst='git status' \
+  ggp='git push'
