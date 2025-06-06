@@ -37,11 +37,10 @@ local options = {
 		["-"] = { "trim_newline" },
 		lua = { "stylua" },
 		-- css = { "prettier" },
+		-- html = { "prettier" },
 		markdown = function(bufnr)
-			return { first(bufnr, "prettierd", "prettier"), "injected" }
+			return { first(bufnr, "marksman", "prettierd", "prettier"), "injected" }
 		end,
-
-		zsh = { "beautysh" },
 	},
 
 	format_on_save = function(bufnr)
