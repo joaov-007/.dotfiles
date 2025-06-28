@@ -1,1 +1,3 @@
 *.gz
+
+dot_config/zsh/dot_zcompdump
