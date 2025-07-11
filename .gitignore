@@ -1,3 +1,6 @@
+*.7z
 *.gz
-
-dot_config/zsh/dot_zcompdump
+*.png
+*.jpeg
+*.7z
+node_modules
