@@ -1,13 +1,11 @@
-# All my home config
-I use [chezmoi](https://www.chezmoi.io) for manage all this files
+# All config
 
 ## enviroment
-the os I prefer for now is archlinux, but has this tools:
-- learnig Nushell
-- zsh
-- rust popular tooling like eza, yazi, etc.
-- Hyprland
+- bash
+- moda tools: yazi, FSF, bat, ...
+- Hydenix
 
 ## Plans
-- [ ] more bash scripitin
-- [ ] Ansible for make universal in linus world
+- switch to Nix ecosystem
+
+switching to nix.
