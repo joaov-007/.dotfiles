@@ -31,4 +31,4 @@ zinit wait lucid for \
   thirteen37/fzf-alias
 
 zinit ice silent
-zinit creinstall ${HOME}/.completions.d/
+#zinit creinstall ${HOME}/.completions.d/

@@ -1,22 +1,21 @@
 export GITHUB_USERNAME="joaov-007"
 export ZDOTDIR="$HOME/.config/zsh/"
-export HISTFILE="{ZDOTDIR}/zsh_history"
+export HISTFILE="$HOME/.cache/zsh/zsh_history"
 export DIFFPROG="nvim -d"
 export XAUTHORITY="${HOME}/.Xauthority"
-export PASSWORD_STORE_ENABLE_EXTENSIONS=true
 export CARGO_TARGET_DIR="$HOME/.local/bin"
 export GOBIN="$HOME/go/bin"
 export PATH="$GOBIN:$PATH"
+export PASSWORD_STORE_ENABLE_EXTENSIONS=true
 
 export GPG_TTY="$(tty)"
 
 ## Nvim in anywhere
-export EDITOR="nvim vim vi"
+export EDITOR="nvim"
 export VISUAL="nvim"
-export MANPAGER="nvim +Man!"
 
 ## Fzf
-export FZF_DEFAULT_COMMAND="bfs --type f"
+#export FZF_DEFAULT_COMMAND="bfs --type f"
 
 ## for asdf completions
 export PATH="${ASDF_DATA_DIR:-$HOME/.asdf}/shims:$PATH"
