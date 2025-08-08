@@ -3,10 +3,10 @@ if command -v atuin &>/dev/null; then
 fi
 
 
-if command -v atuin &>/dev/null; then
+if command -v fzf &>/dev/null; then
   eval "$(fzf --zsh)"
 fi
 
-if command -v atuin &>/dev/null; then
+if command -v zoxide &>/dev/null; then
   eval "$(zoxide init zsh)"
 fi
