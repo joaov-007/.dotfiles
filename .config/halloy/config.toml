@@ -1,9 +1,0 @@
-# Halloy config.
-#
-# For a complete list of available options,
-# please visit https://halloy.chat/configuration/
-
-[servers.liberachat]
-nickname = "halloy9192"
-server = "irc.libera.chat"
-channels = ["#halloy"]
