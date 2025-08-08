@@ -1,11 +1,8 @@
-# All config
+# My Setup
 
 ## enviroment
-- bash
-- moda tools: yazi, FSF, bat, ...
-- Hydenix
+- zsh
+- moda tools: yazi, FZF, bat, ...
 
 ## Plans
 - switch to Nix ecosystem
-
-switching to nix.
