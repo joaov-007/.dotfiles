@@ -19,15 +19,10 @@ zinit light romkatv/powerlevel10k
 zinit ice depth"1"
 zinit wait lucid for \
   id-as"plugins-stack" \
-  light-mode \
   zdharma-continuum/fast-syntax-highlighting \
-  light-mode \
   zsh-users/zsh-completions \
-  light-mode \
   zsh-users/zsh-autosuggestions \
-  light-mode \
   Aloxaf/fzf-tab \
-  light-mode \
   thirteen37/fzf-alias
 
 zinit ice silent
