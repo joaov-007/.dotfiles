@@ -8,11 +8,10 @@ fi
 autoload -Uz compinit
 compinit
 
-ZSH_SOURCE_DIR=$HOME/.config/zsh/
 
-if test -d $ZSH_SOURCE_DIR; then
-	for profile in $ZSH_SOURCE_DIR/**/*.zsh; do
-		test -r "$profile" && . "$profile"
+if test -d $ZDOTDIR; then
+	for profile in $ZDOTDIR/**/*.zsh; do
+		test -r "$profile" && source "$profile"
 	done
 	unset profile
 fi
