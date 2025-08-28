@@ -10,11 +10,11 @@ compinit
 
 
 if test -d $ZDOTDIR; then
-	for profile in $ZDOTDIR/**/*.zsh; do
-		test -r "$profile" && source "$profile"
+	for files in $ZDOTDIR/*.zsh; do
+		test -r "$files" && source "$files"
 	done
-	unset profile
+	unset files
 fi
 
-# To customize prompt, run `p10k configure` or edit ~/.p10k.zsh.
-[[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
+# To customize prompt, run `p10k configure`
+[[ ! -f "$ZDOTDIR/.p10k.zsh" ]] || source "$ZDOTDIR/.p10k.zsh"
