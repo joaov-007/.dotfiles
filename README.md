@@ -1,8 +1,12 @@
-# My Setup
+# My Enviroment
 
-## enviroment
-- zsh
-- moda tools: yazi, FZF, bat, ...
+## tools
+- Zsh shell
+- Yazi File Explorer
+- Zinit Plugin Mananger
+- Atuin Shell History
 
 ## Plans
-- switch to Nix ecosystem
+- [ ] Setup Nix
+- [ ] Learn flakes
+- [ ] Setup home-maneger
