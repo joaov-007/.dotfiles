@@ -10,7 +10,7 @@ compinit
 
 
 if test -d $ZDOTDIR; then
-	for files in $ZDOTDIR/*.zsh; do
+	for files in $ZDOTDIR/**/*.zsh; do
 		test -r "$files" && source "$files"
 	done
 	unset files
