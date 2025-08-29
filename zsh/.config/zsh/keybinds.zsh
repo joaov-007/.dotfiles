@@ -1,1 +1,1 @@
-# for save files
+bindkey -v
