@@ -21,7 +21,10 @@ export VISUAL="nvim"
 export PATH="${ASDF_DATA_DIR:-$HOME/.asdf}/shims:$PATH"
 
 # pnpm
-export PNPM_HOME="/home/robot/.local/share/pnpm"
+if command -v pnpm &>/dev/null; then
+  export PNPM_HOME="/home/robot/.local/share/pnpm"
+fi
+
 case ":$PATH:" in
   *":$PNPM_HOME:"*) ;;
   *) export PATH="$PNPM_HOME:$PATH" ;;
