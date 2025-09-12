@@ -5,9 +5,10 @@
 
 [servers.liberachat]
 nickname = "unixGEEK"
+nick_password_file = "~/.config/halloy/password/libera"
 server = "irc.libera.chat"
-channels = ["#halloy"]
+channels = ["#halloy", "#archlinux"]
 
-[proxy.socks5]
-host = "127.0.0.1"
-port = 9050
+# [proxy.socks5]
+# host = "127.0.0.1"
+# port = 9050
