@@ -4,6 +4,10 @@
 # please visit https://halloy.chat/configuration/
 
 [servers.liberachat]
-nickname = "halloy6961"
+nickname = "unixGEEK"
 server = "irc.libera.chat"
 channels = ["#halloy"]
+
+[proxy.socks5]
+host = "127.0.0.1"
+port = 9050
