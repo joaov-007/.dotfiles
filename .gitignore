@@ -4,3 +4,5 @@
 *.jpeg
 *.7z
 node_modules
+
+password/
