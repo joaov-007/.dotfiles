@@ -5,17 +5,17 @@
 matches:
 
   - trigger: ":date:"
-    replace: "{{date}}"
+    replace: "{{custom_date}}"
     vars:
-      - name: date
+      - name: custom_date
         type: date
         params:
           format: "%m/%d/%Y"
 
   - trigger: ":jdate:"
-    replace: "{{jdate}}"
+    replace: "{{japan_date}}"
     vars:
-      - name: date
+      - name: japan_date
         type: date
         params:
           format: "%Y-%d-%m"
