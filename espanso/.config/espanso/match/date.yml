@@ -19,3 +19,11 @@ matches:
         type: date
         params:
           format: "%Y-%d-%m"
+
+  - trigger: ":hour:"
+    replace: "{{hour}}"
+    vars:
+      - name: hour
+        type: date
+        params:
+          format: "%H:%M"
