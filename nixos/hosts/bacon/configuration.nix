@@ -158,6 +158,7 @@
     sops
     otpclient
     e2fsprogs
+    trash-cli
     # android-tools
     # scrcpy
     # qtscrcpy
