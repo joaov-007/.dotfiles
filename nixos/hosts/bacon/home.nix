@@ -36,6 +36,7 @@
   };
 
   programs.obsidian.enable = true;
+  programs.zellij.enable = true;
 
   programs.home-manager.enable = true;
   home.stateVersion = "25.11";

@@ -1,33 +1,6 @@
 {
   description = "Bacon Setup for personal use and fun";
 
-  outputs = inputs @ {
-    self,
-    nixpkgs,
-    nixpkgs-stable,
-    home-manager,
-    sops-nix,
-    ...
-  }: let
-    system = "x86_64-linux";
-
-    mylib = import ./lib {
-      inherit inputs system;
-    };
-
-    inherit (mylib) lib pkgs hosts mkHost;
-  in {
-    nixosConfigurations = lib.genAttrs hosts (
-      host:
-        mkHost {
-          inherit host;
-          pkgs-stable = pkgs.pkgs-stable;
-        }
-    );
-
-    formatter.${system} = pkgs.pkgs.alejandra;
-  };
-
   inputs = {
     nixpkgs.url = "nixpkgs/nixos-unstable";
     nixpkgs-stable.url = "nixpkgs/nixos-25.11";
@@ -38,7 +11,6 @@
     };
 
     nixos-hardware.url = "github:NixOS/nixos-hardware/master";
-
     nix-flatpak.url = "github:gmodena/nix-flatpak/?ref=latest";
 
     sops-nix = {
@@ -52,5 +24,69 @@
     };
 
     impermanence.url = "github:nix-community/impermanence";
+  };
+
+  outputs = inputs @ {
+    self,
+    nixpkgs,
+    nixpkgs-stable,
+    home-manager,
+    sops-nix,
+    impermanence,
+    ...
+  }: let
+    system = "x86_64-linux";
+
+    lib = nixpkgs-stable.lib;
+
+    hosts =
+      builtins.attrNames
+      (builtins.readDir ./hosts);
+
+    mkPkgs = src:
+      import src {
+        inherit system;
+        config.allowUnfree = true;
+        #overlays =
+        #  builtins.attrValues (import ./overlays {});
+      };
+
+    pkgs = mkPkgs nixpkgs;
+    pkgs-stable = mkPkgs nixpkgs-stable;
+
+    mkHost = host:
+      nixpkgs.lib.nixosSystem {
+        inherit system;
+
+        specialArgs = {
+          inherit inputs pkgs-stable;
+        };
+
+        modules = [
+          ./hosts/${host}
+          ./modules/system
+
+          impermanence.nixosModules.impermanence
+          home-manager.nixosModules.home-manager
+          sops-nix.nixosModules.sops
+
+          {
+            home-manager = {
+              useUserPackages = true;
+              useGlobalPkgs = true;
+              backupFileExtension = "bk";
+
+              extraSpecialArgs = {
+                inherit inputs pkgs-stable;
+              };
+            };
+          }
+        ];
+      };
+  in {
+    nixosConfigurations =
+      lib.genAttrs hosts mkHost;
+
+    formatter.${system} = pkgs.alejandra;
   };
 }
