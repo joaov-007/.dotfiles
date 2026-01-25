@@ -32,7 +32,83 @@
 
   services.xserver.xkb = {
     layout = "us";
-    variant = "intl-unicode";
+    variant = "intl";
+  };
+
+  fonts = {
+    enableDefaultPackages = true;
+    fontDir.enable = true;
+
+    packages = with pkgs; [
+      # ===== Common / System =====
+      dejavu_fonts
+      liberation_ttf
+      noto-fonts
+      noto-fonts-color-emoji
+      freefont_ttf
+
+      # Microsoft-compatible (opcional, mas comum)
+      corefonts
+      vista-fonts
+
+      # ===== UI / Web populares =====
+      inter
+      roboto
+      ubuntu-classic
+      source-sans
+      source-serif
+
+      # ===== Programming fonts =====
+      jetbrains-mono
+      fira-code
+      source-code-pro
+      hack-font
+      cascadia-code
+      meslo-lgs-nf
+    ];
+
+    fontconfig = {
+      enable = true;
+
+      defaultFonts = {
+        serif = [
+          "Times New Roman"
+          "Liberation Serif"
+          "Noto Serif"
+          "DejaVu Serif"
+        ];
+
+        sansSerif = [
+          "Segoe UI"
+          "Inter"
+          "Roboto"
+          "Ubuntu"
+          "Arial"
+          "Liberation Sans"
+          "Noto Sans"
+          "DejaVu Sans"
+        ];
+
+        monospace = [
+          "JetBrainsMono Nerd Font"
+          "FiraCode Nerd Font"
+          "CascadiaCode Nerd Font"
+          "Hack Nerd Font"
+
+          "JetBrains Mono"
+          "Fira Code"
+          "Cascadia Code"
+          "Source Code Pro"
+          "DejaVu Sans Mono"
+        ];
+
+        emoji = [
+          "Noto Color Emoji"
+          "Apple Color Emoji"
+          "Segoe UI Emoji"
+        ];
+      };
+    };
   };
 
   environment.persistence."/persist" = {
@@ -123,6 +199,7 @@
     boot.plymouth.enable = false;
     boot.systemd-boot.enable = true;
     system.updates.enable = true;
+    system.services.tor.enable = true;
 
     user.users = {
       joaov = {
@@ -159,6 +236,9 @@
     otpclient
     e2fsprogs
     trash-cli
+    motrix
+    gromit-mpx
+    brightnessctl
     # android-tools
     # scrcpy
     # qtscrcpy
