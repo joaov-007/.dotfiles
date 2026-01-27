@@ -9,7 +9,7 @@
     (modulesPath + "/installer/scan/not-detected.nix")
   ];
 
-  boot.initrd.availableKernelModules = ["vmd" "xhci_pci" "ahci" "nvme" "usb_storage" "sd_mod" "dm-crypt" "aesni_intel"];
+  boot.initrd.availableKernelModules = [ "vmd" "xhci_pci" "ahci" "nvme" "usb_storage" "sd_mod" "dm-crypt" "aesni_intel" ];
   boot.initrd.kernelModules = [];
   boot.kernelModules = ["kvm-intel"];
   boot.extraModulePackages = [];
@@ -22,18 +22,30 @@
 
   boot.initrd.luks.devices."cryptroot".device = "/dev/disk/by-label/NIXLUKS";
 
-  fileSystems."/boot" = {
-    device = "/dev/disk/by-label/NIXBOOT";
-    fsType = "vfat";
-    options = ["defaults"];
-    neededForBoot = true;
-  };
+  fileSystems."/boot" =
+    { device = "/dev/disk/by-uuid/12CE-A600";
+      fsType = "vfat";
+      options = [ "defaults" ];
+    };
 
-  fileSystems."/home" = {
-    device = "/dev/disk/by-label/NIXROOT";
-    fsType = "btrfs";
-    options = ["subvol=/home" "noatime" "compress=zstd" "defaults"];
-  };
+  fileSystems."/home" =
+    { device = "/dev/disk/by-label/NIXROOT";
+      fsType = "btrfs";
+      options = [ "subvol=/home" "noatime" "compress=zstd" "defaults"];
+    };
+
+  fileSystems."/nix" =
+    { device = "/dev/disk/by-label/NIXROOT";
+      fsType = "btrfs";
+      options = [ "subvol=/nix" "noatime" "compress=zstd" "defaults"];
+    };
+
+  fileSystems."/boot" =
+    { device = "/dev/disk/by-label/NIXBOOT";
+      fsType = "vfat";
+      options = [ "defaults" ];
+      neededForBoot = true;
+    };
 
   fileSystems."/nix" = {
     device = "/dev/disk/by-label/NIXROOT";
@@ -51,7 +63,7 @@
   fileSystems."/var/log" = {
     device = "/dev/disk/by-label/NIXROOT";
     fsType = "btrfs";
-    options = ["subvol=log" "noatime" "compress=zstd" "defaults"];
+    options = ["subvol=/log" "noatime" "compress=zstd" "defaults"];
     neededForBoot = true;
   };
 
