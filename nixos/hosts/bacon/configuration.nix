@@ -111,33 +111,32 @@
     };
   };
 
-  environment.persistence."/persist" = {
-    # Hide these mount from the sidebar of file managers
-    hideMounts = true;
+   environment.persistence."/persist" = {
+     # Hide these mount from the sidebar of file managers
+     hideMounts = true;
 
-    # Folders you want to map
-    directories = [
-      "/etc/NetworkManager/system-connections"
-      "/root"
-      "/var"
-    ];
+     # Folders you want to map
+     directories = [
+       "/etc/NetworkManager/system-connections"
+       "/root"
+     ];
 
-    # Files you want to map
-    files = [
-      "/etc/machine-id"
-      "/etc/ssh/ssh_host_ed25519_key.pub"
-      "/etc/ssh/ssh_host_ed25519_key"
-      "/etc/ssh/ssh_host_rsa_key.pub"
-      "/etc/ssh/ssh_host_rsa_key"
-    ];
+     # Files you want to map
+     files = [
+       "/etc/machine-id"
+       "/etc/ssh/ssh_host_ed25519_key.pub"
+       "/etc/ssh/ssh_host_ed25519_key"
+       "/etc/ssh/ssh_host_rsa_key.pub"
+       "/etc/ssh/ssh_host_rsa_key"
+     ];
 
-    # Similarly, you can map files and folders in users' home directories
-    users.joaov = {
-      directories = [
-      ];
-      files = [];
-    };
-  };
+     # Similarly, you can map files and folders in users' home directories
+     users.joaov = {
+       directories = [
+       ];
+       files = [];
+     };
+   };
 
   console = {
     useXkbConfig = true; # use xkb.options in tty.
@@ -230,15 +229,15 @@
     calibre
     rclone
     borgbackup
-    pika-backup
     age
     sops
-    otpclient
     e2fsprogs
     trash-cli
     motrix
     gromit-mpx
     brightnessctl
+    util-linux
+    anki
     # android-tools
     # scrcpy
     # qtscrcpy

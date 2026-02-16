@@ -39,9 +39,11 @@
 
     lib = nixpkgs-stable.lib;
 
-    hosts =
+    hosts = lib.pipe ./hosts [
+      builtins.readDir
+      (lib.filterAttrs (_: type: type == "directory"))
       builtins.attrNames
-      (builtins.readDir ./hosts);
+    ];
 
     mkPkgs = src:
       import src {
@@ -51,6 +53,19 @@
         #  builtins.attrValues (import ./overlays {});
       };
 
+    overlays =
+      builtins.attrValues (import ./overlays {inherit lib;});
+
+    nixpkgsConfig = {
+      allowUnfree = true;
+    };
+
+    pkgs-patched = (mkPkgs nixpkgs).applyPatches {
+      name = "nixpkgs-patched";
+      src = nixpkgs;
+      patches = [];
+    };
+
     pkgs = mkPkgs nixpkgs;
     pkgs-stable = mkPkgs nixpkgs-stable;
 
@@ -59,7 +74,8 @@
         inherit system;
 
         specialArgs = {
-          inherit inputs pkgs-stable;
+          inherit inputs;
+          pkgs-stable = pkgs.stable;
         };
 
         modules = [
@@ -77,7 +93,8 @@
               backupFileExtension = "bk";
 
               extraSpecialArgs = {
-                inherit inputs pkgs-stable;
+                inherit inputs;
+                pkgs-stable = pkgs.stable;
               };
             };
           }
