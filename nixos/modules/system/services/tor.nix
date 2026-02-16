@@ -13,6 +13,7 @@ in {
   config = lib.mkIf cfg.enable {
     services.tor = {
       enable = true;
+      openFirewall = true;
 
       enableGeoIP = true;
 
@@ -20,9 +21,7 @@ in {
       torsocks.enable = true;
 
       # Enable the Tor client
-      client = {
-        enable = true;
-      };
+      client.enable = true;
 
       # Enable and configure the Tor relay
       relay = {
@@ -49,7 +48,7 @@ in {
         AvoidDiskWrites = 1;
         HardwareAccel = 1;
         SafeLogging = 1;
-        NumCPUs = 3;
+        NumCPUs = 2;
 
         # Network settings
         ORPort = [443 80];
