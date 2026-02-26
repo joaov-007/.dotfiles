@@ -24,7 +24,7 @@
     home.homeDirectory = "/home/${user}";
     imports = [
       ./home.nix
-      ../../modules/home
+      ../../modules/home/default.nix
     ];
   });
 }
