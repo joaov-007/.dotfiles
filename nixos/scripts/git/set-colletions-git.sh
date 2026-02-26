@@ -1,4 +1,10 @@
 #!/usr/bin/env bash
+##
+# this script help bootsrap the system
+# when the git home manager is not
+# working
+##
+
 set -euo pipefail
 
 # Default scope and flags
@@ -8,11 +14,7 @@ DRY_RUN=false
 # List of git config key/value pairs
 git_options=(
     branch.autosetuprebase always
-    color.ui auto
-    core.preloadindex true
     fetch.prune true
-    gc.auto 10000
-    gc.autoPackLimit 50
     pull.default current
     pull.rebase true
     push.autoSetupRemote true
@@ -108,4 +110,40 @@ apply_collection() {
     done
 }
 
-apply_collection git_options
+setCollection() {
+    # Must be key/value pairs
+    (( $# % 2 == 0 )) || {
+        echo "Error: key/value pairs required" >&2
+        return 1
+    }
+
+    while [ "$#" -gt 0 ]; do
+        key=$1
+        value=$2
+
+        # Validate key
+        if [[ -z "$key" ]]; then
+            echo "Error: empty git config key" >&2
+            return 1
+        fi
+
+        case "$value" in
+            ""|unset|null)
+                git config --unset "$key" || {
+                    echo "Warning: failed to unset $key" >&2
+                }
+                ;;
+            *)
+                git config "$key" "$value" || {
+                    echo "Error: failed to set $key=$value" >&2
+                    return 1
+                }
+                ;;
+        esac
+
+        shift 2
+    done
+}
+
+
+setCollection "${git_options[@]}"
