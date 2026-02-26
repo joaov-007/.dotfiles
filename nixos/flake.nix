@@ -40,38 +40,22 @@
     lib = nixpkgs-stable.lib;
 
     hosts = lib.pipe ./hosts [
-      builtins.readDir
+      lib.readDir
       (lib.filterAttrs (_: type: type == "directory"))
-      builtins.attrNames
+      lib.attrsets.attrNames
     ];
-
-    mkPkgs = src:
-      import src {
-        inherit system;
-        config.allowUnfree = true;
-        #overlays =
-        #  builtins.attrValues (import ./overlays {});
-      };
 
     overlays =
       builtins.attrValues (import ./overlays {inherit lib;});
 
-    nixpkgsConfig = {
-      allowUnfree = true;
+    pkgs = import inputs.nixpkgs {
+      inherit system;
+      config.allowUnfree = true;
+      overlays = [(import ./overlays {inherit inputs system;})];
     };
-
-    pkgs-patched = (mkPkgs nixpkgs).applyPatches {
-      name = "nixpkgs-patched";
-      src = nixpkgs;
-      patches = [];
-    };
-
-    pkgs = mkPkgs nixpkgs;
-    pkgs-stable = mkPkgs nixpkgs-stable;
 
     mkHost = host:
       nixpkgs.lib.nixosSystem {
-        inherit system;
 
         specialArgs = {
           inherit inputs;

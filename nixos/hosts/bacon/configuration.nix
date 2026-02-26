@@ -12,17 +12,6 @@
 
   environment.variables.NIX_REMOTE = "daemon";
 
-  systemd.services.nix-daemon = {
-    environment = {
-      # Location for temporary files
-      TMPDIR = "/var/cache/nix";
-    };
-    serviceConfig = {
-      # Create /var/cache/nix automatically on Nix Daemon start
-      CacheDirectory = "nix";
-    };
-  };
-
   # Select internationalisation properties.
   i18n.defaultLocale = "en_US.UTF-8";
   i18n.supportedLocales = [
@@ -111,32 +100,33 @@
     };
   };
 
-   environment.persistence."/persist" = {
-     # Hide these mount from the sidebar of file managers
-     hideMounts = true;
+  environment.persistence."/persist" = {
+    # Hide these mount from the sidebar of file managers
+    hideMounts = true;
 
-     # Folders you want to map
-     directories = [
-       "/etc/NetworkManager/system-connections"
-       "/root"
-     ];
+    # Folders you want to map
+    directories = [
+      "/etc/NetworkManager/system-connections"
+      "/root"
+      "/var"
+    ];
 
-     # Files you want to map
-     files = [
-       "/etc/machine-id"
-       "/etc/ssh/ssh_host_ed25519_key.pub"
-       "/etc/ssh/ssh_host_ed25519_key"
-       "/etc/ssh/ssh_host_rsa_key.pub"
-       "/etc/ssh/ssh_host_rsa_key"
-     ];
+    # Files you want to map
+    files = [
+      "/etc/machine-id"
+      "/etc/ssh/ssh_host_ed25519_key.pub"
+      "/etc/ssh/ssh_host_ed25519_key"
+      "/etc/ssh/ssh_host_rsa_key.pub"
+      "/etc/ssh/ssh_host_rsa_key"
+    ];
 
-     # Similarly, you can map files and folders in users' home directories
-     users.joaov = {
-       directories = [
-       ];
-       files = [];
-     };
-   };
+    # Similarly, you can map files and folders in users' home directories
+    users.joaov = {
+      directories = [
+      ];
+      files = [];
+    };
+  };
 
   console = {
     useXkbConfig = true; # use xkb.options in tty.
@@ -199,6 +189,7 @@
     boot.systemd-boot.enable = true;
     system.updates.enable = true;
     system.services.tor.enable = true;
+    # home.git.enable = true;
 
     user.users = {
       joaov = {
@@ -213,8 +204,6 @@
 
   programs.zsh.enable = true;
   programs.nix-index-database.comma.enable = true;
-
-  services.blueman.enable = true;
 
   environment.systemPackages = with pkgs; [
     neovim
@@ -238,6 +227,10 @@
     brightnessctl
     util-linux
     anki
+    libreoffice
+    hunspell
+    hunspellDicts.en_US
+    hunspellDicts.pt_BR
     # android-tools
     # scrcpy
     # qtscrcpy
