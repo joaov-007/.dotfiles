@@ -1,149 +1,154 @@
 #!/usr/bin/env bash
-##
-# this script help bootsrap the system
-# when the git home manager is not
-# working
+
 ##
 
-set -euo pipefail
+# Bootstrap git configuration when Home Manager
 
-# Default scope and flags
+# is not available yet.
+
+##
+
+set -Eeuo pipefail
+
 CONFIG_SCOPE="--global"
 DRY_RUN=false
+VERBOSE=false
 
-# List of git config key/value pairs
 git_options=(
-    branch.autosetuprebase always
-    fetch.prune true
-    pull.default current
-    pull.rebase true
-    push.autoSetupRemote true
-    push.default current
-    rebase.autoSquash true
-    rebase.autoStash true
-    rebase.stat true
-    rerere.autoUpdate true
-    rerere.enabled true
+branch.autosetuprebase always
+fetch.prune true
+pull.default current
+pull.rebase true
+push.autoSetupRemote true
+push.default current
+rebase.autoSquash true
+rebase.autoStash true
+rebase.stat true
+rerere.autoUpdate true
+rerere.enabled true
 )
 
-# Detect if output is a terminal
 if [[ -t 1 ]]; then
-    RED='\033[0;31m'
-    GREEN='\033[0;32m'
-    YELLOW='\033[0;33m'
-    BLUE='\033[0;34m'
-    RESET='\033[0m'
+RED=$'\033[0;31m'
+GREEN=$'\033[0;32m'
+YELLOW=$'\033[0;33m'
+BLUE=$'\033[0;34m'
+RESET=$'\033[0m'
 else
-    # Disable colors for non-interactive output
-    RED=''
-    GREEN=''
-    YELLOW=''
-    BLUE=''
-    RESET=''
+RED=""
+GREEN=""
+YELLOW=""
+BLUE=""
+RESET=""
 fi
 
-show_help () {
+show_help() {
 cat <<EOF
-   Usage: $0 [--global|--local|--system] [--dry-run]
+Usage: $0 [OPTIONS]
 
-   --dry-run, -n   Show what would be applied (no git config calls)
+Options:
+--global          Use global git config (default)
+--local           Use repository config
+--system          Use system config
+
+-n, --dry-run     Show changes without applying them
+-v, --verbose     Show extra information
+-h, --help        Show this help
+
+Examples:
+$0
+$0 --local
+$0 --dry-run --verbose
 EOF
 }
 
-# Parse options
-while (( $# )); do
-    case "$1" in
-        --global|--local|--system)
-            CONFIG_SCOPE="$1"
-            shift
-            ;;
-        --dry-run|-n)
-            DRY_RUN=true
-            shift
-            ;;
-        --help|-h)
-            show_help
-            exit
-            ;;
-        *)
-            echo -e "${RED}Unknown option:${RESET} $1"
-            exit 1
-            ;;
-    esac
+log() {
+printf '%b\n' "$*"
+}
+
+debug() {
+[[ "$VERBOSE" == true ]] || return 0
+printf '%b\n' "${BLUE}[debug]${RESET} $*"
+}
+
+require_command() {
+command -v "$1" >/dev/null 2>&1 || {
+log "${RED}Error:${RESET} required command not found: $1"
+exit 1
+}
+}
+
+while (($#)); do
+case "$1" in
+--global|--local|--system)
+CONFIG_SCOPE="$1"
+;;
+-n|--dry-run)
+DRY_RUN=true
+;;
+-v|--verbose)
+VERBOSE=true
+;;
+-h|--help)
+show_help
+exit 0
+;;
+*)
+log "${RED}Unknown option:${RESET} $1"
+exit 1
+;;
+esac
+shift
 done
 
+require_command git
+
+debug "scope     = $CONFIG_SCOPE"
+debug "dry-run   = $DRY_RUN"
+debug "verbose   = $VERBOSE"
+
 set_kv() {
-    local key="$1"
-    local value="$2"
+local key="$1"
+local value="$2"
 
-    if [[ "$DRY_RUN" == true ]]; then
-        # Dry-run output
-        echo -e "${BLUE}[dry-run]${RESET} would set ${YELLOW}${key}${RESET} = ${GREEN}${value}${RESET}"
-        return
-    fi
 
-    if [[ "$value" =~ ^(unset|null)$ ]]; then
-        if git config $CONFIG_SCOPE --unset "$key"; then
-            echo -e "${YELLOW}Unset:${RESET} ${key}"
-        else
-            echo -e "${RED}Failed to unset:${RESET} ${key}"
-        fi
+debug "processing: $key=$value"
+
+if [[ "$DRY_RUN" == true ]]; then
+    log "${BLUE}[dry-run]${RESET} $key = ${GREEN}$value${RESET}"
+    return 0
+fi
+
+if [[ "$value" =~ ^(unset|null)$ ]]; then
+    if git config $CONFIG_SCOPE --get "$key" >/dev/null 2>&1; then
+        git config $CONFIG_SCOPE --unset "$key"
+        log "${YELLOW}Unset:${RESET} $key"
     else
-        if git config $CONFIG_SCOPE "$key" "$value"; then
-            echo -e "${GREEN}Set:${RESET} ${key} = ${value}"
-        else
-            echo -e "${RED}Error setting:${RESET} ${key}"
-        fi
+        debug "$key already absent"
     fi
+    return 0
+fi
+
+git config $CONFIG_SCOPE "$key" "$value"
+log "${GREEN}Set:${RESET} $key = $value"
+
 }
 
 apply_collection() {
-    local -n arr=$1
-    (( ${#arr[@]} % 2 == 0 )) || {
-        echo -e "${RED}Error:${RESET} key/value pairs required"
-        return 1
-    }
+local arr=("$@")
 
-    while (( ${#arr[@]} )); do
-        set_kv "${arr[0]}" "${arr[1]}"
-        arr=("${arr[@]:2}")
-    done
+(( ${#arr[@]} % 2 == 0 )) || {
+    log "${RED}Error:${RESET} key/value pairs required"
+    return 1
 }
 
-setCollection() {
-    # Must be key/value pairs
-    (( $# % 2 == 0 )) || {
-        echo "Error: key/value pairs required" >&2
-        return 1
-    }
+local i
 
-    while [ "$#" -gt 0 ]; do
-        key=$1
-        value=$2
+for ((i=0; i<${#arr[@]}; i+=2)); do
+    set_kv "${arr[i]}" "${arr[i+1]}"
+done
 
-        # Validate key
-        if [[ -z "$key" ]]; then
-            echo "Error: empty git config key" >&2
-            return 1
-        fi
-
-        case "$value" in
-            ""|unset|null)
-                git config --unset "$key" || {
-                    echo "Warning: failed to unset $key" >&2
-                }
-                ;;
-            *)
-                git config "$key" "$value" || {
-                    echo "Error: failed to set $key=$value" >&2
-                    return 1
-                }
-                ;;
-        esac
-
-        shift 2
-    done
 }
 
+apply_collection "${git_options[@]}"
 
-setCollection "${git_options[@]}"
