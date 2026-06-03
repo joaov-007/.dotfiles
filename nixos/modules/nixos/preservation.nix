@@ -1,0 +1,30 @@
+{
+  inputs,
+  ...
+}: {
+  imports = [
+    inputs.preservation.nixosModules.default
+  ];
+
+  preservation = {
+    enable = true;
+    preserveAt."/persistent" = {
+      files = [
+        {
+          file = "/etc/machine-id";
+          inInitrd = true;
+        }
+      ];
+      directories = [
+        "/etc/nixos"
+        "/var/lib/nixos"
+        "/var/log"
+        "/var/lib/bluetooth/"
+        "/var/lib/NetworkManager"
+        "/root/.ssh"
+        "/etc/ssh"
+        "/var/lib/colord"
+      ];
+    };
+  };
+}
