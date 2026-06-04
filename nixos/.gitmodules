@@ -1,0 +1,3 @@
+[submodule "modules/others/nvim"]
+	path = modules/others/nvim
+	url = ssh://git@codeberg.org/joaov-007/nvim.git
