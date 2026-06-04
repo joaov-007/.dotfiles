@@ -30,6 +30,8 @@
           "/var/lib/systemd"
           "/var/lib/gdm"
           "/var/lib/AccountsService"
+
+          "/etc/NetworkManager/system-connections/"
         ];
     };
   };
