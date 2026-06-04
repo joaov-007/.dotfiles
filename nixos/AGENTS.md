@@ -38,7 +38,7 @@ modules/
     shell.nix                     # bash aliases, fzf, starship, direnv, zoxide
     desktop.nix                   # obsidian, calibre (GUI apps)
     syncthing.nix                 # syncthing service
-  others/nvim/init.lua            # neovim config, read by cli.nix
+  others/nvim/init.lua            # neovim config (submodule), read by cli.nix
 scripts/git/set-colletions-git.sh # standalone git bootstrap (no home-manager dependency)
 ```
 

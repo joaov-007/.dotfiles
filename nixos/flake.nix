@@ -19,6 +19,5 @@
            ./modules/hosts/bacon
          ];
        };
-       nixpkgs = nixpkgs;
      };
 }

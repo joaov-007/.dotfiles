@@ -26,7 +26,7 @@
           "/root/.ssh"
           "/etc/ssh"
           "/var/lib/colord"
-          "/var/lib/ollama"
+
           "/var/lib/systemd"
           "/var/lib/gdm"
           "/var/lib/AccountsService"
