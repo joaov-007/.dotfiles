@@ -1,11 +1,9 @@
-{
-  imports = [
-    ./sops.nix
-    ./systemd-boot.nix
-    ./preservation.nix
-    ./nix.nix
-    ./networking.nix
-    ./auto-update.nix
-    ./ollama.nix
-  ];
+{ lib, ... }: let
+  inherit (builtins) filter baseNameOf;
+  nixFiles = lib.filesystem.listFilesRecursive ./.;
+  moduleFiles = filter
+    (f: lib.hasSuffix ".nix" f && baseNameOf f != "default.nix")
+    nixFiles;
+in {
+  imports = moduleFiles;
 }

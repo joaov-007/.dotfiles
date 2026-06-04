@@ -7,16 +7,18 @@
       url = "github:nix-community/home-manager";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    neovim-nightly.url = "github:nix-community/neovim-nightly-overlay";
   };
 
-  outputs = { self, nixpkgs, ... }@inputs:
-    {
-      nixosConfigurations.bacon = nixpkgs.lib.nixosSystem {
-        system = "x86_64-linux";
-        specialArgs = { inherit self inputs; };
-        modules = [
-          ./modules/hosts/bacon
-        ];
-      };
-    };
+   outputs = { self, nixpkgs, ... }@inputs:
+     {
+       nixosConfigurations.bacon = nixpkgs.lib.nixosSystem {
+         system = "x86_64-linux";
+         specialArgs = { inherit self inputs; };
+         modules = [
+           ./modules/hosts/bacon
+         ];
+       };
+       nixpkgs = nixpkgs;
+     };
 }

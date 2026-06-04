@@ -3,4 +3,5 @@
   boot.loader.efi.canTouchEfiVariables = true;
   boot.loader.systemd-boot.configurationLimit = 12;
   boot.tmp.cleanOnBoot = true;
+  boot.initrd.systemd.enable = true;
 }
