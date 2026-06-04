@@ -1,10 +1,11 @@
-{pkgs, ...}: {
+{pkgs, config, ...}: {
   home.packages = with pkgs; [
     # system monitoring
     btop
 
     # file management
     tree
+    yazi
     ripgrep
     fd
     jq
@@ -29,16 +30,22 @@
     nixd
     lua-language-server
     marksman
+
+    # Formaters
+    shfmt
+
+    # Python provider for Neovim
+    python3Packages.pynvim
+
+    # Neovim (nightly from overlay)
+    neovim
   ];
 
-  programs.neovim = {
-    enable = true;
-    defaultEditor = true;
-    withPython3 = true;
-  };
-
-  xdg.configFile."nvim" = {
-    source = ../others/nvim;
+  home.file.".config/nvim" = {
+    source = config.lib.file.mkOutOfStoreSymlink (
+      "${config.home.homeDirectory}/.dotfiles/modules/others/nvim"
+    );
     recursive = true;
+    force = true;
   };
 }

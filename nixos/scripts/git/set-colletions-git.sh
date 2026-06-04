@@ -26,6 +26,7 @@ rebase.autoStash true
 rebase.stat true
 rerere.autoUpdate true
 rerere.enabled true
+diff.submodule log
 )
 
 if [[ -t 1 ]]; then

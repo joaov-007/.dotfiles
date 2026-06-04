@@ -1,4 +1,4 @@
-{pkgs, ...}: {
+{pkgs, config, ...}: {
   # Desktop applications that should be available in the GUI environment
   # These are typically larger GUI applications that users want in their desktop environment
   
@@ -6,16 +6,16 @@
   # or create desktop files. This simply makes them available in the user's environment.
   
   home.packages = with pkgs; [
-    # Already in cli.nix but keeping for completeness if we want to separate concerns
+    kitty
     obsidian
     calibre
-    
-    # Additional desktop apps can be added here
-    # firefox
-    # thunderbird
-    # libreoffice
-    # gimp
-    # inkscape
-    # vlc
   ];
+
+  home.file.".config/kitty" = {
+    source = config.lib.file.mkOutOfStoreSymlink (
+      "${config.home.homeDirectory}/.dotfiles/modules/others/kitty"
+    );
+    recursive = true;
+    force = true;
+  };
 }

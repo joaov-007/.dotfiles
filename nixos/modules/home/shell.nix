@@ -1,4 +1,4 @@
-{...}: {
+{pkgs, ...}: {
   programs.bash = {
     enable = true;
     shellAliases = {
@@ -11,10 +11,21 @@
       v = "nvim";
     };
     initExtra = ''
-      # set up fzf key bindings and fuzzy completion
-      eval "$(fzf --bash)" 2>/dev/null
+      source ${pkgs.blesh}/share/blesh/ble.sh
     '';
   };
+
+  home.packages = with pkgs; [
+    blesh
+  ];
+
+  xdg.configFile."blesh/init.sh".text = ''
+    bleopt complete_auto_delay=100
+    bleopt complete_auto_history=1
+    bleopt complete_menu_style=align-nowrap
+    bleopt complete_menu_maxlines=15
+    ble-face auto_complete='fg=240,underline,italic'
+  '';
 
   programs.fzf = {
     enable = true;
@@ -34,6 +45,15 @@
 
   programs.zoxide = {
     enable = true;
+   enableBashIntegration = true;
+  };
+
+  programs.atuin = {
+    enable = true;
     enableBashIntegration = true;
+    settings = {
+      # auto_sync = false;
+      # sync_frequency = "5m";
+    };
   };
 }
