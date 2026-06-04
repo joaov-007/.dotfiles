@@ -5,6 +5,7 @@
   pkgs,
   config,
   lib,
+  inputs,
   ...
 }:
 {
@@ -23,6 +24,12 @@
     font = "Lat2-Terminus16";
     useXkbConfig = true;
   };
+
+  nixpkgs.config.allowUnfreePredicate = pkg: builtins.elem (lib.getName pkg) [
+    "obsidian"
+  ];
+
+  nixpkgs.overlays = [ inputs.neovim-nightly.overlays.default ];
 
   services.xserver.enable = true;
 
@@ -43,12 +50,12 @@
     wireplumber.enable = true;
   };
 
-  users.users.root.hashedPassword = "$y$j9T$6YV.M5P9XJvUfZiU2jhFm1$hg1a8nZbBqZ8i5Fr0O9Q.GeBWgoWWE2o5mhzPTAAo4B";
+  users.users.root.hashedPasswordFile = config.sops.secrets."root-password".path;
 
   users.users.jaov = {
     isNormalUser = true;
     extraGroups = ["wheel" "adm" "audio" "input" "video" "networkmanager"];
-    hashedPassword = "$y$j9T$6YV.M5P9XJvUfZiU2jhFm1$hg1a8nZbBqZ8i5Fr0O9Q.GeBWgoWWE2o5mhzPTAAo4B";
+    hashedPasswordFile = config.sops.secrets."jaov-password".path;
   };
 
   programs.firefox.enable = true;
