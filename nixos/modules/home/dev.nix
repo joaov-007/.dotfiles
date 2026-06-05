@@ -1,14 +1,14 @@
-{pkgs, ...}: {
-  home.packages = with pkgs; [
-    clang
-    zig
-
-    # Rust toolchain manager
-    rustup
-
-    # Build tools
-    gnumake
-    cmake
-    pkg-config
-  ];
+{lib, ...}: {
+  options.dev.user = {
+    name = lib.mkOption {
+      type = lib.types.str;
+      default = "";
+      description = "Global developer name";
+    };
+    email = lib.mkOption {
+      type = lib.types.str;
+      default = "";
+      description = "Global developer email";
+    };
+  };
 }

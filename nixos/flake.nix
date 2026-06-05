@@ -10,14 +10,22 @@
     neovim-nightly.url = "github:nix-community/neovim-nightly-overlay";
   };
 
-   outputs = { self, nixpkgs, ... }@inputs:
-     {
-       nixosConfigurations.bacon = nixpkgs.lib.nixosSystem {
-         system = "x86_64-linux";
-         specialArgs = { inherit self inputs; };
-         modules = [
-           ./modules/hosts/bacon
-         ];
-       };
-     };
+  outputs = {
+    self,
+    nixpkgs,
+    ...
+  } @ inputs: let
+    system = "x86_64-linux";
+    pkgs = nixpkgs.legacyPackages.${system};
+  in {
+    formatter.${system} = pkgs.alejandra;
+
+    nixosConfigurations.bacon = nixpkgs.lib.nixosSystem {
+      inherit system;
+      specialArgs = {inherit self inputs;};
+      modules = [
+        ./modules/hosts/bacon
+      ];
+    };
+  };
 }

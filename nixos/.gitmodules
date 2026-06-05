@@ -1,6 +1,6 @@
-[submodule "modules/others/nvim"]
-	path = modules/others/nvim
-	url = ssh://git@codeberg.org/joaov-007/nvim.git
 [submodule "modules/others/kitty"]
 	path = modules/others/kitty
 	url = ssh://git@codeberg.org/joaov-007/kitty.git
+[submodule "modules/others/nvim"]
+	path = modules/others/nvim
+	url = ssh://git@codeberg.org/joaov-007/nvim.git
