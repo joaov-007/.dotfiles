@@ -1,3 +1,5 @@
 result
 ollama.log
 *.log
+
+modules/others/nvim

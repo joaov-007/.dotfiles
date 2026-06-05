@@ -1,10 +1,14 @@
-{ config, lib, pkgs, ... }:
-with lib;
-let
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
+with lib; let
   cfg = config.dev.git;
 in {
   options.dev.git = {
-    enable = mkEnableOption "Git configuration for user" // { default = true; };
+    enable = mkEnableOption "Git configuration for user" // {default = true;};
   };
 
   config = mkIf cfg.enable {
@@ -13,8 +17,8 @@ in {
       lfs.enable = true;
       settings = {
         user = {
-          name = "jaov";
-          email = "9527341+joaov-007@users.noreply.github.com";
+          name = config.dev.user.name;
+          email = config.dev.user.email;
         };
         push.autoSetupRemote = true;
         pull.rebase = true;
@@ -29,14 +33,14 @@ in {
     };
   };
 
-#  assertions = mkIf cfg.enable [
-#    {
-#      assertion = config.programs.git.settings.user.name != "";
-#      message = "Git user.name must be set when dev.git is enabled";
-#    }
-#    {
-#      assertion = config.programs.git.settings.user.email != "";
-#      message = "Git user.email must be set when dev.git is enabled";
-#    }
-#  ];
+  #  assertions = mkIf cfg.enable [
+  #    {
+  #      assertion = config.programs.git.settings.user.name != "";
+  #      message = "Git user.name must be set when dev.git is enabled";
+  #    }
+  #    {
+  #      assertion = config.programs.git.settings.user.email != "";
+  #      message = "Git user.email must be set when dev.git is enabled";
+  #    }
+  #  ];
 }

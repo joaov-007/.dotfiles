@@ -7,8 +7,7 @@
   lib,
   inputs,
   ...
-}:
-{
+}: {
   networking.hostName = "bacon";
   networking.networkmanager.enable = true;
 
@@ -25,16 +24,15 @@
     useXkbConfig = true;
   };
 
-  nixpkgs.config.allowUnfreePredicate = pkg: builtins.elem (lib.getName pkg) [
-    "obsidian"
-  ];
+  nixpkgs.config.allowUnfreePredicate = pkg:
+    builtins.elem (lib.getName pkg) [
+      "obsidian"
+      "open-webui"
+    ];
 
-  nixpkgs.overlays = [ inputs.neovim-nightly.overlays.default ];
+  nixpkgs.overlays = [inputs.neovim-nightly.overlays.default];
 
-  services.xserver.enable = true;
-
-  services.displayManager.gdm.enable = true;
-  services.desktopManager.gnome.enable = true;
+  dev.desktop.gnome.enable = true;
 
   services.xserver.xkb = {
     layout = "us";
@@ -63,6 +61,11 @@
 
   programs.firefox.enable = true;
   programs.firefox.package = pkgs.librewolf;
+
+  dev.user = {
+    name = "jaov";
+    email = "9527341+joaov-007@users.noreply.github.com";
+  };
 
   system.stateVersion = "25.11";
 }
