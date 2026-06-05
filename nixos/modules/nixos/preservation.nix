@@ -1,12 +1,9 @@
-{
-  inputs,
-  ...
-}: {
+{inputs, ...}: {
   imports = [
     inputs.preservation.nixosModules.default
   ];
 
-  systemd.suppressedSystemUnits = [ "systemd-machine-id-commit.service" ];
+  systemd.suppressedSystemUnits = ["systemd-machine-id-commit.service"];
 
   preservation = {
     enable = true;
@@ -17,22 +14,22 @@
           inInitrd = true;
         }
       ];
-        directories = [
-          "/etc/nixos"
-          "/var/lib/nixos"
-          "/var/log"
-          "/var/lib/bluetooth/"
-          "/var/lib/NetworkManager"
-          "/root/.ssh"
-          "/etc/ssh"
-          "/var/lib/colord"
+      directories = [
+        "/etc/nixos"
+        "/var/lib/nixos"
+        "/var/log"
+        "/var/lib/bluetooth/"
+        "/var/lib/NetworkManager"
+        "/root/.ssh"
+        "/etc/ssh"
+        "/var/lib/colord"
 
-          "/var/lib/systemd"
-          "/var/lib/gdm"
-          "/var/lib/AccountsService"
+        "/var/lib/systemd"
+        "/var/lib/gdm"
+        "/var/lib/AccountsService"
 
-          "/etc/NetworkManager/system-connections/"
-        ];
+        "/etc/NetworkManager/system-connections/"
+      ];
     };
   };
 }

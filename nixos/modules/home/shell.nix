@@ -9,9 +9,41 @@
       gp = "git push";
       gl = "git log --oneline --graph";
       v = "nvim";
+      cat = "bat";
+      catn = "bat -n";
+      h = "history";
+      q = "exit";
+      du = "du -h";
+      df = "df -h";
+      tree = "tree -C";
     };
     initExtra = ''
-      source ${pkgs.blesh}/share/blesh/ble.sh
+        source ${pkgs.blesh}/share/blesh/ble.sh
+        mkcd() {
+       (( $# == 1 )) || {
+           printf 'Usage: mkcd DIR\n' >&2
+           return 1
+       }
+
+       mkdir -p -- "$1" &&
+           cd -- "$1"
+      }
+
+             cpmk() {
+              (( $# == 2 )) || {
+                  printf 'Usage: cpmk SRC DEST\n' >&2
+                  return 1
+              }
+
+              mkdir -p -- "$(dirname -- "$2")" &&
+                  install -D -- "$1" "$2"
+             }
+
+             ..() { local n; n=$1; [ -z "$n" ] && n=1; cd "$(printf '%0.s../' $(seq 1 $n))"; }
+             myip() { curl -s ifconfig.me; echo; }
+             ports() { ss -tlnp; }
+             killport() { kill -9 $(lsof -ti:"$1"); }
+             bak() { cp -r "$1" "$1.bak"; }
     '';
   };
 
@@ -45,7 +77,7 @@
 
   programs.zoxide = {
     enable = true;
-   enableBashIntegration = true;
+    enableBashIntegration = true;
   };
 
   programs.atuin = {
