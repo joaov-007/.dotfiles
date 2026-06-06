@@ -14,14 +14,9 @@
     self,
     nixpkgs,
     ...
-  } @ inputs: let
-    system = "x86_64-linux";
-    pkgs = nixpkgs.legacyPackages.${system};
-  in {
-    formatter.${system} = pkgs.alejandra;
-
+  } @ inputs: {
     nixosConfigurations.bacon = nixpkgs.lib.nixosSystem {
-      inherit system;
+      system = "x86_64-linux";
       specialArgs = {inherit self inputs;};
       modules = [
         ./modules/hosts/bacon
