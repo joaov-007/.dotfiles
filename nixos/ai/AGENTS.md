@@ -1,66 +1,60 @@
-# AGENTS.md
+# AGENTS.md — .dotfiles (NixOS flake)
 
-Single-host NixOS flake (`bacon`, user `jaov`). home-manager as NixOS module. Secrets via sops-nix (age). Impermanence via preservation (preserves to `/persistent`).
+Single-host NixOS flake (`bacon`, user `jaov`). home-manager as NixOS module. Secrets via sops-nix. Impermanence via preservation.
 
 ## Build & apply
 
 ```bash
-sudo nixos-rebuild switch --flake .#bacon   # build + switch (covers both system and home-manager)
-nix build .#nixosConfigurations.bacon.config.system.build.toplevel  # build-only dry-run
+sudo nixos-rebuild switch --flake .#bacon    # build + switch
+nix build .#nixosConfigurations.bacon.config.system.build.toplevel  # build only, dry-run
+nix flake update                             # update all inputs
+nix flake update --update-input home-manager # single input
 ```
 
-No separate `home-manager switch` needed — home-manager is a NixOS module, rebuilt via `nixos-rebuild`.
-
-## Nix gotchas
-
-- **Uses Lix** (`pkgs.lix`), not CppNix
-- **Auto-import**: every `.nix` under `modules/nixos/` is auto-imported (via `default.nix` -> `listFilesRecursive`); same for `modules/home/` (via `home.nix`). Adding a file to either dir is sufficient.
-- **Unfree**: `obsidian`, `open-webui` allowed via `nixpkgs.config.allowUnfreePredicate`
-- **Formatter**: `nix fmt .` uses `alejandra` (defined in `flake.nix` formatter output)
-- **State version**: `25.11` (system and home)
-- **hardware-configuration.nix** is auto-generated — never edit
-- **`flake.nix`**: 5 inputs (`nixpkgs/nixos-unstable`, preservation, sops-nix, home-manager, neovim-nightly-overlay`)
+No `home-manager switch` needed — home-manager is a NixOS module, handled by `nixos-rebuild`.
 
 ## Structure
 
-- `modules/hosts/bacon/` — host-specific (configuration.nix, home.nix, hardware-configuration.nix)
-- `modules/nixos/` — shared system modules (auto-imported)
-- `modules/home/` — home-manager user modules (auto-imported)
-- `modules/others/` — config files for external tools (kitty, nvim), symlinked via `home.file`
-- `secrets/secrets.yaml` — sops-encrypted; edit with `sops secrets/secrets.yaml`
-
-## Key modules
-
-| Module | What |
-|--------|------|
-| `nix.nix` | Lix, Nix GC daily (delete >7d), Cachix substituters, nix-ld |
-| `preservation.nix` | Persists /var/lib/*, /etc/ssh, etc. to `/persistent` |
-| `sops.nix` | sops-nix with age, declares `jaov-password` and `root-password` |
-| `gpg.nix` | `programs.gnupg.agent` with SSH support |
-| `openwebui.nix` | Open WebUI at 127.0.0.1:8080, connects to local Ollama |
-| `dev.nix` (both dirs) | `dev.user.name`/`email` options; set in `configuration.nix`, bridged to home-manager in `home.nix` |
-| `git.nix` | Reads `config.dev.user.*`, has an `enable` option (default true) |
-| `shell.nix` | bash + blesh + fzf + starship + direnv + zoxide + atuin + custom functions (mkcd, cpmk, .., myip, ports, killport, bak) |
-| `cli.nix` | bat, btop, ripgrep, fd, jq, trash-cli, alejandra, LSPs, etc. |
-| `nvim.nix` | neovim nightly (from overlay) + pynvim; symlinks `modules/others/nvim` (git submodule) to `~/.config/nvim` |
-| `desktop.nix` | kitty + obsidian + calibre; symlinks kitty config from `modules/others/kitty` |
-
-## Quirks
-
-- `programs.firefox.package = pkgs.librewolf` — Firefox is actually LibreWolf
-- `services.ollama` runs as a **home-manager user service**, not system-wide
-- `hardware.graphics.extraPackages` includes `intel-media-driver` + `vpl-gpu-rt`
-- `fonts.packages` uses `nerd-fonts` namespace (fira-code, jetbrains-mono, iosevka, etc.)
-- `boot.loader.systemd-boot.configurationLimit = 12` and `boot.tmp.cleanOnBoot = true`
-- `system.autoUpgrade` runs at 02:00 daily with 45min random delay
-- `modules/others/nvim` is a git submodule (gitignored); `modules/others/kitty` is also a submodule
-- `.editorconfig`: 2-space indent for `.nix`, LF, UTF-8
-
-## Secrets
-
-```bash
-sops secrets/secrets.yaml                     # edit
-nix run nixpkgs#sops -- secrets/secrets.yaml   # or with nix
+```
+flake.nix                         # 5 inputs: nixpkgs (nixos-unstable), preservation, sops-nix, home-manager, neovim-nightly
+modules/
+  hosts/bacon/
+    default.nix                   # imports hw-config + configuration + home + ../../nixos
+    hardware-configuration.nix    # auto-generated — do not edit
+    configuration.nix             # system: GNOME/GDM, pipewire, librewolf, neovim-nightly overlay
+    home.nix                      # home-manager NixOS module, auto-imports modules/home/*.nix
+  nixos/                          # shared NixOS modules, auto-imported via default.nix
+    nix.nix                       # lix, nix-ld, GC (weekly, >30d), Cachix substituters
+    preservation.nix              # impermanence: /persistent for machine-id, /var/lib/*
+    sops.nix                      # secrets/secrets.yaml (encrypted), declares password-hash secrets
+    auto-update.nix               # autoUpgrade at 02:00 daily
+    systemd-boot.nix              # systemd-boot, configLimit=12, tmp.cleanOnBoot, initrd.systemd
+    fonts.nix                     # nerd-fonts: fira-code, jetbrains-mono, iosevka, etc.
+    ollama.nix                    # ollama service, no firewall — models pulled at runtime
+    networking.nix                # hostName=bacon, networkmanager
+  home/                           # home-manager modules, auto-imported via home.nix
+    cli.nix                       # btop, ripgrep, fd, neovim (init.lua from others/nvim/), LSPs, alejandra, opencode
+    git.nix                       # user=jaov, push.autoSetupRemote, pull.rebase
+    shell.nix                     # bash aliases, fzf, starship, direnv, zoxide
+    desktop.nix                   # obsidian, calibre (GUI apps)
+    syncthing.nix                 # syncthing service
+  others/nvim/init.lua            # neovim config (submodule), read by cli.nix
+scripts/git/set-colletions-git.sh # standalone git bootstrap (no home-manager dependency)
 ```
 
+## Auto-import mechanism
 
+- `modules/nixos/default.nix` recursively imports every `.nix` in `modules/nixos/` (excluding itself). Adding a new `.nix` file there is enough — no explicit import needed.
+- `modules/hosts/bacon/home.nix` does the same for `modules/home/`.
+
+## Key conventions & gotchas
+
+- Nix files: 2-space indent, LF, UTF-8 (`.editorconfig`)
+- `nix.package = pkgs.lix` — this system uses Lix, not CppNix
+- `programs.firefox.package = pkgs.librewolf` — Firefox is actually LibreWolf
+- State version: `25.11` (system and home)
+- `secrets/secrets.yaml` must exist or sops assertions fail; the file is encrypted with sops and committed to git
+- Edit sops secrets with: `nix run nixpkgs#sops -- secrets/secrets.yaml` or `sops secrets/secrets.yaml`
+- `hardware-configuration.nix` is auto-generated by `nixos-generate-config` — do not edit
+- `result/` and `*.log` are gitignored (build symlink, ollama logs)
+- Default branch: `main`
