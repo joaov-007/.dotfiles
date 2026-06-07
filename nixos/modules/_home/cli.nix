@@ -1,0 +1,31 @@
+{pkgs, ...}: {
+  home.packages = with pkgs; [
+    bat
+    btop
+    tomb
+    tree
+    yazi
+    ripgrep
+    fd
+    jq
+    yq
+    unzip
+    zip
+    xz
+    wget
+    trash-cli
+    tree-sitter
+    curl
+    hledger
+    opencode
+    obsidian
+    calibre
+    alejandra
+    pyright
+    nixd
+    lua-language-server
+    marksman
+    shfmt
+    wl-clipboard
+  ];
+}
