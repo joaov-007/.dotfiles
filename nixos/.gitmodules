@@ -1,6 +1,7 @@
-[submodule "modules/others/kitty"]
-	path = modules/others/kitty
+[submodule "modules/_others/kitty"]
+	path = modules/_others/kitty
 	url = ssh://git@codeberg.org/joaov-007/kitty.git
-[submodule "modules/others/nvim"]
-	path = modules/others/nvim
+[submodule "modules/_others/nvim"]
+	path = modules/_others/nvim
 	url = ssh://git@codeberg.org/joaov-007/nvim.git
+	branch = develop

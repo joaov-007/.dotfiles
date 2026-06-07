@@ -2,4 +2,4 @@ result
 ollama.log
 *.log
 
-modules/others/nvim
+modules/home/env.nix
