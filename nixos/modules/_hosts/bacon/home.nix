@@ -23,7 +23,10 @@
           (f: pkgs.lib.hasSuffix ".nix" f && baseNameOf f != "default.nix")
           allFiles;
       in
-        moduleFiles ++ [ inputs.nvim-config.homeManagerModules.default ];
+        moduleFiles ++ [
+          inputs.nvim-config.homeManagerModules.default
+          inputs.kitty-config.homeManagerModules.default
+        ];
 
       dev.user = {
         name = config.dev.user.name;

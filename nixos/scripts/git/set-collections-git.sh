@@ -1,16 +1,10 @@
 #!/usr/bin/env bash
 
-##
-
-# Bootstrap git configuration when Home Manager
-
-# is not available yet.
-
-##
+# Bootstrap git configuration when Home Manager is not available yet.
 
 set -Eeuo pipefail
 
-CONFIG_SCOPE="--global"
+CONFIG_SCOPE_ARGS=(--global)
 DRY_RUN=false
 VERBOSE=false
 
@@ -30,17 +24,17 @@ diff.submodule log
 )
 
 if [[ -t 1 ]]; then
-RED=$'\033[0;31m'
-GREEN=$'\033[0;32m'
-YELLOW=$'\033[0;33m'
-BLUE=$'\033[0;34m'
-RESET=$'\033[0m'
+readonly RED=$'\033[0;31m'
+readonly GREEN=$'\033[0;32m'
+readonly YELLOW=$'\033[0;33m'
+readonly BLUE=$'\033[0;34m'
+readonly RESET=$'\033[0m'
 else
-RED=""
-GREEN=""
-YELLOW=""
-BLUE=""
-RESET=""
+readonly RED=""
+readonly GREEN=""
+readonly YELLOW=""
+readonly BLUE=""
+readonly RESET=""
 fi
 
 show_help() {
@@ -79,10 +73,16 @@ exit 1
 }
 }
 
-while (($#)); do
+while [[ $# -gt 0 ]]; do
 case "$1" in
---global|--local|--system)
-CONFIG_SCOPE="$1"
+--global)
+CONFIG_SCOPE_ARGS=(--global)
+;;
+--local)
+CONFIG_SCOPE_ARGS=(--local)
+;;
+--system)
+CONFIG_SCOPE_ARGS=(--system)
 ;;
 -n|--dry-run)
 DRY_RUN=true
@@ -104,7 +104,7 @@ done
 
 require_command git
 
-debug "scope     = $CONFIG_SCOPE"
+debug "scope     = ${CONFIG_SCOPE_ARGS[*]}"
 debug "dry-run   = $DRY_RUN"
 debug "verbose   = $VERBOSE"
 
@@ -112,6 +112,7 @@ set_kv() {
 local key="$1"
 local value="$2"
 
+[[ -n "$key" ]] || return 0
 
 debug "processing: $key=$value"
 
@@ -121,8 +122,8 @@ if [[ "$DRY_RUN" == true ]]; then
 fi
 
 if [[ "$value" =~ ^(unset|null)$ ]]; then
-    if git config $CONFIG_SCOPE --get "$key" >/dev/null 2>&1; then
-        git config $CONFIG_SCOPE --unset "$key"
+    if git config "${CONFIG_SCOPE_ARGS[@]}" --get "$key" >/dev/null 2>&1; then
+        git config "${CONFIG_SCOPE_ARGS[@]}" --unset "$key"
         log "${YELLOW}Unset:${RESET} $key"
     else
         debug "$key already absent"
@@ -130,7 +131,7 @@ if [[ "$value" =~ ^(unset|null)$ ]]; then
     return 0
 fi
 
-git config $CONFIG_SCOPE "$key" "$value"
+git config "${CONFIG_SCOPE_ARGS[@]}" "$key" "$value"
 log "${GREEN}Set:${RESET} $key = $value"
 
 }
