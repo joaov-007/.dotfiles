@@ -22,6 +22,7 @@ in {
         };
         push.autoSetupRemote = true;
         pull.rebase = true;
+        diff.submodule = "log";
         alias = {
           st = "status";
           ci = "commit";

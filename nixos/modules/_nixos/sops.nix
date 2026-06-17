@@ -1,6 +1,5 @@
 {
   inputs,
-  self,
   config,
   ...
 }: {
@@ -8,7 +7,7 @@
     inputs.sops-nix.nixosModules.sops
   ];
 
-  sops.defaultSopsFile = self + "/secrets/secrets.yaml";
+  sops.defaultSopsFile = "${inputs.self.outPath}/secrets/secrets.yaml";
   sops.age.keyFile = "/home/jaov/.config/sops/age/keys.txt";
 
   sops.secrets."jaov-password" = {

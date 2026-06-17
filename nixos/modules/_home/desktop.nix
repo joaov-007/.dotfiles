@@ -10,15 +10,8 @@
   # or create desktop files. This simply makes them available in the user's environment.
 
   home.packages = with pkgs; [
-    kitty
     obsidian
     calibre
     gnome-monitor-config
   ];
-
-  home.file.".config/kitty" = {
-    source = config.lib.file.mkOutOfStoreSymlink "${config.home.homeDirectory}/.dotfiles/modules/others/kitty";
-    recursive = true;
-    force = true;
-  };
 }

@@ -1,42 +1,50 @@
 {
-  description = "NixOS configuration";
+  description = "Bacon/joaov Configurations";
 
   inputs = {
 
+  description = "Bacon Configs";
+  inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
-
-    flake-parts.url = "github:hercules-ci/flake-parts";
-    sops-nix.url = "github:Mic92/sops-nix";
+    chaotic.url = "github:chaotic-cx/nyx/nyxpkgs-unstable";
     preservation.url = "github:nix-community/preservation";
+    flake-parts.url = "github:hercules-ci/flake-parts";
+    import-tree.url = "github:denful/import-tree";
+    wrappers.url = "github:Lassulus/wrappers";
+    wrappers-modules.url = "github:BirdeeHub/nix-wrapper-modules";
+    nixos-hardware.url = "github:NixOS/nixos-hardware/master";
+    nix-flatpak.url = "github:gmodena/nix-flatpak";
     neovim-nightly.url = "github:nix-community/neovim-nightly-overlay";
+    nixos-anywhere.url = "github:nix-community/nixos-anywhere";
+    sops-nix.url = "github:Mic92/sops-nix";
+
+    noctalia = {
+      url = "github:noctalia-dev/noctalia/cachix";
+    };
+
+    stylix = {
+      url = "github:nix-community/stylix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
+    nur = {
+      url = "github:nix-community/NUR";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
+    nix-index-database = {
+      url = "github:nix-community/nix-index-database";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
 
     home-manager = {
       url = "github:nix-community/home-manager";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    nvim-config = {
-      url = "git+ssh://git@codeberg.org/joaov-007/nvim.git?ref=develop";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
-
   };
 
   outputs = inputs:
-    inputs.flake-parts.lib.mkFlake { inherit inputs; } {
-      imports = [
-        ({ lib, ... }: {
-          imports = builtins.filter
-            (f: !lib.hasInfix "/_" (toString f) && lib.hasSuffix ".nix" (toString f))
-            (lib.filesystem.listFilesRecursive ./modules);
-        })
-        inputs.home-manager.flakeModules.default
-      ];
-
-      systems = [ "x86_64-linux" ];
-
-      perSystem = { pkgs, system, ... }: {
-        packages.nvim-config = inputs.nvim-config.packages.${system}.default;
-      };
-    };
+    inputs.flake-parts.lib.mkFlake {inherit inputs;}
+    (inputs.import-tree ./modules);
 }

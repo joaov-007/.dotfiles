@@ -2,4 +2,4 @@ result
 ollama.log
 *.log
 
-modules/home/env.nix
+/modules/home/env.nix/
