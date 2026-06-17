@@ -18,11 +18,17 @@
     VISUAL = "nvim";
   };
 
+  environment.systemPackages = with pkgs; [
+    inputs.nixos-anywhere.packages.${pkgs.system}.default
+  ];
+
   i18n.defaultLocale = "en_US.UTF-8";
   console = {
     font = "Lat2-Terminus16";
     useXkbConfig = true;
   };
+
+  hardware.enableRedistributableFirmware = true;
 
   nixpkgs.config.allowUnfreePredicate = pkg:
     builtins.elem (lib.getName pkg) [
