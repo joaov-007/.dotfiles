@@ -6,6 +6,7 @@
     nixpkgs.overlays = [
       inputs.nur.overlays.default
       inputs.chaotic.overlays.default
+      inputs.neovim-nightly.overlays.default
     ];
   };
 }

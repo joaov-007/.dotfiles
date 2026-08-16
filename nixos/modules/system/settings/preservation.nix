@@ -17,6 +17,7 @@
             "/var/lib/NetworkManager"
             "/etc/NetworkManager/system-connections/"
             "/etc/ssh"
+            "/var/lib/colord"
           ];
           files = [
             {
