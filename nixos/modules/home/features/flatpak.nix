@@ -25,8 +25,8 @@
         "io.gitlab.librewolf-community"
         "md.obsidian.Obsidian"
         "org.gnome.Calculator"
-	"com.calibre_ebook.calibre"
-	"com.bitwarden.desktop"
+        "com.calibre_ebook.calibre"
+        "com.bitwarden.desktop"
       ];
       update.auto = {
         enable = true;
