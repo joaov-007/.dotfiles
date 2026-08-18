@@ -13,22 +13,8 @@
       intelDrivers
       desktop
       dev
-      inputs.home-manager.nixosModules.home-manager
-      inputs.nix-index-database.nixosModules.default
-      {
-        programs.nix-index-database.comma.enable = true;
-      }
-      {
-        home-manager = {
-          useGlobalPkgs = true;
-          backupFileExtension = "backup";
-          extraSpecialArgs = {inherit self inputs;};
-          sharedModules = [
-            self.homeModules.desktop
-          ];
-          users.joaov = self.homeModules.joaov;
-        };
-      }
+      homeManager
+      nixIndexDatabase
     ];
   };
   flake.nixosModules.bacon = {
