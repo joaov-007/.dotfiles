@@ -25,6 +25,7 @@
       noctalia
       udiskie
       kdeconnect
+      syncthing
     ];
   in {
     imports = modules;
