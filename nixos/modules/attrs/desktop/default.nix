@@ -26,6 +26,7 @@
       udiskie
       kdeconnect
       syncthing
+      yazi
     ];
   in {
     imports = modules;
