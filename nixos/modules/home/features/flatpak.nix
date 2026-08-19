@@ -27,6 +27,7 @@
         "org.gnome.Calculator"
         "com.calibre_ebook.calibre"
         "com.bitwarden.desktop"
+        "net.ankiweb.Anki"
       ];
       update.auto = {
         enable = true;
