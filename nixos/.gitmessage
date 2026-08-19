@@ -1,0 +1,12 @@
+# <type>(<scope>): <subject>
+#
+# type: feat | fix | refactor | docs | chore | style | test | perf | build | ci | revert
+# scope: optional module/area, e.g. flake, hosts, nvim, home-manager
+# subject: imperative, <= 50 chars, no trailing period
+#
+# Body — why this change exists:
+# - problem it solves / context that motivated it
+# - decisions made and alternatives considered
+# - gotchas, dependencies, or follow-ups
+#
+# Footer (optional): BREAKING CHANGE: ... or issue references
