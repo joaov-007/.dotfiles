@@ -3,7 +3,7 @@
   inputs,
   ...
 }: {
-  flake.nixosModules.security = {
+  flake.nixosModules.securityBase = {
     pkgs,
     lib,
     config,
@@ -82,6 +82,5 @@
     # specialisation.no-apparmor.configuration = {
     #   security.apparmor.enable = lib.mkForce false;
     # };
-
   };
 }
