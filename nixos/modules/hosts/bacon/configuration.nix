@@ -15,6 +15,8 @@
       dev
       homeManager
       nixIndexDatabase
+      aide
+      clamav
     ];
   };
   flake.nixosModules.bacon = {
