@@ -9,6 +9,8 @@
         };
         optimise.automatic = true;
         settings = {
+          # only users in the `users` group may use the daemon
+          allowed-users = ["@users"];
           cores = 2;
           experimental-features = ["nix-command" "flakes"];
           extra-substituters = [
