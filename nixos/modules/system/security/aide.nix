@@ -4,6 +4,12 @@
     # No NixOS module exists upstream; package + own systemd timer (Discourse consensus).
     # Monitor the mutable attack surface only: /nix/store is content-addressed and
     # root-owned — nix-store --verify is the real check there, AIDE would be noise.
+    # on PATH for init/update commands (sudo aide -c /etc/aide.conf --init)
+    environment.systemPackages = [pkgs.aide];
+
+    # aide.conf writes reports to /var/log/aide/aide.log — ensure the dir exists
+    systemd.tmpfiles.rules = ["d /var/log/aide 0755 root root -"];
+
     environment.etc."aide.conf" = {
       mode = "0600";
       text = ''
@@ -72,5 +78,18 @@
         Unit = "aide-check.service";
       };
     };
+
+    # Alert on changes: aide-check exits non-zero when files changed — surface
+    # it as a desktop notification (same pattern as the ClamAV alert).
+    systemd.services.aide-notify = {
+      serviceConfig = {
+        Type = "oneshot";
+        User = "joaov";
+      };
+      script = ''
+        ${pkgs.libnotify}/bin/notify-send -u critical "AIDE: integrity check FAILED" "Files changed — check: journalctl -u aide-check"
+      '';
+    };
+    systemd.services.aide-check.onFailure = ["aide-notify.service"];
   };
 }
