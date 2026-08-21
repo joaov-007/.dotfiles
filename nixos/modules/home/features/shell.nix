@@ -1,5 +1,6 @@
 {...}: {
-  flake.homeModules.shell = {...}: {
+  flake.homeModules.shell = {pkgs, ...}: {
+    home.packages = [pkgs.yt-dlp];
     programs.btop.enable = true;
     programs.zoxide.enable = true;
     programs.starship.enable = true;
