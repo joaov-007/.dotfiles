@@ -46,6 +46,23 @@ O host `bacon` monta o sistema a partir de módulos nomeados
 (`with self.nixosModules; [bacon baconHardware preservation ...]`), e o
 home-manager é integrado via `modules/system/settings/home-manager.nix`.
 
+## Regras de pacotes
+
+Nada de instalação imperativa (`nix profile install`, `nix-env -i`) — todo
+pacote é declarado no código:
+
+- Ferramentas de terminal → `home.packages` em `modules/home/features/shell.nix`
+- Config comum do usuário → `modules/home/common.nix`
+- Apps GUI → `modules/home/apps/`
+- Nível de sistema → módulos em `modules/system/`
+
+Fluxo: declarar → `nix eval .#nixosConfigurations.bacon.config.home-manager.users.joaov.home.packages | grep <nome>` → `sudo nixos-rebuild switch --flake .#bacon`.
+
+Para limpar installs imperativos antigos: `nix profile list` e `nix profile remove <nome>`.
+
+> **GOTCHA (import-tree):** só arquivos `.nix` rastreados pelo git são
+> descobertos — `git add` em arquivos novos antes do rebuild.
+
 ## Scripts
 
 - `scripts/git/set-collections-git.sh` — bootstrap da configuração do git
