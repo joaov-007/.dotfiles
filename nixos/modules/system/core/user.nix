@@ -14,7 +14,7 @@
     users.users.joaov = {
       isNormalUser = true;
       hashedPassword = "$y$j9T$Uhi/1Es0cg1sswwUBGnuh/$KcWOw417vWeHjNEd17Xq4oDZ/3iuP7kXcegB16CyVdD";
-      extraGroups = ["wheel" "networkmanager" "render" "input" "adm" "audio" "video" "dialout" "plugdev" "i2c" "fuse"];
+      extraGroups = ["wheel" "networkmanager" "render" "input" "adm" "audio" "video" "dialout" "plugdev" "i2c" "fuse" "dialout" "gpio" "spi" "netdev" "games" "cdrom"];
       subUidRanges = [
         {
           startUid = 100000;
