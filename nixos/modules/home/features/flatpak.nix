@@ -22,12 +22,13 @@
         };
       };
       packages = [
+        "com.bitwarden.desktop"
+        "com.calibre_ebook.calibre"
         "io.gitlab.librewolf-community"
         "md.obsidian.Obsidian"
-        "org.gnome.Calculator"
-        "com.calibre_ebook.calibre"
-        "com.bitwarden.desktop"
         "net.ankiweb.Anki"
+        "org.gnome.Calculator"
+        "org.onlyoffice.desktopeditors"
       ];
       update.auto = {
         enable = true;
