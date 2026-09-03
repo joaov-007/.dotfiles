@@ -10,6 +10,7 @@
       updater.enable = true;
       scanner.enable = true;
       scanner.scanDirectories = ["/home/joaov/Downloads"];
+      fangfrisch.enable = true; # sanesecurity, urlhaus, securiteinfo
     };
 
     # Alert on detection: clamdscan exits non-zero when infected files are found
