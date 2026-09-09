@@ -17,6 +17,7 @@
       nix-ld
       security
       fonts
+      power
     ];
   in {
     imports =
