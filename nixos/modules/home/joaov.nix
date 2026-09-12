@@ -1,8 +1,5 @@
-{inputs, ...}: {
-  flake.homeModules.joaov = {lib, ...}: {
-    home = {
-      username = "joaov";
-      homeDirectory = "/home/joaov";
-    };
+{...}: {
+  flake.homeModules.joaov = {
+    # ponytail: username/homeDirectory derived from NixOS user, nothing else needed here
   };
 }

@@ -13,7 +13,7 @@
         backupFileExtension = "backup";
         extraSpecialArgs = {inherit self inputs;};
         sharedModules = [
-          self.homeModules.desktop
+          self.homeModules.default
         ];
         users.joaov = self.homeModules.joaov;
       };

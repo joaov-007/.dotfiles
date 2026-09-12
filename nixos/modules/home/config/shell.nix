@@ -1,6 +1,11 @@
 {...}: {
   flake.homeModules.shell = {pkgs, ...}: {
     home.packages = with pkgs; [yt-dlp];
+    home.sessionPath = ["$HOME/.local/bin"];
+    home.sessionVariables = {
+      EDITOR = "nvim";
+      VISUAL = "nvim";
+    };
     programs.btop.enable = true;
     programs.zoxide.enable = true;
     programs.starship.enable = true;
