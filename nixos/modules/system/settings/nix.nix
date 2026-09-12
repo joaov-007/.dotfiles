@@ -1,11 +1,14 @@
 {inputs, ...}: {
-  flake.nixosModules.settings = {config, ...}: {
+  flake.nixosModules.settings = {config, lib, pkgs, ...}: {
     config = {
+      # QEMU binfmt for cross-compilation (aarch64 ↔ x86_64)
+      # boot.binfmt.emulatedSystems = ["aarch64-linux"];
+
       nix = {
         gc = {
           automatic = true;
           dates = "daily";
-          options = "--delete-older-than 8d";
+          options = "--delete-older-than 10d";
         };
         optimise.automatic = true;
         settings = {
@@ -13,6 +16,8 @@
           allowed-users = ["@users"];
           cores = 2;
           experimental-features = ["nix-command" "flakes"];
+          # Cross-compilation support (aarch64 for Raspberry Pi)
+          extra-platforms = "aarch64-linux x86_64-linux";
           extra-substituters = [
             "https://cache.nixos.org"
             "https://nix-community.cachix.org"
@@ -31,6 +36,17 @@
           ];
         };
       };
+
+      # Optional: Use Raspberry Pi as remote builder
+      # Add to nix block above, replace <pi-ip> with your Pi's IP:
+      #   buildMachines = [{
+      #     hostName = "<pi-ip>";
+      #     system = "aarch64-linux";
+      #     maxJobs = 4;
+      #     speedFactor = 2;
+      #     supportedFeatures = [ "kvm" "big-parallel" ];
+      #   }];
+      #   distributedBuilds = true;
     };
   };
 }
