@@ -54,6 +54,7 @@
     boot.resumeDevice = "/dev/disk/by-uuid/147616fb-2b4c-4a1e-81d7-877ef4a252ac";
 
     nixpkgs.hostPlatform = lib.mkDefault "x86_64-linux";
-    hardware.cpu.intel.updateMicrocode = lib.mkDefault config.hardware.enableRedistributableFirmware;
+    hardware.enableAllFirmware = true;
+    hardware.cpu.intel.updateMicrocode = lib.mkDefault true;
   };
 }

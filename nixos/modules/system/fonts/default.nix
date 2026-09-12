@@ -27,9 +27,6 @@
       ibm-plex
       victor-mono
     ];
-    nixpkgs.config.allowUnfreePredicate = pkg: (builtins.elem (pkg.pname or pkg.name) [
-      "corefonts"
-      "vista-fonts"
-    ]);
+    nixpkgs.config.allowUnfree = true;
   };
 }
