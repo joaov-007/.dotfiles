@@ -2,7 +2,7 @@
   inputs,
   ...
 }: {
-  flake.homeModules.noctalia = {pkgs, ...}: {
+  flake.homeModules.noctalia = {...}: {
     imports = [
       inputs.noctalia.homeModules.default
     ];
