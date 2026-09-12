@@ -4,7 +4,7 @@
     # No NixOS module exists upstream; package + own systemd timer (Discourse consensus).
     # Monitor the mutable attack surface only: /nix/store is content-addressed and
     # root-owned — nix-store --verify is the real check there, AIDE would be noise.
-    # on PATH for init/update commands (sudo aide -c /etc/aide.conf --init)
+    # on PATH for init/update commands (doas aide -c /etc/aide.conf --init)
     environment.systemPackages = [pkgs.aide];
 
     # aide.conf writes reports to /var/log/aide/aide.log — ensure the dir exists
