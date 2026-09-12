@@ -16,19 +16,4 @@
     imports = modules;
   });
 
-  flake.homeModules.desktop = let
-    modules = with self.homeModules; [
-      common
-      dev
-      flatpak
-      niri
-      noctalia
-      udiskie
-      kdeconnect
-      syncthing
-      yazi
-    ];
-  in {
-    imports = modules;
-  };
 }
