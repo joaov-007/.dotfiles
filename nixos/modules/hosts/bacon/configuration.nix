@@ -9,12 +9,13 @@
       bacon
       baconHardware
       preservation
-      extraModules
+      overlays
       intelDrivers
       desktop
       dev
       homeManager
       nixIndexDatabase
+      doas
     ];
   };
   flake.nixosModules.bacon = {

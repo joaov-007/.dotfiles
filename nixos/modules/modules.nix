@@ -1,5 +1,5 @@
 {inputs, ...}: {
-  flake.nixosModules.extraModules = {
+  flake.nixosModules.overlays = {
     imports = [
       inputs.chaotic.nixosModules.default
     ];

@@ -75,7 +75,10 @@
     # --- AppArmor ---
     security.apparmor = {
       enable = true;
-      killUnconfinedConfinables = true;
+      # ponytail: killUnconfinedConfinables kills systemd-hibernate and other
+      # unconfined system services. Disable until all critical services have
+      # AppArmor profiles.
+      killUnconfinedConfinables = false;
       policies = apparmorProfiles;
     };
 
