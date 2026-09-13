@@ -10,9 +10,9 @@
       inputs.agenix-rekey.nixosModules.default
     ];
 
-    environment.systemPackages = with pkgs; [
-      agenix
-      rage
+    environment.systemPackages = [
+      inputs.agenix.packages.${pkgs.system}.agenix
+      pkgs.rage
     ];
 
     # ponytail: openssh disabled, no host keys. Use user SSH key for decryption.
@@ -20,6 +20,6 @@
 
     # ponytail: masterIdentities for rekeying — the key that encrypts secrets
     # at rest. Rekeyed per-host on activation.
-    rekey.masterIdentities = ["/home/joaov/.ssh/github"];
+    age.rekey.masterIdentities = ["/home/joaov/.ssh/github"];
   };
 }
