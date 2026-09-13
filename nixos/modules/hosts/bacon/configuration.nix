@@ -16,6 +16,7 @@
       homeManager
       nixIndexDatabase
       doas
+      agenix
     ];
   };
   flake.nixosModules.bacon = {
@@ -33,6 +34,10 @@
 
     # udisks2 backend for udiskie automount (configured in home-manager).
     services.udisks2.enable = true;
+
+    # ponytail: fill in your host's SSH pubkey — run:
+    #   cat /etc/ssh/ssh_host_ed25519_key.pub
+    age.rekey.hostPubkey = "ssh-ed25519 REPLACE_WITH_YOUR_HOST_PUBKEY";
 
     # List packages installed in system profile.
     # You can use https://search.nixos.org/ to find more packages (and options).
