@@ -4,16 +4,31 @@
   ...
 }: {
   flake.nixosModules.user = {
+    config,
     pkgs,
     lib,
     ...
   }: {
     users.mutableUsers = false;
 
-    users.users.root.hashedPassword = "$y$j9T$.ISCl/aQ0j7Q6YeiP7ZXI0$DoZXwhbkD35LmKsHIn4/XIraODuDA02SO7OHKcumuq4";
+    # ponytail: agenix-rekey manages these — create secrets with:
+    #   mkpasswd -m SHA-512 | agenix edit secrets/root-pw-hash.age
+    #   agenix-rekey rekey
+    age.secrets = {
+      root-pw-hash = {
+        rekeyFile = ../../../secrets/root-pw-hash.age;
+        owner = "root";
+      };
+      joaov-pw-hash = {
+        rekeyFile = ../../../secrets/joaov-pw-hash.age;
+        owner = "root";
+      };
+    };
+
+    users.users.root.hashedPasswordFile = config.age.secrets.root-pw-hash.path;
     users.users.joaov = {
       isNormalUser = true;
-      hashedPassword = "$y$j9T$Uhi/1Es0cg1sswwUBGnuh/$KcWOw417vWeHjNEd17Xq4oDZ/3iuP7kXcegB16CyVdD";
+      hashedPasswordFile = config.age.secrets.joaov-pw-hash.path;
       extraGroups = ["wheel" "networkmanager" "render" "input" "adm" "audio" "video" "dialout" "plugdev" "i2c" "fuse" "dialout" "gpio" "spi" "netdev" "games" "cdrom"];
       subUidRanges = [
         {
