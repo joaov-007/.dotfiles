@@ -157,13 +157,19 @@
     "Mod+Ctrl+Shift+R" = mkAction "Switch Preset Window Height" "switch-preset-window-height";
     "Mod+Ctrl+R" = mkAction "Reset Window Height" "reset-window-height";
 
-    # resize
+    # resize (vim-style: Ctrl+hjkl)
+    "Mod+Ctrl+H" = mkBind "Shrink Column" {"set-column-width" = ["-10%"];};
+    "Mod+Ctrl+L" = mkBind "Grow Column" {"set-column-width" = ["+10%"];};
+    "Mod+Ctrl+J" = mkBind "Shrink Window Height" {"set-window-height" = ["-10%"];};
+    "Mod+Ctrl+K" = mkBind "Grow Window Height" {"set-window-height" = ["+10%"];};
+    # resize (fallback: -/+=)
     "Mod+Minus" = mkBind "Shrink Column" {"set-column-width" = ["-10%"];};
     "Mod+Equal" = mkBind "Grow Column" {"set-column-width" = ["+10%"];};
     "Mod+Shift+Minus" = mkBind "Shrink Window Height" {"set-window-height" = ["-10%"];};
     "Mod+Shift+Equal" = mkBind "Grow Window Height" {"set-window-height" = ["+10%"];};
 
-    # apps
+    # apps (vim-style: Return for terminal)
+    "Mod+Return" = mkSpawn "Open a Terminal: alacritty" ["alacritty"];
     "Mod+T" = mkSpawn "Open a Terminal: alacritty" ["alacritty"];
     "Mod+B" = mkSpawn "Open a Browser: LibreWolf" ["flatpak" "run" "io.gitlab.librewolf-community"];
     "Mod+E" = mkSpawn "Open File Manager: Nautilus" ["nautilus"];
