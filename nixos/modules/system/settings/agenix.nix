@@ -22,8 +22,7 @@
     # at rest. Rekeyed per-host on activation.
     age.rekey.masterIdentities = ["/home/joaov/.ssh/github"];
 
-    # ponytail: local storage — rekeyed secrets stored in repo, no key needed at build time.
-    age.rekey.storageMode = "local";
-    age.rekey.localStorageDir = ./. + "/secrets/rekeyed/${config.networking.hostName}";
+    # ponytail: derivation storage — rekeyed secrets built as derivations, no dir needed in git.
+    age.rekey.storageMode = "derivation";
   };
 }
