@@ -238,6 +238,22 @@ in {
               enable_community_templates = true;
               community_ids = ["obsidian"];
             };
+            plugins = {
+              sources = [
+                {
+                  enabled = true;
+                  name = "Official Noctalia Plugins";
+                  url = "https://github.com/noctalia-dev/noctalia-plugins";
+                }
+              ];
+              states = {
+                keybind-cheatsheet = {
+                  enabled = true;
+                  sourceUrl = "https://github.com/noctalia-dev/noctalia-plugins";
+                };
+              };
+              version = 2;
+            };
           };
         }).wrapper;
 
