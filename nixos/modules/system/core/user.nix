@@ -11,16 +11,13 @@
   }: {
     users.mutableUsers = false;
 
-    # ponytail: agenix-rekey manages these — create secrets with:
-    #   mkpasswd -m SHA-512 | agenix edit secrets/root-pw-hash.age
-    #   agenix-rekey rekey
     age.secrets = {
       root-pw-hash = {
-        rekeyFile = ../../../secrets/root-pw-hash.age;
+        rekeyFile = self + "/secrets/root-pw-hash.age";
         owner = "root";
       };
       joaov-pw-hash = {
-        rekeyFile = ../../../secrets/joaov-pw-hash.age;
+        rekeyFile = self + "/secrets/joaov-pw-hash.age";
         owner = "root";
       };
     };
