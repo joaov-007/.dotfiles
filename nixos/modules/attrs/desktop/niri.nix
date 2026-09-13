@@ -167,6 +167,12 @@
     "Mod+T" = mkSpawn "Open a Terminal: alacritty" ["alacritty"];
     "Mod+B" = mkSpawn "Open a Browser: LibreWolf" ["flatpak" "run" "io.gitlab.librewolf-community"];
     "Mod+E" = mkSpawn "Open File Manager: Nautilus" ["nautilus"];
+    "Mod+Shift+B" = mkSpawn "Open Bitwarden" ["flatpak" "run" "com.bitwarden.desktop"];
+    "Mod+Shift+E" = mkSpawn "Open Calibre" ["flatpak" "run" "com.calibre_ebook.calibre"];
+    "Mod+Shift+O" = mkSpawn "Open Obsidian" ["flatpak" "run" "md.obsidian.Obsidian"];
+    "Mod+A" = mkSpawn "Open Anki" ["flatpak" "run" "net.ankiweb.Anki"];
+    "Mod+G" = mkSpawn "Open Calculator" ["flatpak" "run" "org.gnome.Calculator"];
+    "Mod+X" = mkSpawn "Open ONLYOFFICE" ["flatpak" "run" "org.onlyoffice.desktopeditors"];
 
     # screenshots
     "Print" = mkAction "Screenshot" "screenshot";
