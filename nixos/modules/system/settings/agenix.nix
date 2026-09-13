@@ -15,7 +15,12 @@
       rage
     ];
 
-    # ponytail: hostPubkey is per-host — set in the host's configuration.nix
-    # age.rekey.hostPubkey = "ssh-ed25519 AAAA...";
+    # ponytail: openssh is disabled, so agenix can't auto-detect identity paths.
+    # point to the host key directly — needed for decryption.
+    age.identityPaths = ["/etc/ssh/ssh_host_ed25519_key"];
+
+    # ponytail: masterIdentities for rekeying — the key that encrypts secrets
+    # at rest. The host key re-encrypts per-host on activation.
+    rekey.masterIdentities = ["/etc/ssh/ssh_host_ed25519_key"];
   };
 }
