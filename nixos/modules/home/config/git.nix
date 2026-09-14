@@ -6,6 +6,7 @@
       settings = {
         user.name = "joaov";
         user.email = "9527341+joaov-007@users.noreply.github.com";
+        safe.directory = "/home/joaov/.dotfiles";
         merge.conflictstyle = "diff3";
         diff.colorMoved = "default";
       };
