@@ -9,61 +9,18 @@
     config,
     ...
   }: let
-    # Ponytail: upstream profiles use FHS paths (/usr/bin/*) but NixOS aliases
-    # them to /run/current-system/sw/bin via includes.nix. Start with complain,
-    # move to enforce after verifying with aa-status + journalctl.
     apparmorProfiles = {
-      # --- Network utilities ---
-      curl = {
-        state = "complain";
-        path = "${pkgs.apparmor-profiles}/etc/apparmor.d/curl";
-      };
-      dig = {
-        state = "complain";
-        path = "${pkgs.apparmor-profiles}/etc/apparmor.d/dig";
-      };
-      "bin.ping" = {
-        state = "complain";
-        path = "${pkgs.apparmor-profiles}/etc/apparmor.d/bin.ping";
-      };
-
-      # --- System utilities ---
-      free = {
-        state = "complain";
-        path = "${pkgs.apparmor-profiles}/etc/apparmor.d/free";
-      };
-      hostname = {
-        state = "complain";
-        path = "${pkgs.apparmor-profiles}/etc/apparmor.d/hostname";
-      };
-      lsblk = {
-        state = "complain";
-        path = "${pkgs.apparmor-profiles}/etc/apparmor.d/lsblk";
-      };
-      lsof = {
-        state = "complain";
-        path = "${pkgs.apparmor-profiles}/etc/apparmor.d/lsof";
-      };
-      lsusb = {
-        state = "complain";
-        path = "${pkgs.apparmor-profiles}/etc/apparmor.d/lsusb";
-      };
-      tar = {
-        state = "complain";
-        path = "${pkgs.apparmor-profiles}/etc/apparmor.d/tar";
-      };
-
-      # --- Desktop ---
-      nautilus = {
-        state = "complain";
-        path = "${pkgs.apparmor-profiles}/etc/apparmor.d/nautilus";
-      };
-
-      # --- Container runtime ---
-      podman = {
-        state = "complain";
-        path = "${pkgs.apparmor-profiles}/etc/apparmor.d/podman";
-      };
+      curl = {path = "${pkgs.apparmor-profiles}/etc/apparmor.d/curl";};
+      dig = {path = "${pkgs.apparmor-profiles}/etc/apparmor.d/dig";};
+      "bin.ping" = {path = "${pkgs.apparmor-profiles}/etc/apparmor.d/bin.ping";};
+      free = {path = "${pkgs.apparmor-profiles}/etc/apparmor.d/free";};
+      hostname = {path = "${pkgs.apparmor-profiles}/etc/apparmor.d/hostname";};
+      lsblk = {path = "${pkgs.apparmor-profiles}/etc/apparmor.d/lsblk";};
+      lsof = {path = "${pkgs.apparmor-profiles}/etc/apparmor.d/lsof";};
+      lsusb = {path = "${pkgs.apparmor-profiles}/etc/apparmor.d/lsusb";};
+      tar = {path = "${pkgs.apparmor-profiles}/etc/apparmor.d/tar";};
+      nautilus = {path = "${pkgs.apparmor-profiles}/etc/apparmor.d/nautilus";};
+      podman = {path = "${pkgs.apparmor-profiles}/etc/apparmor.d/podman";};
     };
   in {
     # --- Audit ---
