@@ -11,10 +11,11 @@
   }: {
     users.mutableUsers = false;
 
-    users.users.root.hashedPassword = "$y$j9T$gKL9kJ16d65/w/qGRowu.1$w1/cGE91HgV6ZrQBwtJKpIZSjeDmTZLFRxrQje9wMD.";
+
+    users.users.root.hashedPassword = "$y$j9T$GWSRZO7Ei.3cF4vc3pA1A/$cl8hJ8hbSO6ATanQYmqYxtfF5kilmQj/l3Ax/48Cot/";
     users.users.joaov = {
       isNormalUser = true;
-      hashedPassword = "$y$j9T$gKL9kJ16d65/w/qGRowu.1$w1/cGE91HgV6ZrQBwtJKpIZSjeDmTZLFRxrQje9wMD.";
+      hashedPassword = "$y$j9T$JGNdjh2bclSh3Hxhle814.$cYDwdbVp./b.n3.OavtJYF./7IUjyRXSVW1howLANo.";
       extraGroups = ["wheel" "networkmanager" "render" "input" "adm" "audio" "video" "dialout" "plugdev" "i2c" "fuse" "dialout" "gpio" "spi" "netdev" "games" "cdrom"];
       subUidRanges = [
         {
@@ -37,5 +38,11 @@
         python3
       ];
     };
+    assertions = [
+      {
+        assertion = !config.users.mutableUsers;
+        message = "users must be immutable";
+      }
+    ];
   };
 }

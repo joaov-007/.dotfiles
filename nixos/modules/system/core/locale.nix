@@ -4,6 +4,7 @@
   ...
 }: {
   flake.nixosModules.locale = {
+    config,
     pkgs,
     lib,
     ...
