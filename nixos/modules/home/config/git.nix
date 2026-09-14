@@ -6,6 +6,17 @@
       settings = {
         user.name = "joaov";
         user.email = "9527341+joaov-007@users.noreply.github.com";
+        merge.conflictstyle = "diff3";
+        diff.colorMoved = "default";
+      };
+    };
+    programs.delta = {
+      enable = true;
+      enableGitIntegration = true;
+      options = {
+        navigate = true;
+        line-numbers = true;
+        syntax-theme = "base16-stylix";
       };
     };
     programs.gh = {
