@@ -12,7 +12,7 @@
       delta
       sd
       jq
-      make
+      gnumake
       just
       yazi
       ouch
