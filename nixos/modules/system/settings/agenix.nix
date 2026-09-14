@@ -11,7 +11,7 @@
     ];
 
     environment.systemPackages = [
-      inputs.agenix.packages.${pkgs.system}.agenix
+      inputs.agenix.packages.${pkgs.stdenv.hostPlatform.system}.agenix
       pkgs.rage
     ];
 
