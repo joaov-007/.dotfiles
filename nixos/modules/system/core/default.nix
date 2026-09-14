@@ -41,13 +41,6 @@
     services = {
       avahi.enable = true;
     };
-    virtualisation = {
-      containers.enable = true;
-      podman = {
-        enable = true;
-        dockerCompat = true;
-      };
-    };
     system.stateVersion = "26.05";
   };
 }
