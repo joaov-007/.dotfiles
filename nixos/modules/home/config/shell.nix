@@ -1,5 +1,9 @@
 {...}: {
-  flake.homeModules.shell = {pkgs, ...}: {
+  flake.homeModules.shell = {
+    pkgs,
+    config,
+    ...
+  }: {
     home.packages = with pkgs; [
       yt-dlp
       blesh

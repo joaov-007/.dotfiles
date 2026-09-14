@@ -11,7 +11,7 @@
     };
   };
 
-  flake.homeModules.kdeconnect = {...}: {
+  flake.homeModules.kdeconnect = {config, ...}: {
     services.kdeconnect.enable = true;
   };
 }
