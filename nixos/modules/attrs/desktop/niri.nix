@@ -103,7 +103,6 @@
     "Mod+Shift+Space" = mkSpawnSh "Toggle Clipboard History" "noctalia msg panel-toggle clipboard";
     "Mod+Ctrl+W" = mkSpawnSh "Browse Wallpapers" "noctalia msg panel-toggle wallpaper";
     "Mod+Ctrl+S" = mkSpawnSh "Session Menu" "noctalia msg panel-toggle session";
-    "Mod+F1" = mkSpawnSh "Keybind Cheatsheet" "noctalia msg panel-toggle kenn/keybind-cheatsheet:cheatsheet";
     "Super+Alt+L" = mkSpawnSh "Lock the Screen" "noctalia msg session lock";
 
     # focus / move columns & windows
@@ -242,15 +241,23 @@ in {
               sources = [
                 {
                   enabled = true;
-                  name = "Official Noctalia Plugins";
-                  url = "https://github.com/noctalia-dev/noctalia-plugins";
+                  name = "official";
+                  url = "https://github.com/noctalia-dev/official-plugins";
+                }
+                {
+                  enabled = true;
+                  name = "community";
+                  url = "https://github.com/noctalia-dev/community-plugins";
                 }
               ];
               states = {
-                keybind-cheatsheet = {
-                  enabled = true;
-                  sourceUrl = "https://github.com/noctalia-dev/noctalia-plugins";
-                };
+                screen_recorder.enabled = true;
+                translator.enabled = true;
+                timer.enabled = true;
+                wallhaven.enabled = true;
+                world_clock.enabled = true;
+                github-activity.enabled = true;
+                git-companion.enabled = true;
               };
               version = 2;
             };
