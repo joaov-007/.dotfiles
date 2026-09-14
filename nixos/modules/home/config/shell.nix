@@ -4,17 +4,16 @@
       yt-dlp
       blesh
       # Rust CLI replacements
+      # bat: installed via programs.bat.enable
+      # delta: installed via programs.delta.enable (git.nix)
       eza
-      bat
       ripgrep
       fd
       dust
-      delta
       sd
       jq
       gnumake
       just
-      yazi
       ouch
     ];
     programs.bat = {
