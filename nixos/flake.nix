@@ -12,6 +12,7 @@
     nix-flatpak.url = "github:gmodena/nix-flatpak";
     neovim-nightly.url = "github:nix-community/neovim-nightly-overlay";
     nixos-anywhere.url = "github:nix-community/nixos-anywhere";
+
     noctalia = {
       url = "github:noctalia-dev/noctalia/cachix";
     };
@@ -33,16 +34,6 @@
 
     home-manager = {
       url = "github:nix-community/home-manager";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
-
-    agenix = {
-      url = "github:ryantm/agenix";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
-
-    agenix-rekey = {
-      url = "github:oddlama/agenix-rekey";
       inputs.nixpkgs.follows = "nixpkgs";
     };
   };
