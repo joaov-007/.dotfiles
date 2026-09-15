@@ -6,7 +6,7 @@
   }: {
     config = {
       boot = {
-        kernelPackages = pkgs.linuxPackages_cachyos;
+        kernelPackages = pkgs.linuxPackages_cachyos-lto or pkgs.linuxPackages_latest;
         loader = {
           timeout = 3;
           systemd-boot.enable = true;
@@ -14,7 +14,7 @@
           systemd-boot.configurationLimit = 32;
         };
         kernel.sysctl = {
-          "vm.swappiness" = 50;
+          "vm.swappiness" = 40;
 
           # --- Kernel hardening (Lynis KRNL-6000) ---
           "kernel.kptr_restrict" = "2"; # hide kernel pointers even with CAP_SYSLOG
