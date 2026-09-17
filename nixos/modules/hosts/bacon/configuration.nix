@@ -16,7 +16,6 @@
       homeManager
       nixIndexDatabase
       doas
-      agenix
     ];
   };
   flake.nixosModules.bacon = {
@@ -35,8 +34,6 @@
     # udisks2 backend for udiskie automount (configured in home-manager).
     services.udisks2.enable = true;
 
-    age.rekey.hostPubkey = "age1zgskc4j23d80cyngujzkqr3xkj3vt25eqhaj6r7w5qjclcduvfkq5hs42t";
-
     # List packages installed in system profile.
     # You can use https://search.nixos.org/ to find more packages (and options).
     environment.systemPackages = with pkgs; [
@@ -51,8 +48,6 @@
       enableSSHSupport = true;
     };
 
-    # List services that you want to enable:
-
     # Enable the OpenSSH daemon.
     services.openssh.enable = lib.mkForce false;
 
@@ -61,24 +56,5 @@
 
     system.copySystemConfiguration = lib.mkForce false;
 
-    networking.nameservers = [
-      "1.1.1.1"
-      "9.9.9.9"
-      "8.8.8.8"
-    ];
-
-    services.resolved = {
-      enable = true;
-      settings.Resolve = {
-        DNSSEC = "true";
-        Domains = ["~."];
-        DNSOverTLS = "true";
-        FallbackDNS = [
-          "1.1.1.1"
-          "9.9.9.9"
-          "8.8.8.8"
-        ];
-      };
-    };
   };
 }
