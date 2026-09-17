@@ -11,21 +11,10 @@
   }: {
     users.mutableUsers = false;
 
-    age.secrets = {
-      root-pw-hash = {
-        rekeyFile = self + "/secrets/root-pw-hash.age";
-        owner = "root";
-      };
-      joaov-pw-hash = {
-        rekeyFile = self + "/secrets/joaov-pw-hash.age";
-        owner = "root";
-      };
-    };
-
-    users.users.root.hashedPasswordFile = config.age.secrets.root-pw-hash.path;
+    users.users.root.hashedPassword = "$y$j9T$gKL9kJ16d65/w/qGRowu.1$w1/cGE91HgV6ZrQBwtJKpIZSjeDmTZLFRxrQje9wMD.";
     users.users.joaov = {
       isNormalUser = true;
-      hashedPasswordFile = config.age.secrets.joaov-pw-hash.path;
+      hashedPassword = "$y$j9T$gKL9kJ16d65/w/qGRowu.1$w1/cGE91HgV6ZrQBwtJKpIZSjeDmTZLFRxrQje9wMD.";
       extraGroups = ["wheel" "networkmanager" "render" "input" "adm" "audio" "video" "dialout" "plugdev" "i2c" "fuse" "dialout" "gpio" "spi" "netdev" "games" "cdrom"];
       subUidRanges = [
         {
