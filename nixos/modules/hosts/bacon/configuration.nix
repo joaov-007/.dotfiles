@@ -53,29 +53,6 @@
     networking.firewall.allowedUDPPorts = [];
 
     system.copySystemConfiguration = lib.mkForce false;
-<<<<<<< Updated upstream
-||||||| Stash base
-
-    networking.nameservers = [
-      "1.1.1.1"
-      "9.9.9.9"
-      "8.8.8.8"
-    ];
-
-    services.resolved = {
-      enable = true;
-      settings.Resolve = {
-        DNSSEC = "true";
-        Domains = ["~."];
-        DNSOverTLS = "true";
-        FallbackDNS = [
-          "1.1.1.1"
-          "9.9.9.9"
-          "8.8.8.8"
-        ];
-      };
-    };
-=======
 
     assertions = [
       {
@@ -83,14 +60,9 @@
         message = "openssh must be disabled on bacon";
       }
       {
-        assertion = config.system.copySystemConfiguration == false;
-        message = "copySystemConfiguration must be disabled";
-      }
-      {
         assertion = config.networking.firewall.enable;
         message = "firewall must be enabled";
       }
     ];
->>>>>>> Stashed changes
   };
 }
