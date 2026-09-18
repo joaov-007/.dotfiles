@@ -1,7 +1,18 @@
 {inputs, ...}: {
-  flake.nixosModules.stylix = {pkgs, ...}: {
+  flake.nixosModules.stylix = {
+    config,
+    pkgs,
+    ...
+  }: {
     imports = [
       inputs.stylix.nixosModules.stylix
+    ];
+
+    assertions = [
+      {
+        assertion = config.stylix.polarity == "dark";
+        message = "stylix polarity must be dark";
+      }
     ];
 
     stylix = {

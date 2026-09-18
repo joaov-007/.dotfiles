@@ -6,6 +6,21 @@
     ...
   }: {
     config = {
+      assertions = [
+        {
+          assertion = builtins.elem "nix-command" config.nix.settings.experimental-features;
+          message = "nix-command experimental feature must be enabled";
+        }
+        {
+          assertion = builtins.elem "flakes" config.nix.settings.experimental-features;
+          message = "flakes experimental feature must be enabled";
+        }
+        {
+          assertion = builtins.elem "@wheel" config.nix.settings.allowed-users;
+          message = "@users group must be in allowed-users";
+        }
+      ];
+
       # QEMU binfmt for cross-compilation (aarch64 ↔ x86_64)
       # boot.binfmt.emulatedSystems = ["aarch64-linux"];
 
@@ -18,7 +33,7 @@
         optimise.automatic = true;
         settings = {
           # only users in the `users` group may use the daemon
-          allowed-users = ["@users"];
+          allowed-users = ["@wheel"];
           cores = 2;
           experimental-features = ["nix-command" "flakes"];
           # Cross-compilation support (aarch64 for Raspberry Pi)

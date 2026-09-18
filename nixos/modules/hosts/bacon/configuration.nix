@@ -25,7 +25,6 @@
     ...
   }: {
     networking.hostName = "bacon"; # Define your hostname.
-
     networking.networkmanager.enable = true;
 
     # Enable touchpad support (enabled default in most desktopManager).
@@ -37,7 +36,6 @@
     # List packages installed in system profile.
     # You can use https://search.nixos.org/ to find more packages (and options).
     environment.systemPackages = with pkgs; [
-      age
     ];
 
     # Some programs need SUID wrappers, can be configured further or are
@@ -55,5 +53,44 @@
     networking.firewall.allowedUDPPorts = [];
 
     system.copySystemConfiguration = lib.mkForce false;
+<<<<<<< Updated upstream
+||||||| Stash base
+
+    networking.nameservers = [
+      "1.1.1.1"
+      "9.9.9.9"
+      "8.8.8.8"
+    ];
+
+    services.resolved = {
+      enable = true;
+      settings.Resolve = {
+        DNSSEC = "true";
+        Domains = ["~."];
+        DNSOverTLS = "true";
+        FallbackDNS = [
+          "1.1.1.1"
+          "9.9.9.9"
+          "8.8.8.8"
+        ];
+      };
+    };
+=======
+
+    assertions = [
+      {
+        assertion = !config.services.openssh.enable;
+        message = "openssh must be disabled on bacon";
+      }
+      {
+        assertion = config.system.copySystemConfiguration == false;
+        message = "copySystemConfiguration must be disabled";
+      }
+      {
+        assertion = config.networking.firewall.enable;
+        message = "firewall must be enabled";
+      }
+    ];
+>>>>>>> Stashed changes
   };
 }
