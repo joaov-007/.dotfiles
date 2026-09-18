@@ -11,7 +11,6 @@
   }: {
     users.mutableUsers = false;
 
-
     users.users.root.hashedPassword = "$y$j9T$wlXYjqg/QqlcSvrY9yByV/$72cAizf8yT0Pw6NPLvt/kaQ8BpXQoZ0VEVAA/fXCsU5";
     users.users.joaov = {
       isNormalUser = true;

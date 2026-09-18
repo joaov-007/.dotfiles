@@ -18,6 +18,7 @@
       security
       fonts
       power
+      ollama
     ];
   in {
     imports =
