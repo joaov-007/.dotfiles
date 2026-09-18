@@ -2,7 +2,6 @@
   flake.homeModules.common = {
     home.stateVersion = "26.05";
     programs.home-manager.enable = true;
-    programs.opencode.enable = true;
     programs.mise.enable = true;
     home.file.".config/nixpkgs/config.nix".text = ''
       {

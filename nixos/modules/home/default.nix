@@ -15,6 +15,7 @@
       xdg
       nvim
       yazi
+      pi
     ];
   };
 
