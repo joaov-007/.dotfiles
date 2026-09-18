@@ -1,18 +1,9 @@
 {self, ...}: {
-<<<<<<< Updated upstream
-  flake.nixosModules.power = {lib, ...}: {
-||||||| Stash base
-  flake.nixosModules.power = {
-    lib,
-    ...
-  }: {
-=======
   flake.nixosModules.power = {
     lib,
     config,
     ...
   }: {
->>>>>>> Stashed changes
     powerManagement = {
       enable = true;
       powertop.enable = true;
