@@ -1,7 +1,4 @@
-{
-  inputs,
-  ...
-}: {
+{inputs, ...}: {
   flake.homeModules.noctalia = {...}: {
     imports = [
       inputs.noctalia.homeModules.default

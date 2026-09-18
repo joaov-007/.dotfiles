@@ -91,6 +91,11 @@
           themePackages = with pkgs; [];
         };
       };
+      environment.systemPackages = with pkgs; [
+        scx
+        scxctl
+        scxtui
+      ];
       services.scx.enable = true;
     };
   };

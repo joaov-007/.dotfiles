@@ -1,8 +1,5 @@
 {self, ...}: {
-  flake.nixosModules.power = {
-    lib,
-    ...
-  }: {
+  flake.nixosModules.power = {lib, ...}: {
     powerManagement = {
       enable = true;
       powertop.enable = true;

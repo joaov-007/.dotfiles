@@ -1,5 +1,10 @@
 {inputs, ...}: {
-  flake.nixosModules.settings = {config, lib, pkgs, ...}: {
+  flake.nixosModules.settings = {
+    config,
+    lib,
+    pkgs,
+    ...
+  }: {
     config = {
       # QEMU binfmt for cross-compilation (aarch64 ↔ x86_64)
       # boot.binfmt.emulatedSystems = ["aarch64-linux"];
