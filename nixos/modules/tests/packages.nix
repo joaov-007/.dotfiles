@@ -16,7 +16,7 @@
           pkgs,
           ...
         }: {
-          imports = [self.nixosModules.sopsNix];
+          # imports = [];
           environment.systemPackages = with pkgs; [
             neovim
             git
