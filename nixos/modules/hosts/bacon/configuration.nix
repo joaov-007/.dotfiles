@@ -55,6 +55,5 @@
     networking.firewall.allowedUDPPorts = [];
 
     system.copySystemConfiguration = lib.mkForce false;
-
   };
 }
