@@ -2,7 +2,6 @@
   flake.nixosModules.overlays = {
     imports = [
       inputs.chaotic.nixosModules.default
-      inputs.jovian.nixosModules.default
     ];
     nixpkgs.overlays = [
       inputs.nur.overlays.default
