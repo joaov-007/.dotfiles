@@ -9,11 +9,6 @@
       enable = true;
       package = pkgs.ollama-cpu;
 
-      loadModels = [
-        "qwen2.5-coder:1.5b"
-        "kimi-k2.5:cloud"
-      ];
-
       environmentVariables = {
         OLLAMA_CONTEXT_LENGTH = "8192";
         OLLAMA_KEEP_ALIVE = "5m";
