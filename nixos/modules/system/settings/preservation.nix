@@ -21,6 +21,7 @@
             "/var/log/aide/"
             "/var/lib/aide/"
             "/var/lib/audit"
+            "/var/lib/ollama"
           ];
           files = [
             {
