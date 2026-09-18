@@ -6,6 +6,7 @@
   flake.nixosModules.intelDrivers = {
     pkgs,
     lib,
+    config,
     ...
   }: {
     imports = [
@@ -24,5 +25,20 @@
         libva-vdpau-driver
       ];
     };
+
+    assertions = [
+      {
+        assertion = config.hardware.graphics.enable;
+        message = "graphics must be enabled for Intel GPU";
+      }
+      {
+        assertion = config.hardware.graphics.enable32Bit;
+        message = "32-bit graphics must be enabled for game compatibility";
+      }
+      {
+        assertion = builtins.length config.hardware.graphics.extraPackages > 0;
+        message = "Intel vaapi drivers must be in extraPackages";
+      }
+    ];
   };
 }

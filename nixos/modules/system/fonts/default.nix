@@ -1,5 +1,9 @@
 {...}: {
-  flake.nixosModules.fonts = {pkgs, ...}: {
+  flake.nixosModules.fonts = {
+    pkgs,
+    config,
+    ...
+  }: {
     fonts.packages = with pkgs; [
       # Nerd Fonts
       nerd-fonts.iosevka
@@ -28,5 +32,12 @@
       victor-mono
     ];
     nixpkgs.config.allowUnfree = true;
+
+    assertions = [
+      {
+        assertion = config.nixpkgs.config.allowUnfree;
+        message = "allowUnfree must be enabled for corefonts/vista-fonts";
+      }
+    ];
   };
 }
