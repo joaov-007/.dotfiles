@@ -6,6 +6,7 @@
   flake.nixosModules.flatpak = {
     pkgs,
     lib,
+    config,
     ...
   }: {
     imports = [
@@ -32,5 +33,24 @@
     #    system.activationScripts.flatpak-binsh = ''
     #      [ -L /bin/sh ] || ln -s ${pkgs.bash}/bin/sh /bin/sh
     #    '';
+
+    assertions = [
+      {
+        assertion = config.services.flatpak.enable;
+        message = "flatpak must be enabled";
+      }
+      {
+        assertion = config.xdg.portal.enable;
+        message = "xdg portal must be enabled for flatpak";
+      }
+      {
+        assertion = builtins.length config.xdg.portal.extraPortals > 0;
+        message = "xdg portal must have extra portals configured";
+      }
+      {
+        assertion = config.security.apparmor.policies.flatpak.state == "enforce";
+        message = "flatpak apparmor profile must be in enforce mode";
+      }
+    ];
   };
 }

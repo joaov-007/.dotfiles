@@ -32,7 +32,7 @@
     fileSystems."/nix" = {
       device = "/dev/mapper/crypt";
       fsType = "btrfs";
-      options = ["subvol=@nix" "compress=zstd:3" "defaults"];
+      options = ["subvol=@nix" "defaults"];
     };
 
     fileSystems."/home" = {
@@ -56,5 +56,44 @@
     nixpkgs.hostPlatform = lib.mkDefault "x86_64-linux";
     hardware.enableAllFirmware = true;
     hardware.cpu.intel.updateMicrocode = lib.mkDefault true;
+
+    assertions = [
+      {
+        assertion = builtins.elem "btrfs" config.boot.initrd.availableKernelModules;
+        message = "btrfs must be in initrd availableKernelModules";
+      }
+      {
+        assertion = builtins.elem "dm_crypt" config.boot.initrd.availableKernelModules;
+        message = "dm_crypt must be in initrd availableKernelModules for LUKS";
+      }
+      {
+        assertion = config.hardware.cpu.intel.updateMicrocode == true;
+        message = "Intel microcode updates must be enabled";
+      }
+      {
+        assertion = config.hardware.enableAllFirmware;
+        message = "all firmware must be enabled";
+      }
+      {
+        assertion = config.fileSystems."/".fsType == "tmpfs";
+        message = "root filesystem must be tmpfs";
+      }
+      {
+        assertion = config.fileSystems."/nix".fsType == "btrfs";
+        message = "/nix must be btrfs";
+      }
+      {
+        assertion = config.fileSystems."/home".fsType == "btrfs";
+        message = "/home must be btrfs";
+      }
+      {
+        assertion = config.fileSystems."/.persistent".fsType == "btrfs";
+        message = "/.persistent must be btrfs for persistence";
+      }
+      {
+        assertion = config.fileSystems."/boot".fsType == "vfat";
+        message = "/boot must be vfat";
+      }
+    ];
   };
 }
