@@ -1,5 +1,5 @@
 {...}: {
-  flake.nixosModules.clamav = {pkgs,...}: {
+  flake.nixosModules.clamav = {pkgs, ...}: {
     # ClamAV — honest use case on a Linux desktop: scanning files you'll forward
     # to Windows machines, not real-time Linux protection (signatures are ~all
     # Windows malware). On-demand Downloads scan only; daemon is socket-activated
