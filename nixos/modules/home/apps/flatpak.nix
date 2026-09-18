@@ -29,6 +29,7 @@
         "net.ankiweb.Anki"
         "org.gnome.Calculator"
         "org.onlyoffice.desktopeditors"
+        "io.speedofsound.SpeedOfSound"
       ];
       update.auto = {
         enable = true;
