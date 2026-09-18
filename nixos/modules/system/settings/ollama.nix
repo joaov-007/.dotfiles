@@ -11,6 +11,7 @@
 
       loadModels = [
         "qwen2.5-coder:1.5b"
+        "kimi-k2.5:cloud"
       ];
 
       environmentVariables = {
