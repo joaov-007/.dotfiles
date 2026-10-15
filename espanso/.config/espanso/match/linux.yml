@@ -1,0 +1,18 @@
+metadata:
+  name: "Linux ecosystem and easter eggs"
+  description: "Archlinux btw, nixos btw, everthings uneplower things"
+  version: "1.0.0"
+  author: "joaov"
+  tags: [eggs, shell, linux-btw]
+  updated: "2026-10-08"
+
+matches:
+  - trigger: ":arch-btw"
+    label: "Archlinux btw"
+    comment: "I use arch btw"
+    replace: "I use Arch btw"
+
+  - trigger: ":nixos-btw"
+    label: "NixOS btw"
+    comment: "I use NixOS btw"
+    replace: "I use NixOS btw"

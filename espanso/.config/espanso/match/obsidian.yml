@@ -1,0 +1,47 @@
+metadata:
+  name: "obsidian-filenames"
+  description: "Nomes de arquivo para Obsidian: timestamp + titulo"
+  version: "1.0.0"
+  author: "joaov"
+  tags: [obsidian, filenames, dates]
+  updated: "2026-10-15"
+
+matches:
+# espanso obsidian filename shortcuts
+# ============================
+
+# Timestamped filename with title prompt (spaces become hyphens)
+# Ex: 20261015143522_Nota-sobre-Rust
+- trigger: "kekab"
+  label: "Arquivo Obsidian (timestamp + titulo)"
+  comment: "Abre um campo para o titulo; espacos viram hifens"
+  replace: "{{ts}}_{{slug}}"
+  vars:
+    - name: ts
+      type: date
+      params:
+        format: "%Y%m%d%H%M%S"
+    - name: form1
+      type: form
+      params:
+        layout: "Titulo do arquivo (espacos viram hifens): [[title]]"
+        fields:
+          title:
+            default: ""
+    - name: slug
+      type: shell
+      params:
+        cmd: |
+          printf '%s' "{{form1.title}}" | tr -s '[:space:]' '-' | sed -e 's/^-//' -e 's/-$//'
+
+# Timestamp prefix only - digite o titulo direto no editor
+# Ex: 20261015143522_
+- trigger: ":kekabts"
+  label: "Prefixo de timestamp"
+  comment: "Insere apenas YYYYMMDDHHMMSS_ para digitar o titulo depois"
+  replace: "{{ts}}_"
+  vars:
+    - name: ts
+      type: date
+      params:
+        format: "%Y%m%d%H%M%S"

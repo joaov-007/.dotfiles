@@ -1,0 +1,316 @@
+metadata:
+  name: "brazilian-research"
+  description: "Pesquisa brasileira: ABNT, agencias de fomento, metodologia e frases academicas"
+  version: "1.0.0"
+  author: "joaov"
+  tags: [abnt, research, portuguese, brazil]
+  updated: "2026-10-08"
+
+matches:
+# espanso brazilian research shortcuts
+# ============================
+# ABNT, instituicoes brasileiras e frases academicas em portugues
+
+# --- Formatacao ABNT / referencias (NBR 6023) ---
+
+- trigger: ":abntr"
+  label: "ABNT referencia"
+  comment: "Modelo de referencia NBR 6023"
+  replace: "SOBRENOME, Nome. Titulo da obra. Edicao. Local: Editora, ano."
+
+- trigger: ":abntl"
+  label: "ABNT ato legal"
+  comment: "Citação de lei (BRASIL. Lei no ...)"
+  replace: "BRASIL. Lei no 14.063, de 6 de outubro de 2020. Dispõe sobre o uso de assinaturas eletronicas. Brasilia, DF, 2020."
+
+- trigger: ":abnto"
+  label: "ABNT fonte online"
+  comment: "Referencia de site com acesso em"
+  replace: "SOBRENOME, Nome. Titulo do site. Data de publicação. Disponivel em: https://exemplo.com.br. Acesso em: dia mês ano."
+
+- trigger: ":abntn"
+  label: "ABNT NBR 6023:2018"
+  comment: "Norma de referencias"
+  replace: "ABNT NBR 6023:2018. Referencias. Rio de Janeiro: ABNT, 2018."
+
+- trigger: ":abntc"
+  label: "Citacao indireta"
+  comment: "(SOBRENOME, ano, p. 00)"
+  replace: "(SOBRENOME, ano, p. 00)"
+
+- trigger: ":abntd"
+  label: "Citacao direta"
+  comment: "Segundo SOBRENOME (ano, p. 00)"
+  replace: "Segundo SOBRENOME (ano, p. 00), texto entre aspas."
+
+# --- Data e numeros no padrao brasileiro ---
+
+- trigger: ":dbr"
+  label: "Data BR dd/mm/aaaa"
+  comment: "Data no formato brasileiro"
+  replace: "{{mydate}}"
+  vars:
+    - name: mydate
+      type: date
+      params:
+        format: "%d/%m/%Y"
+
+- trigger: ":dext"
+  label: "Data por extenso"
+  comment: "Ex: 08 de outubro de 2026"
+  replace: "{{mydate}}"
+  vars:
+    - name: mydate
+      type: date
+      params:
+        format: "%d de %B de %Y"
+        locale: "pt-BR"
+
+# --- Instituicoes e agencias de fomento ---
+
+- trigger: ":cnpq"
+  label: "CNPq"
+  comment: "Conselho Nacional de Desenvolvimento Cientifico e Tecnologico"
+  replace: "Conselho Nacional de Desenvolvimento Científico e Tecnológico (CNPq)"
+
+- trigger: ":capes"
+  label: "CAPES"
+  comment: "Coordenacao de Aperfeicoamento de Pessoal de Nivel Superior"
+  replace: "Coordenacao de Aperfeiçoamento de Pessoal de Nível Superior (CAPES)"
+
+- trigger: ":fapesp"
+  label: "FAPESP"
+  comment: "Fundacao de Amparo a Pesquisa do Estado de Sao Paulo"
+  replace: "Fundação de Amparo à Pesquisa do Estado de Sao Paulo (FAPESP)"
+
+- trigger: ":fam"
+  label: "FAPEAM"
+  comment: "Fundacao de Amparo a Pesquisa do Estado do Amazonas"
+  replace: "Fundação de Amparo à Pesquisa do Estado do Amazonas (FAPEAM)"
+
+- trigger: ":finep"
+  label: "FINEP"
+  comment: "Financiadora de Estudos e Projetos"
+  replace: "Financiadora de Estudos e Projetos (FINEP)"
+
+- trigger: ":faperj"
+  label: "FAPERJ"
+  comment: "Fundacao Carlos Chagas Filho de Amparo a Pesquisa do Rio de Janeiro"
+  replace: "Fundação Carlos Chagas Filho de Amparo a Pesquisa do Estado do Rio de Janeiro (FAPERJ)"
+
+# --- Agencias reguladoras ---
+
+- trigger: ":anv"
+  label: "ANVISA"
+  comment: "Agencia Nacional de Vigilancia Sanitaria"
+  replace: "Agencia Nacional de Vigilância Sanitária (ANVISA)"
+
+- trigger: ":ant"
+  label: "ANATEL"
+  comment: "Agencia Nacional de Telecomunicacoes"
+  replace: "Agencia Nacional de Telecomunicações (ANATEL)"
+
+- trigger: ":ane"
+  label: "ANEEL"
+  comment: "Agencia Nacional de Energia Eletrica"
+  replace: "Agencia Nacional de Elétrica (ANEEL)"
+
+- trigger: ":ans"
+  label: "ANS"
+  comment: "Agencia Nacional de Saude Suplementar"
+  replace: "Agencia Nacional de Saúde Suplementar (ANS)"
+
+- trigger: ":inm"
+  label: "INMETRO"
+  comment: "Instituto Nacional de Metrologia, Qualidade e Tecnologia"
+  replace: "Instituto Nacional de Metrologia, Qualidade e Tecnologia (INMETRO)"
+
+- trigger: ":ibge"
+  label: "IBGE"
+  comment: "Instituto Brasileiro de Geografia e Estatistica"
+  replace: "Instituto Brasileiro de Geografia e Estatística (IBGE)"
+
+# --- Metodologia de pesquisa ---
+
+- trigger: ":hip"
+  label: "Hipotese"
+  comment: "Modelo de hipotese de pesquisa"
+  replace: "Hipótese: a variável independente influencia a variável dependente."
+
+- trigger: ":og"
+  label: "Objetivo geral"
+  comment: "Objetivo geral: analisar"
+  replace: "Objetivo geral: analisar"
+
+- trigger: ":oe"
+  label: "Objetivo especifico"
+  comment: "Objetivo especifico: identificar"
+  replace: "Objetivo específico: identificar"
+
+- trigger: ":met"
+  label: "Metodologia"
+  comment: "Paragrafo de metodologia qualitativa"
+  replace: "A pesquisa adotou abordagem qualitativa, de natureza exploratória e descritiva, com estudo de caso."
+
+- trigger: ":amo"
+  label: "Amostra"
+  comment: "Descricao de amostra por conveniencia"
+  replace: "A amostra foi composta por participantes selecionados por conveniência."
+
+- trigger: ":res"
+  label: "Resultado"
+  comment: "Os resultados indicam que"
+  replace: "Os resultados indicam que"
+
+- trigger: ":conc"
+  label: "Conclusao"
+  comment: "Conclui-se que"
+  replace: "Conclui-se que"
+
+- trigger: ":rev"
+  label: "Revisao bibliografica"
+  comment: "Revisao dos ultimos cinco anos"
+  replace: "A revisão bibliográfica abrangeu artigos publicados nos últimos cinco anos."
+
+# --- Frases academicas em portugues ---
+
+- trigger: ":cpop"
+  label: "Citacao popular"
+  comment: "Segundo Silva (2024), ..."
+  replace: "Segundo Silva (2024), a tecnologia tem transformado as praticas de pesquisa."
+
+- trigger: ":clit"
+  label: "Conforme a literatura"
+  comment: "Conector para revisao"
+  replace: "Conforme a literatura, "
+
+- trigger: ":elg"
+  label: "Em linhas gerais"
+  comment: "Conector"
+  replace: "Em linhas gerais, "
+
+- trigger: ":vd"
+  label: "Vale destacar"
+  comment: "Conector"
+  replace: "Vale destacar que "
+
+- trigger: ":pol"
+  label: "Por outro lado"
+  comment: "Conector de contraste"
+  replace: "Por outro lado, "
+
+- trigger: ":eop"
+  label: "Em outras palavras"
+  comment: "Conector de reformulacao"
+  replace: "Em outras palavras, "
+
+- trigger: ":tn"
+  label: "Torna-se necessario"
+  comment: "Conector"
+  replace: "Torna-se necessário "
+
+- trigger: ":po"
+  label: "E possivel observar"
+  comment: "Conector"
+  replace: "É possível observar que "
+
+# --- Padroes brasileiros de formatacao ---
+
+- trigger: ":decb"
+  label: "Decimal BR"
+  comment: "1.234,56"
+  replace: "1.234,56"
+
+- trigger: ":rs"
+  label: "Moeda R$"
+  comment: "Real brasileiro"
+  replace: "R$ 0,00"
+
+- trigger: ":cpf"
+  label: "CPF placeholder"
+  comment: "000.000.000-00"
+  replace: "000.000.000-00"
+
+- trigger: ":cnpj"
+  label: "CNPJ placeholder"
+  comment: "00.000.000/0000-00"
+  replace: "00.000.000/0000-00"
+
+- trigger: ":cep"
+  label: "CEP placeholder"
+  comment: "00000-000"
+  replace: "00000-000"
+
+- trigger: ":tel"
+  label: "Telefone BR"
+  comment: "(00) 00000-0000"
+  replace: "(00) 00000-0000"
+
+# --- Enderecos institucionais ---
+
+- trigger: ":bsb"
+  label: "Brasilia, DF"
+  comment: "Endereco institucional"
+  replace: "Brasilia, DF, Brasil"
+
+- trigger: ":usp"
+  label: "USP"
+  comment: "Universidade de Sao Paulo"
+  replace: "Universidade de Sao Paulo (USP)"
+
+- trigger: ":unicamp"
+  label: "UNICAMP"
+  comment: "Universidade Estadual de Campinas"
+  replace: "Universidade Estadual de Campinas (UNICAMP)"
+
+- trigger: ":unesp"
+  label: "UNESP"
+  comment: "Universidade Estadual Paulista"
+  replace: "Universidade Estadual Paulista (UNESP)"
+
+- trigger: ":ufrj"
+  label: "UFRJ"
+  comment: "Universidade Federal do Rio de Janeiro"
+  replace: "Universidade Federal do Rio de Janeiro (UFRJ)"
+
+- trigger: ":ufmg"
+  label: "UFMG"
+  comment: "Universidade Federal de Minas Gerais"
+  replace: "Universidade Federal de Minas Gerais (UFMG)"
+
+# --- Palavras-chave de pesquisa ---
+
+- trigger: ":ac"
+  label: "Artigo cientifico"
+  comment: "Termo de pesquisa"
+  replace: "artigo científico"
+
+- trigger: ":pq"
+  label: "Pesquisa qualitativa"
+  comment: "Termo de pesquisa"
+  replace: "pesquisa qualitativa"
+
+- trigger: ":pqm"
+  label: "Pesquisa quantitativa"
+  comment: "Termo de pesquisa"
+  replace: "pesquisa quantitativa"
+
+- trigger: ":eda"
+  label: "Estado da arte"
+  comment: "Termo de pesquisa"
+  replace: "estado da arte"
+
+- trigger: ":tcc"
+  label: "TCC"
+  comment: "Trabalho de Conclusao de Curso"
+  replace: "Trabalho de Conclusão de Curso (TCC)"
+
+- trigger: ":ban"
+  label: "Banca examinadora"
+  comment: "Termo academico"
+  replace: "banca examinadora"
+
+- trigger: ":def"
+  label: "Defesa de dissertacao"
+  comment: "Termo academico"
+  replace: "defesa de dissertação"

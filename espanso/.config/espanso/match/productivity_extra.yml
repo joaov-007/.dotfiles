@@ -1,0 +1,171 @@
+metadata:
+  name: "productivity-extra"
+  description: "UUID, datas ISO, conversao de caixa, saudacoes e modelos de e-mail"
+  version: "1.0.0"
+  author: "joaov"
+  tags: [utility, shell, email]
+  updated: "2026-10-08"
+
+matches:
+# espanso extra productivity shortcuts
+# ============================
+
+# UUID generator (via shell)
+- trigger: ":uuid"
+  label: "UUID v4"
+  comment: "Gera UUID aleatorio via uuidgen"
+  replace: "{{output}}"
+  vars:
+    - name: output
+      type: shell
+      params:
+        cmd: "uuidgen"
+
+# Current ISO date
+- trigger: ":isodate"
+  label: "Data ISO"
+  comment: "Data no formato YYYY-MM-DD"
+  replace: "{{mydate}}"
+  vars:
+    - name: mydate
+      type: date
+      params:
+        format: "%Y-%m-%d"
+
+# Random integer (1-100)
+- trigger: ":rand-int"
+  label: "Numero aleatorio"
+  comment: "Inteiro aleatorio 1-100"
+  replace: "{{output}}"
+  vars:
+    - name: output
+      type: shell
+      params:
+        cmd: "shuf -i 1-100 -n 1"
+
+# Random string (8 chars)
+- trigger: ":rand-str"
+  label: "String aleatoria"
+  comment: "String aleatoria de 8 caracteres"
+  replace: "{{output}}"
+  vars:
+    - name: output
+      type: shell
+      params:
+        cmd: "cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 8 | head -n 1"
+
+# Convert to camelCase (via shell)
+- trigger: ":camelcase"
+  label: "Texto p/ camelCase"
+  comment: "Converte YOUR_TEXT_HERE via shell"
+  replace: "{{output}}"
+  vars:
+    - name: output
+      type: shell
+      params:
+        cmd: "echo 'YOUR_TEXT_HERE' | python3 -c 'import sys,re; s=sys.stdin.read().strip(); print(re.sub(r\"(_| )([a-zA-Z])\", lambda m: m.group(2).upper(), re.sub(r\"[_ ]\", \"\", s)))'"
+
+# Convert to snake_case
+- trigger: ":snake"
+  label: "Texto p/ snake_case"
+  comment: "Converte YOUR_TEXT_HERE via shell"
+  replace: "{{output}}"
+  vars:
+    - name: output
+      type: shell
+      params:
+        cmd: "echo 'YOUR_TEXT_HERE' | python3 -c 'import sys,re; s=sys.stdin.read().strip(); print(re.sub(r\"([A-Z])\", r\"\\\\1\", re.sub(r\"[ _]\", \"_\", s)).lower().lstrip(\"_\"))'"
+
+# Convert to kebab-case
+- trigger: ":kebab"
+  label: "Texto p/ kebab-case"
+  comment: "Converte YOUR_TEXT_HERE via shell"
+  replace: "{{output}}"
+  vars:
+    - name: output
+      type: shell
+      params:
+        cmd: "echo 'YOUR_TEXT_HERE' | python3 -c 'import sys,re; s=sys.stdin.read().strip(); print(re.sub(r\"([A-Z])\", r\"-\\\\1\", re.sub(r\"[ _]\", \"-\", s)).lower().lstrip(\"-\"))'"
+
+# Today + N days
+- trigger: ":plusN"
+  label: "Data + 1 dia"
+  comment: "Data de amanha (offset 86400s)"
+  replace: "{{mytime}}"
+  vars:
+    - name: mytime
+      type: date
+      params:
+        format: "%m/%d/%Y"
+        offset: 86400
+
+# Time ago
+- trigger: ":agoN"
+  label: "Data - 1 dia"
+  comment: "Data de ontem (offset -86400s)"
+  replace: "{{mytime}}"
+  vars:
+    - name: mytime
+      type: date
+      params:
+        format: "%m/%d/%Y"
+        offset: -86400
+
+# Meeting time formats
+- trigger: ":morning"
+  label: "Bom dia"
+  comment: "Good morning! emoji"
+  replace: "Good morning! ❤"
+
+- trigger: ":afternoon"
+  label: "Boa tarde"
+  comment: "Good afternoon! emoji"
+  replace: "Good afternoon! ☕"
+
+- trigger: ":evening"
+  label: "Boa noite"
+  comment: "Good evening! emoji"
+  replace: "Good evening! ☃"
+
+# Common responses
+- trigger: ":yes"
+  label: "Sim (ingles)"
+  comment: "Yes, that works for me!"
+  replace: "Yes, that works for me!"
+
+- trigger: ":no"
+  label: "Nao (ingles)"
+  comment: "No, I can't make it."
+  replace: "No, I can't make it."
+
+- trigger: ":maybe"
+  label: "Talvez (ingles)"
+  comment: "Maybe, let me check my schedule."
+  replace: "Maybe, let me check my schedule."
+
+# Project templates
+- trigger: ":project"
+  label: "Nome de projeto"
+  comment: "project-AAAAMMDD baseado na data"
+  replace: "{{myproject}}"
+  vars:
+    - name: myproject
+      type: date
+      params:
+        format: "project-%Y%m%d"
+
+# Email templates (plain text, no block scalars)
+- trigger: ":welcome"
+  label: "Boas-vindas"
+  comment: "Mensagem de boas-vindas para time"
+  replace: "Welcome to the team! 🎉 We're excited to have you on board. Best regards, The Team"
+
+- trigger: ":thanks"
+  label: "Agradecimento"
+  comment: "Nota de agradecimento"
+  replace: "Thank you for your work! 👏 Your contribution makes a difference."
+
+- trigger: ":followup"
+  label: "Follow-up"
+  comment: "Mensagem de acompanhamento"
+  replace: "Just following up on my previous message. Looking forward to hearing from you."
