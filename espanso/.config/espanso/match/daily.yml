@@ -1,0 +1,96 @@
+metadata:
+  name: "daily-dates"
+  description: "Data e hora: hoje, amanha, ontem, formatos japones e brasileiro"
+  version: "1.0.0"
+  author: "joaov"
+  tags: [date, time, locale]
+  updated: "2026-10-08"
+
+matches:
+# espanso daily date shortcuts
+# ============================
+
+# Today's date
+- trigger: ":date"
+  label: "Data de hoje"
+  comment: "Data atual no formato MM/DD/YYYY"
+  replace: "{{mydate}}"
+  vars:
+    - name: mydate
+      type: date
+      params:
+        format: "%m/%d/%Y"
+
+# Tomorrow's date
+- trigger: ":tomorrow"
+  label: "Amanha"
+  comment: "Data de amanha"
+  replace: "{{mytime}}"
+  vars:
+    - name: mytime
+      type: date
+      params:
+        format: "%v"
+        offset: 86400
+
+# Yesterday's date
+- trigger: ":yesterday"
+  label: "Ontem"
+  comment: "Data de ontem"
+  replace: "{{mytime}}"
+  vars:
+    - name: mytime
+      type: date
+      params:
+        format: "%v"
+        offset: -86400
+
+# Japanese date format (year.month.day)
+- trigger: ":japanese-date"
+  label: "Data japonesa"
+  comment: "Formato japones YYYY.MM.DD"
+  replace: "{{mydate}}"
+  vars:
+    - name: mydate
+      type: date
+      params:
+        format: "%Y.%m.%d"
+        locale: "ja-JP"
+
+# Brazilian Portuguese date format (dd month year extenso)
+- trigger: ":br-date"
+  label: "Data BR por extenso"
+  comment: "Ex: 08 de outubro de 2026 (pt-BR)"
+  replace: "{{mydate}}"
+  vars:
+    - name: mydate
+      type: date
+      params:
+        format: "%d de %B de %Y"
+        locale: "pt-BR"
+
+# Current time
+- trigger: ":time"
+  label: "Hora atual"
+  comment: "Hora no formato HH:MM"
+  replace: "{{mytime}}"
+  vars:
+    - name: mytime
+      type: date
+      params:
+        format: "%H:%M"
+
+# Current datetime
+- trigger: ":datetime"
+  label: "Data + hora"
+  comment: "Data e hora atuais juntas"
+  replace: "{{mydate}} {{mytime}}"
+  vars:
+    - name: mydate
+      type: date
+      params:
+        format: "%d/%m/%Y"
+    - name: mytime
+      type: date
+      params:
+        format: "%H:%M"

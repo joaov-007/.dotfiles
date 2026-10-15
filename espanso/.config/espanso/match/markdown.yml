@@ -1,0 +1,215 @@
+metadata:
+  name: "markdown-editing"
+  description: "Formatacao Markdown e simbolos seguros (sufixo espaco)"
+  version: "1.0.0"
+  author: "joaov"
+  tags: [markdown, symbols, writing]
+  updated: "2026-10-08"
+
+matches:
+# espanso markdown editing shortcuts
+# ============================
+
+# Horizontal rule
+- trigger: ":hr"
+  label: "Linha horizontal"
+  comment: "---"
+  replace: "---"
+
+# Bold/Italic shortcuts
+- trigger: "**"
+  label: "Negrito"
+  comment: "Delimitador **"
+  replace: "**"
+
+- trigger: "*"
+  label: "Italico"
+  comment: "Delimitador *"
+  replace: "*"
+
+# Headers
+- trigger: "### "
+  label: "Titulo nivel 3"
+  comment: "### "
+  replace: "### "
+
+- trigger: "## "
+  label: "Titulo nivel 2"
+  comment: "## "
+  replace: "## "
+
+- trigger: "# "
+  label: "Titulo nivel 1"
+  comment: "# "
+  replace: "# "
+
+# Links
+- trigger: "["
+  label: "Link - abre"
+  comment: "Abre o texto do link"
+  replace: "["
+
+- trigger: "(url)"
+  label: "Link - URL"
+  comment: "Destino do link"
+  replace: "(url)"
+
+# Images
+- trigger: "!"
+  label: "Imagem"
+  comment: "Abre sintaxe de imagem ![]()"
+  replace: "!"
+
+# Code blocks
+- trigger: "```"
+  label: "Bloco de codigo"
+  comment: "Delimitador de bloco de codigo"
+  replace: "```"
+
+# Blockquote
+- trigger: "> "
+  label: "Citacao (blockquote)"
+  comment: "> "
+  replace: "> "
+
+# Lists
+- trigger: "- "
+  label: "Lista"
+  comment: "Item de lista - "
+  replace: "- "
+
+# Tables
+- trigger: "| col1 | col2 |"
+  label: "Tabela - cabecalho"
+  comment: "Linha de cabecalho de tabela"
+  replace: "| col1 | col2 |"
+
+- trigger: "| --- | --- |"
+  label: "Tabela - divisor"
+  comment: "Linha divisoria de tabela"
+  replace: "| --- | --- |"
+
+# Horizontal separator
+- trigger: "---"
+  label: "Regra horizontal"
+  comment: "---"
+  replace: "---"
+
+# Task list
+- trigger: "- [ ] "
+  label: "Tarefa (checkbox)"
+  comment: "Item de lista de tarefas"
+  replace: "- [ ] "
+
+# Emphasis
+- trigger: "__"
+  label: "Sublinhado/forte"
+  comment: "Delimitador __"
+  replace: "__"
+
+# Symbols (with space to not break typing)
+- trigger: "{} "
+  label: "Chaves"
+  comment: "Chaves com espaco (nao quebra digitacao)"
+  replace: "{ } "
+
+- trigger: "() "
+  label: "Parenteses"
+  comment: "Parenteses com espaco"
+  replace: "( ) "
+
+- trigger: "|| "
+  label: "Barras duplas"
+  comment: "Pipes duplos"
+  replace: "|| "
+
+- trigger: "[] "
+  label: "Colchetes"
+  comment: "Colchetes com espaco"
+  replace: "[ ] "
+
+- trigger: "<> "
+  label: "Angulares"
+  comment: "Menor/maior que com espaco"
+  replace: "< > "
+
+- trigger: "`` "
+  label: "Codigo inline"
+  comment: "Backticks com espaco"
+  replace: "` `"
+
+- trigger: "~~ "
+  label: "Tachado"
+  comment: "Delimitador ~~ (strikethrough)"
+  replace: "~~ "
+
+- trigger: "** "
+  label: "Negrito (espaco)"
+  comment: "Negrito ativado apos espaco"
+  replace: "** "
+
+- trigger: "* "
+  label: "Italico (espaco)"
+  comment: "Italico ativado apos espaco"
+  replace: "* "
+
+- trigger: "^ "
+  label: "Circunflexo"
+  comment: "Caret com espaco"
+  replace: "^ "
+
+# Superscript
+- trigger: "^"
+  label: "Sobrescrito"
+  comment: "Notacao de sobrescrito"
+  replace: "^"
+
+# Footnote
+- trigger: "[^1]"
+  label: "Nota de rodape"
+  comment: "Referencia de rodape [^1]"
+  replace: "[^1]"
+
+# Mermaid diagram wrapper
+- trigger: "mermaid"
+  label: "Diagrama mermaid"
+  comment: "Bloco mermaid graph TD A --> B"
+  replace: "
+mermaid
+graph TD
+    A --> B
+
+"
+
+# Citation
+- trigger: "[@ref]"
+  label: "Citacao [@ref]"
+  comment: "Referencia de citacao"
+  replace: "[@ref]"
+
+# Footnotes definition
+- trigger: "^[1]: "
+  label: "Definicao de rodape"
+  comment: "Define o texto da nota [^1]"
+  replace: "[^1]: "
+
+# Math (basic)
+- trigger: "$$"
+  label: "Matematica display"
+  comment: "Delimitador $$"
+  replace: "$$"
+
+# Inline math
+- trigger: "$"
+  label: "Matematica inline"
+  comment: "Delimitador $"
+  replace: "$"
+
+# Abbreviation
+- trigger: "TODO"
+  label: "Marcador TODO"
+  comment: "Insere 'TODO: '"
+  replace: "TODO: "
+
+# Note: These use single triggers that expand with space or enter
+# Make sure your espanso toggle works properly with these

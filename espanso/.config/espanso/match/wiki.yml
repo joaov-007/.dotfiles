@@ -1,0 +1,241 @@
+metadata:
+  name: "wiki"
+  description: "Frontmatter do vault Wiki: schema unificado (Vault Conventions + ai-*), campos opcionais e atalhos"
+  version: "1.1.0"
+  author: "joaov"
+  tags: [wiki, obsidian, yaml, metadata]
+  updated: "2026-10-08"
+
+matches:
+# espanso wiki frontmatter shortcuts
+# ============================
+# Schema unificado: ordem canonica de Meta/Vault Conventions.md + bloco ai-*.
+# Ordem dos opcionais: expires, language, platform, scope, audience, keywords,
+# sources, source_retrieved, related, cssclasses.
+# Campos opcionais vazios sao OMITIDOS (nao geram linha nula).
+# Regras de aspas (Vault Conventions §2): valores com ": " ou " #" precisam de
+# aspas duplas — o bloco scope ja faz isso automaticamente; em title/titulos de
+# fonte, evite aspas duplas no texto digitado.
+# Observacao: nao use :fm sozinho, ele seria prefixo dos outros gatilhos.
+
+# --- Frontmatter completo (formulario) ---
+
+- trigger: ":fmnote"
+  label: "Frontmatter da nota"
+  comment: "Formulario: schema unificado completo, opcionais omitidos se vazios"
+  replace: |
+    ---
+    title: "{{form.title}}"
+    aliases: [{{form.aliases}}]
+    description: >-
+      {{form.desc}}
+    tags: [{{form.tags}}]
+    type: {{form.type}}
+    status: {{form.status}}
+    ai-gen: true
+    ai-model: "longcat-2.5-preview-free"
+    ai-provider: "opencode"
+    ai-prompt: "{{form.aiprompt}}"
+    ai-review: pending
+    created: {{today}}
+    updated: {{today}}
+    last_reviewed: {{today}}
+    review_after: {{review_after}}
+    {{expires_line}}
+    language: {{form.lang}}
+    {{optional_yaml}}
+    related:
+    {{related_yaml}}
+    cssclasses: [{{form.css}}]
+    ---
+    # {{form.title}}
+  vars:
+    - name: form
+      type: form
+      params:
+        layout: |
+          Titulo: [[title]]
+          Aliases (virgula, opcional): [[aliases]]
+          Descricao (1 linha): [[desc]]
+          Tags (kebab-case, virgula): [[tags]]
+          Type: [[type]]
+          Status: [[status]]
+          AI prompt (1 frase): [[aiprompt]]
+          Expires (AAAA-MM-DD, opcional): [[expires]]
+          Language: [[lang]]
+          Platform (virgula, opcional): [[platform]]
+          Scope (1 linha, opcional): [[scope]]
+          Audience (opcional): [[audience]]
+          Keywords (virgula, opcional): [[keywords]]
+          Sources (1 por linha: titulo;url;tipo;true|false, opcional): [[sources]]
+          Related (nomes das notas, virgula): [[related]]
+          CSS classes (opcional, virgula): [[css]]
+        fields:
+          type:
+            type: list
+            values: [reference, audit, runbook, cheatsheet, reference-list, guide, dossier, moc, template, note]
+          status:
+            type: list
+            values: [draft, evergreen, needs-action, review, archived]
+          lang:
+            type: list
+            values: [en, pt-BR]
+          sources:
+            multiline: true
+    - name: expires_line
+      type: shell
+      params:
+        cmd: |
+          e="{{form.expires}}"
+          if [ -n "$e" ]; then printf 'expires: %s' "$e"; fi
+    - name: optional_yaml
+      type: shell
+      params:
+        cmd: |
+          p="{{form.platform}}"
+          s="{{form.scope}}"
+          a="{{form.audience}}"
+          k="{{form.keywords}}"
+          c="{{form.sources}}"
+          o=""
+          nl='
+          '
+          put() { o="${o:+$o$nl}$1"; }
+          if [ -n "$p" ]; then
+            b=$(printf '%s' "$p" | tr ',' '\n' | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' -e '/^$/d' -e 's/^/  - /')
+            put "$(printf 'platform:\n%s' "$b")"
+          fi
+          if [ -n "$s" ]; then
+            case "$s" in
+              *": "*|*" #"*) put "scope: \"$s\"" ;;
+              *) put "scope: $s" ;;
+            esac
+          fi
+          if [ -n "$a" ]; then put "audience: $a"; fi
+          if [ -n "$k" ]; then
+            b=$(printf '%s' "$k" | tr ',' '\n' | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' -e '/^$/d' -e 's/^/  - /')
+            put "$(printf 'keywords:\n%s' "$b")"
+          fi
+          if [ -n "$c" ]; then
+            b=$(printf '%s\n' "$c" | awk -F';' 'NF >= 3 {
+              if (!h) { print "sources:"; h = 1 }
+              gsub(/^[ \t]+|[ \t]+$/, "", $1)
+              gsub(/^[ \t]+|[ \t]+$/, "", $2)
+              gsub(/^[ \t]+|[ \t]+$/, "", $3)
+              gsub(/^[ \t]+|[ \t]+$/, "", $4)
+              printf "  - title: \"%s\"\n    url: %s\n    kind: %s", $1, $2, $3
+              if ($4 != "") printf "\n    authoritative: %s", ($4 == "true" ? "true" : "false")
+              printf "\n"
+            }')
+            put "$b"
+            put "source_retrieved: $(date +%F)"
+          fi
+          printf '%s' "$o"
+    - name: related_yaml
+      type: shell
+      params:
+        cmd: |
+          in="{{form.related}}"
+          if [ -z "$in" ]; then printf '  []'; else
+            printf '%s' "$in" | tr ',' '\n' | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' -e '/^$/d' -e 's/\[\[//g' -e 's/\]\]//g' -e 's/^/  - "[[/' -e 's/$/]]"/'
+          fi
+    - name: today
+      type: date
+      params:
+        format: "%Y-%m-%d"
+    - name: review_after
+      type: date
+      params:
+        format: "%Y-%m-%d"
+        offset: 15552000
+
+# --- Atalhos para atualizar campos de notas existentes ---
+
+- trigger: ":fmupd"
+  label: "Bump updated"
+  comment: "Linha updated: com a data de hoje"
+  replace: "updated: {{today}}"
+  vars:
+    - name: today
+      type: date
+      params:
+        format: "%Y-%m-%d"
+
+- trigger: ":fmrev"
+  label: "Revisao da nota"
+  comment: "Linhas last_reviewed (hoje) + review_after (+180 dias)"
+  replace: |
+    last_reviewed: {{today}}
+    review_after: {{review_after}}
+  vars:
+    - name: today
+      type: date
+      params:
+        format: "%Y-%m-%d"
+    - name: review_after
+      type: date
+      params:
+        format: "%Y-%m-%d"
+        offset: 15552000
+
+- trigger: ":fmrel"
+  label: "Bloco related"
+  comment: "related: com wikilinks a partir de nomes separados por virgula"
+  replace: |
+    related:
+    {{related_yaml}}
+  vars:
+    - name: form
+      type: form
+      params:
+        layout: |
+          Related (nomes das notas, virgula): [[related]]
+    - name: related_yaml
+      type: shell
+      params:
+        cmd: |
+          in="{{form.related}}"
+          if [ -z "$in" ]; then printf '  []'; else
+            printf '%s' "$in" | tr ',' '\n' | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' -e '/^$/d' -e 's/\[\[//g' -e 's/\]\]//g' -e 's/^/  - "[[/' -e 's/$/]]"/'
+          fi
+
+- trigger: ":fmsource"
+  label: "Entrada de fonte"
+  comment: "Entrada indentada para colar dentro de sources: existente"
+  replace: "{{entry}}"
+  vars:
+    - name: form
+      type: form
+      params:
+        layout: |
+          Titulo da fonte: [[title]]
+          URL: [[url]]
+          Tipo: [[kind]]
+          Authoritative: [[auth]]
+        fields:
+          kind:
+            type: list
+            values: [documentation, wiki, manpage, faq, aur, registry, api, manual, repository, distro-wiki, distro-package, upstream-docs, third-party-blog, blog, guide, video]
+          auth:
+            type: list
+            values: ["true", "false"]
+    - name: entry
+      type: shell
+      params:
+        cmd: |
+          printf '  - title: "%s"\n    url: %s\n    kind: %s\n    authoritative: %s' '{{form.title}}' '{{form.url}}' '{{form.kind}}' '{{form.auth}}'
+
+- trigger: ":fmconf"
+  label: "Confidence"
+  comment: "confidence: (obrigatorio em audit/dossier)"
+  replace: "confidence: {{form.conf}}"
+  vars:
+    - name: form
+      type: form
+      params:
+        layout: |
+          Confidence: [[conf]]
+        fields:
+          conf:
+            type: list
+            values: [high, medium, low]

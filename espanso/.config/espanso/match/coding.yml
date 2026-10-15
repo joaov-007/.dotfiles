@@ -1,0 +1,90 @@
+metadata:
+  name: "code-templates"
+  description: "Templates de codigo: Python, HTML5, CSS e JavaScript"
+  version: "1.0.0"
+  author: "joaov"
+  tags: [code, python, html, css, js]
+  updated: "2026-10-08"
+
+matches:
+# espanso coding shortcuts
+# ============================
+
+# Python function template
+- trigger: ":pyfunc"
+  label: "Funcao Python"
+  comment: "Template def com docstring"
+  replace: |
+    def {{funcname}}({{params}}):
+        """{{docstring}}"""
+        pass
+
+# Python class template
+- trigger: ":pyclass"
+  label: "Classe Python"
+  comment: "Template class Python"
+  replace: |
+    class {{classname}}:
+        pass
+
+# HTML5 boilerplate
+- trigger: ":html5"
+  label: "HTML5 boilerplate"
+  comment: "Estrutura base de pagina HTML5"
+  replace: |
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>{{title}}</title>
+    </head>
+    <body>
+        {{content}}
+    </body>
+    </html>
+
+# CSS reset
+- trigger: ":cssreset"
+  label: "CSS reset"
+  comment: "Reset CSS para todos os elementos"
+  replace: |
+    /* CSS Reset */
+    html, body, div, span, applet, object, iframe,
+    h1, h2, h3, h4, h5, h6, p, blockquote, pre,
+    a, abbr, acronym, address, big, citation, code,
+    del, dfn, em, img, ins, kbd, q, s, strike, strong,
+    sub, sup, tt, var, b, u, i, center,
+    dl, dt, dd, ol, ul, li,
+    fieldset, form, label, legend,
+    table, caption, tbody, tfoot, thead, tr, th, td,
+    article, aside, canvas, details, embed, 
+    figure, figcaption, footer, header, hgroup, 
+    menu, nav, output, ruby, section, summary,
+    time, mark, audio, video {
+        margin: 0;
+        padding: 0;
+        border: 0;
+        outline: 0;
+        font-size: 100%;
+        vertical-align: baseline;
+        background: transparent;
+    }
+
+# JavaScript function template
+- trigger: ":jsfunc"
+  label: "Funcao JavaScript"
+  comment: "Template function com TODO"
+  replace: |
+    function {{funcname}}({{params}}) {
+        // TODO: Auto-generated function
+    }
+
+# JavaScript arrow function
+- trigger: ":jsarrow"
+  label: "Arrow function JS"
+  comment: "Template const = () => {}"
+  replace: |
+    const {{funcname}} = ({{params}}) => {
+        // TODO: Auto-generated arrow function
+    }

@@ -1,0 +1,66 @@
+metadata:
+  name: "system-info"
+  description: "Informacoes de sistema: ano, semana, mes, timestamp unix"
+  version: "1.0.0"
+  author: "joaov"
+  tags: [date, system]
+  updated: "2026-10-08"
+
+matches:
+# espanso system shortcuts
+# ============================
+
+# Current year
+- trigger: ":year"
+  label: "Ano atual"
+  comment: "Ano no formato YYYY"
+  replace: "{{mydate}}"
+  vars:
+    - name: mydate
+      type: date
+      params:
+        format: "%Y"
+
+# ISO week number
+- trigger: ":week"
+  label: "Semana ISO"
+  comment: "Numero da semana ISO do ano"
+  replace: "{{mydate}}"
+  vars:
+    - name: mydate
+      type: date
+      params:
+        format: "%W"
+
+# Month name
+- trigger: ":month"
+  label: "Mes por extenso"
+  comment: "Nome do mes atual"
+  replace: "{{mydate}}"
+  vars:
+    - name: mydate
+      type: date
+      params:
+        format: "%B"
+
+# Day of year
+- trigger: ":dayofyear"
+  label: "Dia do ano"
+  comment: "Numero do dia no ano (001-366)"
+  replace: "{{mydate}}"
+  vars:
+    - name: mydate
+      type: date
+      params:
+        format: "%j"
+
+# Epoch timestamp
+- trigger: ":timestamp"
+  label: "Timestamp Unix"
+  comment: "Epoch em segundos"
+  replace: "{{mytime}}"
+  vars:
+    - name: mytime
+      type: date
+      params:
+        format: "%s"

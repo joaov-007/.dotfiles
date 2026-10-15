@@ -1,0 +1,78 @@
+metadata:
+  name: "productivity-core"
+  description: "Templates Java, assinatura de e-mail, contato e frases prontas"
+  version: "1.0.0"
+  author: "joaov"
+  tags: [java, email, contact]
+  updated: "2026-10-08"
+
+matches:
+# espanso productivity shortcuts
+# ============================
+
+# Java class template
+- trigger: ":javaclass"
+  label: "Classe Java"
+  comment: "Template de classe Java com main()"
+  replace: |
+    public class {{classname}} {
+        private static final long serialVersionUID = 1L;
+
+        public static void main(String[] args) {
+            // TODO: Auto-generated method stub
+        }
+    }
+
+# Java interface template
+- trigger: ":javainterface"
+  label: "Interface Java"
+  comment: "Template de interface Java"
+  replace: |
+    public interface {{classname}} {
+        // Method signatures
+    }
+
+# Greeting shortcut
+- trigger: ":greeting"
+  label: "Saudacao"
+  comment: "Hello! How can I help you today?"
+  replace: "Hello! How can I help you today?"
+
+# Email signature
+- trigger: ":sig"
+  label: "Assinatura de e-mail"
+  comment: "Best regards, Joao Vitor - Software Developer"
+  replace: |
+    Best regards,
+    Joao Vitor
+    Software Developer
+
+# Phone number
+- trigger: ":phone"
+  label: "Telefone"
+  comment: "Numero de telefone BR"
+  replace: "(11) 98765-4321"
+
+# Address
+- trigger: ":addr"
+  label: "Endereco"
+  comment: "Endereco em Sao Paulo, SP"
+  replace: "Rua das Flores, 123 - São Paulo, SP, 01234-567"
+
+# Common phrase when busy
+- trigger: ":busy"
+  label: "Ocupado"
+  comment: "Resposta: estou ocupado, retorno em breve"
+  replace: "I'm currently busy, I'll get back to you shortly."
+
+# TODO comment
+- trigger: ":todo"
+  label: "Comentario TODO"
+  comment: "// TODO: Implement this feature"
+  replace: "// TODO: Implement this feature"
+
+# Lorem ipsum placeholder
+- trigger: ":lorem"
+  label: "Lorem ipsum"
+  comment: "Texto placeholder Lorem ipsum"
+  replace: "Lorem ipsum dolor sit amet, consectetur adipiscing elit."
