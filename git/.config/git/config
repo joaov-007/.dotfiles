@@ -1,9 +1,41 @@
 [user]
-	name = joaov-007
-	email = 79527341+joaov-007@users.noreply.github.com
+	name = joaov
+	email = 9527341+joaov-007@users.noreply.github.com
 [credential "https://github.com"]
 	helper = 
 	helper = !/usr/bin/gh auth git-credential
 [credential "https://gist.github.com"]
 	helper = 
 	helper = !/usr/bin/gh auth git-credential
+
+# Linear history.
+#
+# A pull rebases instead of merging, a push sends only the branch you are
+# on, and a rebase stashes your work instead of refusing to start. The
+# result is a history that is a straight line, with no merge commits to
+# untangle later.
+[rebase]
+	autoStash = true
+	autoSquash = true
+[pull]
+	rebase = true
+[push]
+	default = current
+[fetch]
+	prune = true
+
+# zdiff3 keeps the common ancestor in the middle of a conflict, instead of
+# only showing ours and theirs.
+[merge]
+	conflictStyle = zdiff3
+
+# Remember how a conflict was resolved, so the same one does not have to
+# be solved twice while rebasing.
+[rerere]
+	enabled = true
+
+# delta renders the diffs.
+[core]
+	pager = delta
+[interactive]
+	diffFilter = delta --paging=never
