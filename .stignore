@@ -1,0 +1,8 @@
+// Syncthing ignore patterns for dotfiles
+.git
+.gitignore
+*.tmp
+*.swp
+.DS_Store
+.cache
+.local/share/Trash
