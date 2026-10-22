@@ -29,6 +29,11 @@ require("lazy").setup({
 dofile(vim.g.base46_cache .. "defaults")
 dofile(vim.g.base46_cache .. "statusline")
 
+for _, v in ipairs { "python3_provider", "node_provider" } do
+  vim.g["loaded_" .. v] = nil
+  vim.cmd("runtime " .. v)
+end
+
 require "options"
 require "nvchad.autocmds"
 require "autocmd"
