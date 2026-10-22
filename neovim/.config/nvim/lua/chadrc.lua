@@ -12,7 +12,6 @@ M.base46 = {
   -- 	Comment = { italic = true },
   -- 	["@comment"] = { italic = true },
   -- },
-  integrations = { "defaults", 'devicons' },
 }
 
 M.nvdash = { load_on_startup = true }
