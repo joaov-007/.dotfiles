@@ -10,11 +10,29 @@
 
 ```
 .
+├── nixos/          # config NixOS (flake dendrítico) — veio do nixos-config
 ├── scripts/        # único diretório de scripts
-│   └── stow/       # aplica a blacklist do stow
+│   ├── git/        # bootstrap de config do git
+│   ├── nixos/      # suíte de checks do flake
+│   ├── stow/       # aplica a blacklist do stow
+│   └── unbound/    # gerador de adblock do unbound
 ├── etc/            # arquivos espelhados de /etc
 ├── zsh/ neovim/    # config de home (espelhada em ~/.config)
 └── ...             # flags por app, rclone-services, etc.
+```
+
+O `nixos/` é um *subtree* do antigo repositório `nixos-config`: o histórico
+completo foi preservado via merge de históricos não relacionados, então
+`git log nixos/` mostra a história original.
+
+## Uso
+
+```bash
+# rebuild do sistema NixOS
+sudo nixos-rebuild switch --flake ./nixos#bacon
+
+# suíte de checks
+./scripts/nixos/test-all.sh
 ```
 
 ## Stow
@@ -50,6 +68,6 @@ sudo stow -t /etc etc
 ```
 
 ## Plans
-- [ ] Setup Nix
+- [x] Setup Nix
 - [ ] Learn flakes
-- [ ] Setup home-maneger
+- [x] Setup home-maneger

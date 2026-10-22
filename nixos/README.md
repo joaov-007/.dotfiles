@@ -65,8 +65,12 @@ Para limpar installs imperativos antigos: `nix profile list` e `nix profile remo
 
 ## Scripts
 
-- `scripts/git/set-collections-git.sh` — bootstrap da configuração do git
+Os scripts vive na pasta `scripts/` da raiz do repositório (fora de
+`nixos/`, para manter um único diretório de scripts):
+
+- `../scripts/git/set-collections-git.sh` — bootstrap da configuração do git
   quando o home-manager ainda não está disponível.
+- `../scripts/nixos/test-all.sh` — roda a suíte de checks do flake.
 
 ## Agradecimentos
 
