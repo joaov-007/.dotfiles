@@ -1,0 +1,14 @@
+# mise — the tool version manager
+#
+# This replaces the old asdf setup: one file, one binary, and the tool
+# list lives in the dotfiles instead of in a dotfile-shaped .tool-versions
+# that asdf read from the current directory.
+#
+# The version manager is set up in zsh/.config/zsh/05-mise.zsh, which
+# evaluates `mise activate zsh`. Everything else — bat, eza, delta, fzf,
+# zoxide, atuin — is a pacman package and is deliberately absent here.
+
+[tools]
+jd = "latest"
+node = "latest"
+npm = "latest"

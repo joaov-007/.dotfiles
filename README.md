@@ -5,6 +5,7 @@
 - Yazi File Explorer
 - Zinit Plugin Mananger
 - Atuin Shell History
+- Mise — gerenciador de versões (substitui o asdf)
 
 ## Estrutura
 
@@ -18,6 +19,7 @@
 │   └── unbound/    # gerador de adblock do unbound
 ├── etc/            # arquivos espelhados de /etc
 ├── zsh/ neovim/    # config de home (espelhada em ~/.config)
+├── mise/           # config do mise (~/.config/mise/config.toml)
 └── ...             # flags por app, rclone-services, etc.
 ```
 
