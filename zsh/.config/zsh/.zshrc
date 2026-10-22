@@ -1,20 +1,19 @@
-# Enable Powerlevel10k instant prompt. Should stay close to the top of ~/.zshrc.
-# Initialization code that may require console input (password prompts, [y/n]
-# confirmations, etc.) must go above this block; everything else may go below.
-if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]; then
-  source "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh"
-fi
+# ~/.config/zsh/.zshrc
+# Entry point. Sourced by zsh on every interactive shell.
+# Everything else lives in this directory; see README.md.
 
-autoload -Uz compinit
-compinit
+# Config root — set first so the sourced files can rely on it.
+: ${ZDOTDIR:=$HOME/.config/zsh}
 
+# Keep plugin/completion caches next to the config instead of in $HOME.
+: ${XDG_CACHE_HOME:=$HOME/.cache}
+: ${XDG_DATA_HOME:=$HOME/.local/share}
 
-if test -d $ZDOTDIR; then
-	for files in $ZDOTDIR/**/*.zsh; do
-		test -r "$files" && source "$files"
-	done
-	unset files
-fi
-
-# To customize prompt, run `p10k configure`
-[[ ! -f "$ZDOTDIR/.p10k.zsh" ]] || source "$ZDOTDIR/.p10k.zsh"
+# Source every NN-*.zsh here in name order. The NN- prefixes define load
+# order, which matters: options before history (they interact), completion
+# before the plugins (fzf-tab and zoxide both hook into it), and the prompt
+# after everything else (pure owns PROMPT).
+for _zsh_conf in "$ZDOTDIR"/[0-9][0-9]-*.zsh; do
+  [[ -r $_zsh_conf ]] && source "$_zsh_conf"
+done
+unset _zsh_conf

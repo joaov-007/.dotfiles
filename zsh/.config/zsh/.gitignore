@@ -1,2 +1,5 @@
+# Completion cache and history live outside the config, but a stray copy
+# in here should never be committed.
 .zcompdump
 .zsh_history
+.zcompdump*
