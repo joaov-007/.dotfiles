@@ -23,6 +23,17 @@ M.opts = {
     "eslint_d",
     "shellcheck",
     "flake8",
+
+    -- Debuggers
+    "delve",
+    "debugpy",
+    "js-debug-adapter",
+
+    -- Extras
+    "yaml-language-server",
+    "json-lsp",
+    "dockerfile-language-server",
+    "terraform-ls",
   },
 }
 
