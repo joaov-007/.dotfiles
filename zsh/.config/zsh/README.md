@@ -70,6 +70,28 @@ startup, from the environment it already has. Setting `ZDOTDIR` inside
 but variable assignments. `~/.zshrc` remains only as a fallback in case
 `ZDOTDIR` is ever unset.
 
+## Tool versions
+
+`mise` manages the tool versions. It is the only version manager on this
+machine — the old asdf setup is gone.
+
+Which tools exist and which version each one is pinned to lives in
+`mise/.config/mise/config.toml`, stowed to `~/.config/mise/config.toml`:
+
+```toml
+[tools]
+jd = "latest"
+node = "latest"
+npm = "latest"
+```
+
+`05-mise.zsh` evaluates `mise activate zsh`, which puts the shims at the
+front of `PATH` and re-resolves the versions when the working directory
+changes.
+
+Everything else — `fzf`, `zoxide`, `atuin`, `bat`, `eza`, `delta`, `git` —
+is a pacman package and is deliberately absent from that list.
+
 ## Plugins
 
 zinit manages the zsh plugins. It is **not** used as a package manager:
