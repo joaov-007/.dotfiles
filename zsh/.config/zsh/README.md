@@ -93,6 +93,10 @@ changes.
 Everything else — `fzf`, `zoxide`, `atuin`, `bat`, `eza`, `delta`, `git` —
 is a pacman package and is deliberately absent from that list.
 
+The file holds no comments on purpose: mise rewrites it when it changes a
+pin, and the rewrite drops anything it cannot parse back. The list of
+tools it pins is short enough to read at a glance anyway.
+
 ## Plugins
 
 zinit manages the zsh plugins. It is **not** used as a package manager:
