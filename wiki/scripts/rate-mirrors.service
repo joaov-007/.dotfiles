@@ -1,0 +1,13 @@
+[Unit]
+Description=Rate and sort pacman mirrors by measured speed
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/bash /home/joaov/Projects/Wiki/rate-mirrors.sh
+Environment=PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+Nice=10
+
+[Install]
+WantedBy=multi-user.target
