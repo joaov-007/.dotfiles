@@ -1,0 +1,50 @@
+// ─── System, Screenshots & Media ───
+//  Included from binds.kdl — edit here, not in binds.kdl
+binds {
+
+    // ── Overview (vim Ctrl+o) ──
+    Mod+o hotkey-overlay-title="Toggle Overview" repeat=false { toggle-overview; }
+    Mod+Escape hotkey-overlay-title="Toggle Keyboard Shortcuts Inhibitor" repeat=false allow-inhibiting=false { toggle-keyboard-shortcuts-inhibit; }
+
+    // ── Screenshot ──
+    Print repeat=false hotkey-overlay-title="Copy Screenshot to Clipboard: grim | wl-copy" { spawn "sh" "-c" "grim - | wl-copy"; }
+    CTRL+Shift+2 repeat=false hotkey-overlay-title="Screenshot Screen" { screenshot-screen; }
+    CTRL+Shift+3 repeat=false hotkey-overlay-title="Screenshot Window" { screenshot-window; }
+    Mod+Print repeat=false hotkey-overlay-title="Screenshot Region: grim -g $(slurp)" { spawn "grim" "-g" "$(slurp)"; }
+    Mod+Shift+Print repeat=false hotkey-overlay-title="Screenshot Region to Clipboard: grim -g $(slurp) - | wl-copy" { spawn "grim" "-g" "$(slurp)" "-"; }
+
+    // ── Media Keys (Noctalia IPC) ──
+    XF86AudioRaiseVolume allow-when-locked=true hotkey-overlay-title="Volume Up: noctalia volume-up" { spawn-sh "noctalia msg volume-up"; }
+    XF86AudioLowerVolume allow-when-locked=true hotkey-overlay-title="Volume Down: noctalia volume-down" { spawn-sh "noctalia msg volume-down"; }
+    XF86AudioMute allow-when-locked=true hotkey-overlay-title="Toggle Mute: noctalia volume-mute" { spawn-sh "noctalia msg volume-mute"; }
+    XF86AudioMicMute allow-when-locked=true hotkey-overlay-title="Toggle Microphone Mute: noctalia mic-mute" { spawn-sh "noctalia msg mic-mute"; }
+    XF86AudioNext allow-when-locked=true hotkey-overlay-title="Next Track: noctalia media next" { spawn-sh "noctalia msg media next"; }
+    XF86AudioPrev allow-when-locked=true hotkey-overlay-title="Previous Track: noctalia media previous" { spawn-sh "noctalia msg media previous"; }
+    XF86AudioPlay allow-when-locked=true hotkey-overlay-title="Play/Pause: noctalia media toggle" { spawn-sh "noctalia msg media toggle"; }
+    XF86AudioPause allow-when-locked=true hotkey-overlay-title="Play/Pause: noctalia media toggle" { spawn-sh "noctalia msg media toggle"; }
+    XF86MonBrightnessUp allow-when-locked=true hotkey-overlay-title="Brightness Up: noctalia brightness-up" { spawn-sh "noctalia msg brightness-up"; }
+    XF86MonBrightnessDown allow-when-locked=true hotkey-overlay-title="Brightness Down: noctalia brightness-down" { spawn-sh "noctalia msg brightness-down"; }
+
+    // ── Keyboard Layout (us / br, track-layout "global") ──
+    //  Uses niri's native switch-layout — no xkb grp: option is set
+    //  in input/input.kdl, so the layout won't switch twice by accident.
+    Mod+Shift+Space hotkey-overlay-title="Switch Keyboard Layout: next" { switch-layout "next"; }
+
+    // ── Power Off Monitors (vim :qa!) ──
+    Mod+Shift+P repeat=false hotkey-overlay-title="Power Off Monitors" { power-off-monitors; }
+
+    // ── Screen Mirror (wl-mirror → TV) ──
+    //  Toggles mirroring eDP-1 (laptop screen) fullscreen onto
+    //  HDMI-A-1 (TV). If wl-mirror is running, kill it; otherwise
+    //  start it. The TV must be on before pressing the bind, or
+    //  the window fails to create and the bind silently does nothing.
+    Mod+Alt+m repeat=false hotkey-overlay-title="Toggle Screen Mirror (TV): wl-mirror" { spawn-sh "if pgrep -x wl-mirror >/dev/null; then pkill -x wl-mirror; else wl-mirror --fullscreen-output HDMI-A-1 eDP-1; fi"; }
+
+    // ── Reload Config ──
+    //  `load-config-file` exists only as an IPC action — it is skipped in
+    //  the config decoder, so it must go through `niri msg`. The old
+    //  `niri msg reload-config` subcommand no longer exists (niri 26.04)
+    //  and made this bind fail silently.
+    //  repeat=false: a held key would reload an already-reloaded config.
+    Mod+Shift+r repeat=false hotkey-overlay-title="Reload Niri Config: niri msg action load-config-file" { spawn-sh "niri msg action load-config-file"; }
+}

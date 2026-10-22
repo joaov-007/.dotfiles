@@ -1,0 +1,83 @@
+// ─── Window Rules ───────────────────────────────────────────────────
+//  Included from config.kdl — edit here, not in config.kdl
+
+window-rule {
+    exclude is-focused=true
+    opacity 0.9
+    geometry-corner-radius 12
+    clip-to-geometry true
+    background-effect {
+        blur true
+    }
+    shadow {
+        on
+        softness 40
+        spread 5
+        offset x=0 y=5
+        draw-behind-window true
+        color "#00000064"
+    }
+}
+
+// ─── Browser (LibreWolf) ───────────────────────────────────────
+//  Opts the browser back out of the global rule above. Rule order
+//  matters: a later matching rule overrides an earlier one.
+//  0.9 opacity + blur softens text-heavy pages and costs a blur pass
+//  on every frame, which is the wrong trade for a browser.
+//  Corner radius and clipping are left alone — those look fine.
+window-rule {
+    match app-id="^librewolf$"
+
+    opacity 1.0
+    background-effect {
+        blur false
+    }
+    shadow {
+        off
+    }
+}
+
+// ─── Browser (Brave + PWAs) ─────────────────────────────────────
+//  Same reasoning as LibreWolf above: opaque, no blur, no shadow.
+//  `^brave` covers the main window (`brave-browser`) and every
+//  installed PWA/Brave-App window (`brave-chatgpt.com__-Default`,
+//  `brave-web.whatsapp.com__-Default`, …), so one rule handles all.
+window-rule {
+    match app-id="^brave"
+
+    opacity 1.0
+    background-effect {
+        blur false
+    }
+    shadow {
+        off
+    }
+}
+
+// ─── Terminal Variants ──────────────────────────────────────────
+//  Matched by the `--class` that binds.kdl passes to alacritty.
+//  A plain `alacritty` (no --class) is not matched here, so it keeps
+//  tiling normally.
+
+// Dropdown terminal — anchored to the top edge, half the screen tall.
+// Wayland apps report the full parent as the parent window, so a top
+// edge stays a top edge instead of the window jumping to whichever
+// monitor the pointer is on.
+window-rule {
+    match app-id="^dropdown$"
+
+    open-floating true
+    default-floating-position x=0 y=0 relative-to="top"
+    default-window-height { proportion 0.5; }
+    default-column-width { proportion 0.8; }
+}
+
+// Floating terminal — free-floating at a fixed centred size.
+window-rule {
+    match app-id="^niri-float$"
+
+    open-floating true
+    default-floating-position x=0 y=0 relative-to="top"
+    default-window-height { proportion 0.7; }
+    default-column-width { proportion 0.7; }
+}

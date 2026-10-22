@@ -23,6 +23,10 @@
 └── ...             # flags por app, rclone-services, etc.
 ```
 
+A documentação completa está em [`wiki/`](wiki/README.md): o mapa do
+repositório, a instalação em outra máquina, o shell, o editor, o NixOS, a
+configuração de sistema e os scripts.
+
 O `nixos/` é um *subtree* do antigo repositório `nixos-config`: o histórico
 completo foi preservado via merge de históricos não relacionados, então
 `git log nixos/` mostra a história original.
@@ -51,6 +55,8 @@ listado nunca é linkado:
 | `scripts`   | ferramentas do repositório                          |
 | `etc`       | vai para `/etc` (`sudo stow -t /etc etc`)           |
 | `zsh.old`   | resto do layout antigo                              |
+| `wiki`      | documentação, não é um dotfile                      |
+| `TODO.md`   | a lista de tarefas, pelo mesmo motivo               |
 
 O stow só lê esse arquivo na raiz do package, então `scripts/stow/stow.sh`
 passa a mesma blacklist para o stow e exige os packages na mão:

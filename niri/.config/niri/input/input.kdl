@@ -1,0 +1,41 @@
+// ─── Input ──────────────────────────────────────────────────────────
+//  Included from config.kdl — edit here, not in config.kdl.
+//  Bloco único de input: basicsettings.kdl não deve ter um input {}
+
+input {
+    mod-key "Super"
+
+    keyboard {
+        xkb {
+            layout "us,br"
+            variant "altgr-intl"
+        }
+        repeat-delay 200
+        repeat-rate 40
+        track-layout "global"
+        numlock
+    }
+
+    touchpad {
+        tap
+        dwt
+        natural-scroll
+        accel-speed 0.5
+        accel-profile "adaptive"
+        scroll-method "two-finger"
+        // button-areas faz press com 2 dedos virar left click (niri #2142).
+        click-method "clickfinger"
+        // 2 dedos = right click, 3 dedos = middle click.
+        tap-button-map "left-right-middle"
+        drag false
+    }
+
+    mouse {
+        // natural-scroll
+        accel-speed 0.2
+        accel-profile "adaptive"
+    }
+
+    focus-follows-mouse max-scroll-amount="0%"
+    warp-mouse-to-focus
+}

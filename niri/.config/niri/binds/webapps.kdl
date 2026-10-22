@@ -1,0 +1,24 @@
+// ─── Web Apps (Brave, chromeless windows) ───
+//  Included from binds.kdl — edit here, not in binds.kdl
+//
+//  Each site opens as its own app window: no tabs, no toolbar, so it
+//  behaves like a native app under the tiling layout.
+//  Brave runs as a *user* flatpak, hence `--user --command=brave`.
+//
+//  Repeated presses may stack a second window. Once you install a site
+//  as a PWA in Brave (the install icon in the omnibox), swap
+//  `--app=https://…` for `--app-id=<hash>` to get a dedicated icon and
+//  single-instance behaviour (re-press focuses the open window).
+//  Hashes live in:
+//      ~/.local/share/applications/brave-*-Default.desktop
+binds {
+
+    Mod+Alt+g hotkey-overlay-title="GitHub (Web App): brave --app=github.com"   { spawn "flatpak" "run" "--user" "--command=brave" "com.brave.Browser" "--app=https://github.com"; }
+    Mod+Alt+i hotkey-overlay-title="GitLab (Web App): brave --app=gitlab.com"   { spawn "flatpak" "run" "--user" "--command=brave" "com.brave.Browser" "--app=https://gitlab.com"; }
+    Mod+Alt+d hotkey-overlay-title="Drive (Web App): brave --app=drive.google.com"    { spawn "flatpak" "run" "--user" "--command=brave" "com.brave.Browser" "--app=https://drive.google.com"; }
+    Mod+Alt+c hotkey-overlay-title="Codeberg (Web App): brave --app=codeberg.org" { spawn "flatpak" "run" "--user" "--command=brave" "com.brave.Browser" "--app=https://codeberg.org"; }
+    Mod+Alt+y hotkey-overlay-title="YouTube (Web App): brave --app=youtube.com"  { spawn "flatpak" "run" "--user" "--command=brave" "com.brave.Browser" "--app=https://www.youtube.com"; }
+    Mod+Alt+w hotkey-overlay-title="WhatsApp (Web App): brave --app=web.whatsapp.com" { spawn "flatpak" "run" "--user" "--command=brave" "com.brave.Browser" "--app=https://web.whatsapp.com"; }
+    Mod+Alt+a hotkey-overlay-title="ChatGPT (Web App): brave --app=chatgpt.com"  { spawn "flatpak" "run" "--user" "--command=brave" "com.brave.Browser" "--app=https://chatgpt.com"; }
+
+}
