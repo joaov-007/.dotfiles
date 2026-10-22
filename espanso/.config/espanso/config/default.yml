@@ -3,5 +3,5 @@
 
 toggle_key: ALT
 auto_restart: true
-backend: Clipboard
+backend: Auto
 clipboard_threshold: 100
