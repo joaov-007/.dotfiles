@@ -5,7 +5,8 @@ local servers = {
   awk_ls = {},
   bashls = {},
   emmet_ls = {},
-
+  ts_ls = {},
+  eslint = {},
   pyright = {
     settings = {
       python = {
@@ -13,6 +14,14 @@ local servers = {
           autoSearchPaths = true,
           typeCheckingMode = "basic",
         },
+      },
+    },
+  },
+  lua_ls = {
+    settings = {
+      Lua = {
+        diagnostics = { globals = { "vim" } },
+        workspace = { checkThirdParty = false },
       },
     },
   },
