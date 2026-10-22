@@ -96,20 +96,18 @@ extract() {
   esac
 }
 
-# Compress a directory into an archive; pick the format from the extension.
+# Compress paths into an archive; the format comes from the extension.
+#   pack release.tar.gz dist/ docs/
 pack() {
-  local name=$1; shift
-  local file
-  for file in "$name" "$@"; do
-    case $file in
-      *.tar.bz2) tar cjf  "$file" "${file%.tar.bz2}" ;;
-      *.tar.gz)  tar czf  "$file" "${file%.tar.gz}" ;;
-      *.tar.xz)  tar cJf  "$file" "${file%.tar.xz}" ;;
-      *.tar.zst) tar --zstd -cf "$file" "${file%.tar.zst}" ;;
-      *.tar)     tar cf   "$file" "${file%.tar}" ;;
-      *.zip)     zip -r  "$file" "${file%.zip}" ;;
-      *) print -u2 "pack: unknown format: $file" && return 1 ;;
-    esac
-    print -r -- "created ${file}"
-  done
+  (( $# < 2 )) && { print -u2 "pack: usage: pack <archive> <path>..."; return 1; }
+  local archive=$1; shift
+  case $archive in
+    *.tar.bz2) tar cjf  "$archive" "$@" ;;
+    *.tar.gz)  tar czf  "$archive" "$@" ;;
+    *.tar.xz)  tar cJf  "$archive" "$@" ;;
+    *.tar.zst) tar --zstd -cf "$archive" "$@" ;;
+    *.tar)     tar cf   "$archive" "$@" ;;
+    *.zip)     zip -r  "$archive" "$@" ;;
+    *) print -u2 "pack: unknown format: $archive"; return 1 ;;
+  esac
 }

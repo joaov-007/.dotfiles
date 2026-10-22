@@ -20,8 +20,15 @@ git_lg() {
 
   # --no-pager everywhere: the pager is delta (see ~/.config/git/config),
   # and a pager inside an fzf preview is just noise.
+  #
+  # --color=always is what puts the colour in: %C(auto) only colours when
+  # the output is a terminal, and here it is a pipe into fzf.
+  #
+  # The sha comes first and carries no colour of its own, so {1} in the
+  # preview and $1 below are the plain hash and nothing else.
   local sha
-  sha=$(git --no-pager log --format='%C(auto)%h%C(reset) %C(yellow)%d%C(reset) %s %C(green)(%cr) %C(blue)<%an>%C(reset)' "$@" |
+  sha=$(git --no-pager log --color=always \
+          --format='%h %C(yellow)%d%C(reset) %s %C(green)(%cr) %C(blue)<%an>%C(reset)' "$@" |
     fzf --ansi --no-sort --prompt='log> ' \
         --preview 'git --no-pager show --color=always --stat {1}' \
         --preview-window='right:60%:wrap' |
@@ -40,7 +47,7 @@ git_br() {
   local branch
   branch=$(git for-each-ref --format='%(refname:short)' refs/heads refs/remotes |
     grep -v '/HEAD$' |
-    fzf --prompt='branch> ' --preview 'git log --oneline --no-decorate -1 {}')
+    fzf --prompt='branch> ' --preview 'git --no-pager log --oneline --no-decorate -1 {}')
 
   [[ -z $branch ]] && return 1
 
@@ -68,9 +75,9 @@ git_ref() {
   fi
 
   local sha
-  sha=$(git reflog --format='%C(auto)%h%C(reset) %C(yellow)%gd%C(reset) %gs' |
+  sha=$(git reflog --color=always --format='%h %C(yellow)%gd%C(reset) %gs' |
     fzf --ansi --prompt='reflog> ' \
-        --preview 'git show --color=always --stat {1}' |
+        --preview 'git --no-pager show --color=always --stat {1}' |
     awk '{print $1}')
 
   [[ -n $sha ]] && git show --color=always "$sha"
