@@ -26,6 +26,19 @@ etc
 # --- leftovers from the old zsh layout
 zsh.old
 
+# --- documentation: it is read in the browser, not linked into $HOME
+wiki
+
+# --- the task list, for the same reason
+^/TODO\.md$
+
+# --- written by the noctalia theme template on every theme change: it is
+# --- machine state, not a dotfile. The pattern is not anchored so it matches
+# --- the path inside the "niri" package (.config/niri/noctalia.kdl) and the
+# --- path inside the repository (niri/.config/niri/noctalia.kdl), while
+# --- leaving the hand written theme/noctalia.kdl alone
+/\.config/niri/noctalia\.kdl$
+
 # --- stow defaults, repeated because this file replaces them
 RCS
 CVS
