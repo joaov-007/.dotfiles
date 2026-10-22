@@ -15,6 +15,20 @@
 if (( $+commands[fzf] )); then
   eval "$(fzf --zsh 2>/dev/null)"
   (( $+functions[fzf-tab-complete] )) && fzf_default_completion=fzf-tab-complete
+
+  # How every fzf window looks. fzf-tab reads these too, because
+  # `use-fzf-default-opts` is on below; it overrides the height on its
+  # own, since the completion menu is sized to the number of matches.
+  export FZF_DEFAULT_OPTS="--height 50% --layout=reverse --border rounded --info=inline"
+
+  # fd instead of find: it is faster and it skips .gitignore'd files by
+  # default, which is what a file picker wants.
+  if (( $+commands[fd] )); then
+    export FZF_CTRL_T_COMMAND="fd --type f --hidden --follow --exclude .git"
+    export FZF_CTRL_T_OPTS="--preview 'bat --color=always --style=plain --preview-window right:60%:wrap {}'"
+    export FZF_ALT_C_COMMAND="fd --type d --hidden --follow --exclude .git"
+    export FZF_ALT_C_OPTS="--preview 'eza --tree --color=always --level=2 {}'"
+  fi
 fi
 
 # ── fzf-tab styles ──────────────────────────────────────────

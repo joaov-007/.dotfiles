@@ -1,4 +1,4 @@
-# 45-enviroment.zsh — environment variables
+# 45-environment.zsh — environment variables
 #
 # Plain exports only. ZDOTDIR lives in ~/.zshenv and HISTFILE in
 # 20-history.zsh, so neither is repeated here.
@@ -10,6 +10,19 @@ export GITHUB_USERNAME="joaov-007"
 export EDITOR="nvim"
 export VISUAL="nvim"
 export DIFFPROG="nvim -d"
+
+# ── Pagers ─────────────────────────────────────────────────
+# bat reads the man page as text and keeps the bold and the underline,
+# which plain `man` piping throws away. `col -bx` first turns the
+# backspaces into plain text, otherwise bat sees the raw escapes.
+if (( $+commands[bat] )); then
+  export MANPAGER="sh -c 'col -bx | bat --language=man --style=plain --paging=always'"
+fi
+
+# -R keeps the colours of the output and leaves the raw escapes alone;
+# -r would interpret every escape sequence, which turns bold into
+# overstrike.
+export PAGER="${PAGER:-less -R}"
 
 # ── Rust and Go ────────────────────────────────────────────
 # Cargo writes its build artifacts straight into ~/.local/bin, which is
