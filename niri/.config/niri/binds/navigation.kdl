@@ -1,0 +1,21 @@
+// ─── Cycling & Scrolling ───
+//  Included from binds.kdl — edit here, not in binds.kdl
+binds {
+
+    // ── Window Cycling (vim :bn/:bp) ──
+    Mod+Tab hotkey-overlay-title="Focus Next Column: focus-column-right" { focus-column-right; }
+    Mod+Shift+Tab hotkey-overlay-title="Focus Previous Column: focus-column-left" { focus-column-left; }
+
+    // ── Workspace Cycling (vim gt/gT) ──
+    Mod+period hotkey-overlay-title="Next Workspace: focus-workspace-down" { focus-workspace-down; }
+    Mod+s hotkey-overlay-title="Previous Workspace: focus-workspace-up" { focus-workspace-up; }
+
+    // ── Scroll (vim scrolling) ──
+    Mod+WheelScrollDown hotkey-overlay-title="Next Workspace" cooldown-ms=150 { focus-workspace-down; }
+    Mod+WheelScrollUp hotkey-overlay-title="Previous Workspace" cooldown-ms=150 { focus-workspace-up; }
+    //  Mouse-wheel axis binds get a cooldown too: a single flick fires many
+    //  ticks, which would otherwise jump several columns at once.
+    Mod+WheelScrollRight hotkey-overlay-title="Focus Column Right" cooldown-ms=150 { focus-column-right; }
+    Mod+WheelScrollLeft hotkey-overlay-title="Focus Column Left" cooldown-ms=150 { focus-column-left; }
+
+}

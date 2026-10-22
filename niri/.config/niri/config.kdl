@@ -1,0 +1,39 @@
+// ═══════════════════════════════════════════════════════════════════
+//  🌙 NOCTLIA — Niri Config
+//  Noctalia shell · Vim-centric · Blazing fast
+// ═══════════════════════════════════════════════════════════════════
+//
+//  This file is only an index. Everything else lives in folders:
+//
+//    input/input.kdl        keyboard, touchpad, mouse, focus behaviour
+//    layout/layout.kdl      gaps, column widths, animations
+//    layout/window-rules.kdl  opacity, blur, shadow, corner radius
+//    binds.kdl              index → binds/*.kdl
+//    theme/environment.kdl  theme + toolkit env vars
+//    theme/noctalia.kdl     Noctalia colour scheme
+//
+//  niri watches these files and reloads on save, no restart needed.
+//  Anything in a `spawn-at-startup` block only runs at session start.
+
+// ─── Input ──────────────────────────────────────────────────────────
+include "input/input.kdl"
+
+// ─── Layout & Animations ────────────────────────────────────────────
+include "layout/layout.kdl"
+
+// ─── Keybinds (index → binds/) ──────────────────────────────────────
+include "binds.kdl"
+
+// ─── Window Rules (opacity, blur, shadow) ───────────────────────────
+include "layout/window-rules.kdl"
+
+// ─── Environment (Global Theme) ─────────────────────────────────────
+include "theme/environment.kdl"
+
+// ─── Noctalia Colour Scheme ──────────────────────────────────────────
+
+include "theme/noctalia.kdl"
+
+include "basicsettings.kdl" // Added by niri-settings
+
+include "keybinds.kdl" // Added by niri-settings

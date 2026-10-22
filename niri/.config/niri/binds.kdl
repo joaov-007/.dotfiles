@@ -1,0 +1,23 @@
+// ═══════════════════════════════════════════════════════════════════
+//  ⌨️ Keybinds (Vim + Noctalia)
+// ═══════════════════════════════════════════════════════════════════
+//
+//  This file is only an index. The binds live next to it:
+//
+//    binds/shell.kdl       launcher, apps, terminals, session
+//    binds/webapps.kdl     Brave chromeless web apps (GitHub, Drive, …)
+//    binds/windows.kdl     windows, focus, move, resize, maximize
+//    binds/workspaces.kdl  focus + move to workspace
+//    binds/navigation.kdl  cycling + scroll
+//    binds/system.kdl      overview, screenshots, media keys
+//
+//  Each one is its own `binds { }` block — niri merges them all, so
+//  adding a key somewhere new is just a new line in the right file.
+//  niri watches these and reloads on save, no restart needed.
+
+include "binds/shell.kdl"
+include "binds/webapps.kdl"
+include "binds/windows.kdl"
+include "binds/workspaces.kdl"
+include "binds/navigation.kdl"
+include "binds/system.kdl"
