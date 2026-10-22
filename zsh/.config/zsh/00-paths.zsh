@@ -30,4 +30,12 @@ append_path '~/.local/bin'
 append_path '~/bin'
 
 # SSH agent socket (systemd user service, socket-activated).
-export SSH_AUTH_SOCK="${SSH_AUTH_SOCK:-${XDG_RUNTIME_DIR:-/run/user/$UID}/ssh-agent.socket}"
+#
+# Only exported when the socket is really there. A variable that points at
+# a file which does not exist makes ssh and git complain about the agent
+# instead of quietly carrying on without one.
+if [[ -z ${SSH_AUTH_SOCK:-} ]]; then
+  _ssh_socket="${XDG_RUNTIME_DIR:-/run/user/$UID}/ssh-agent.socket"
+  [[ -S $_ssh_socket ]] && export SSH_AUTH_SOCK="$_ssh_socket"
+  unset _ssh_socket
+fi

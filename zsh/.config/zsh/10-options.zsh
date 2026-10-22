@@ -29,3 +29,12 @@ setopt BANG_HIST
 # PROMPT_SUBST is deliberately NOT set: the prompt is owned by `pure`
 # (50-prompt.zsh), which turns it off itself. Leaving it on here would
 # only invite %-escapes in a prompt that does not want them.
+
+# ── Keymap ─────────────────────────────────────────────────
+# Emacs mode, stated explicitly instead of left to the default.
+#
+# `bindkey -e` also resets the main map to the stock emacs bindings, so it
+# has to run before anything else binds a key: atuin (20-history.zsh) and
+# fzf (40-plugins.zsh) write into whichever map is active, and a reset
+# after them would throw their bindings away again.
+bindkey -e
