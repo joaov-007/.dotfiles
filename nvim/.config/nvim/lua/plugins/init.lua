@@ -25,10 +25,13 @@ return {
         "markdown_inline",
         "printf",
         "python",
+        "javascript",
+        "typescript",
+        "tsx",
+        "json",
         "vim",
         "vimdoc",
       },
     },
   },
-}
 }
