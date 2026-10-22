@@ -53,6 +53,6 @@ zstyle ':completion:*:sudo:*'    command \
 mkdir -p "${XDG_CACHE_HOME:-$HOME/.cache}/zsh" 2>/dev/null
 
 # mise completions (needs compinit, so loaded here)
-if command -v mise &>/dev/null; then
-  eval "$(mise completion zsh)"
+if (( $+commands[mise] )); then
+  cache_init "$commands[mise]" mise-completion.zsh mise completion zsh
 fi

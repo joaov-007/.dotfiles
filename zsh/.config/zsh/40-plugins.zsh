@@ -13,7 +13,7 @@
 # a trigger character is typed. Setting it explicitly below makes the
 # result independent of load order.
 if (( $+commands[fzf] )); then
-  eval "$(fzf --zsh 2>/dev/null)"
+  cache_init "$commands[fzf]" fzf.sh fzf --zsh
   (( $+functions[fzf-tab-complete] )) && fzf_default_completion=fzf-tab-complete
 
   # How every fzf window looks. fzf-tab reads these too, because
@@ -67,7 +67,7 @@ fi
 # ── zoxide: jump to frecent directories ─────────────────────
 # `z foo` to jump, `zi` for the interactive picker.
 if (( $+commands[zoxide] )); then
-  eval "$(zoxide init zsh --cmd cd 2>/dev/null)"
+  cache_init "$commands[zoxide]" zoxide.zsh zoxide init zsh --cmd cd
   # A function, not an alias: zsh expands aliases before completion, so an
   # alias would bypass the compdef below. Reuse zoxide's own completer,
   # which offers local directories on Tab and the fzf picker on `z foo <Tab>`.

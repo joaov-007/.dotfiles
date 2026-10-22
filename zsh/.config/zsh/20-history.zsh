@@ -27,4 +27,7 @@ setopt HIST_VERIFY            # show the expansion, don't run it
 #   --disable-up-arrow  keeps ↑/↓ for zsh's own prefix search (60-keys.zsh)
 #   --disable-ai        stops atuin from hijacking the ? key, which it
 #                       otherwise binds to its AI widget
-eval "$(atuin init zsh --disable-up-arrow --disable-ai 2>/dev/null)"
+if (( $+commands[atuin] )); then
+  cache_init "$commands[atuin]" atuin.zsh \
+    atuin init zsh --disable-up-arrow --disable-ai
+fi
