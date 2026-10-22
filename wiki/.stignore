@@ -1,0 +1,53 @@
+// Syncthing ignore patterns — Obsidian vault
+// Lives in the folder root; Syncthing never syncs this file itself.
+// Reference: https://docs.syncthing.net/users/ignoring.html
+//
+//   (?d)  file may be deleted by Syncthing if it blocks removing a directory
+//   (?i)  case-insensitive match
+//   //    comment (only at the start of a line)
+
+// --- Obsidian trash --------------------------------------------------------
+// Created when "Deleted files" is set to move to Obsidian's own trash.
+(?d).trash
+
+// --- macOS ----------------------------------------------------------------
+(?d).DS_Store
+(?d)._*
+(?d).Spotlight-V100
+(?d).Trashes
+(?d).fseventsd
+(?d).TemporaryItems
+
+// --- Windows --------------------------------------------------------------
+(?d)(?i)thumbs.db
+(?d)(?i)ehthumbs.db
+(?d)(?i)desktop.ini
+
+// --- Editor / download temp junk -----------------------------------------
+(?d)*~
+(?d)#*#
+(?d).#*
+(?d).~lock.*#
+(?d)*.tmp
+(?d)*.temp
+(?d)*.sw?
+(?d)*.bak
+(?d)*.orig
+(?d)*.rej
+(?d)*.part
+(?d)(?i)*.crdownload
+
+// --- Obsidian device-local state -----------------------------------------
+// Per-device window layout; syncing it makes devices overwrite each other.
+.obsidian/workspace.json
+.obsidian/workspace-mobile.json
+
+// --- Obsidian theme (device-local) ----------------------------------------
+// Regenerated per device by noctalia from the local palette. Kept out of sync
+// so a rewrite or deletion on one machine can't blank the snippet elsewhere.
+.obsidian/snippets/noctalia.css
+
+// --- Vault-derived content (large, regenerable) --------------------------
+// OSS clones and local tar backups. Not notes; already hidden from Obsidian.
+// Delete these two lines if you do want them mirrored to the other devices.
+/.backup
