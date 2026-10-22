@@ -68,8 +68,3 @@ sudo stow -t /etc etc
 # stow puro passa a respeitar a blacklist também
 ./scripts/stow/stow.sh --global-ignore
 ```
-
-## Plans
-- [x] Setup Nix
-- [ ] Learn flakes
-- [x] Setup home-maneger
