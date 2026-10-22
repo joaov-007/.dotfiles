@@ -9,3 +9,12 @@ password/
 
 # theme output of noctalia, rewritten on every theme change
 niri/.config/niri/noctalia.kdl
+
+# Obsidian workspace state
+wiki/.obsidian/workspace.json
+
+# Obsidian per-device state
+wiki/.obsidian/workspace*.json
+wiki/.obsidian/graph.json
+wiki/.obsidian/workspace-mobile.json
+wiki/.obsidian/snippets/noctalia*
