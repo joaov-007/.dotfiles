@@ -17,3 +17,24 @@ map("n", "<leader>ct", function()
     },
   }
 end, { desc = "toggle zen mode" })
+
+-- C/C++ specific mappings
+map("n", "<leader>ch", function()
+  vim.cmd "ClangdSwitchSourceHeader"
+end, { desc = "Switch between source and header" })
+
+map("n", "<leader>cH", function()
+  vim.cmd "ClangdExplore"
+end, { desc = "Clangd explore symbols" })
+
+map("n", "<leader>ca", function()
+  vim.lsp.buf.code_action { apply = true, context = { only = { "quickfix", "refactor" } } }
+end, { desc = "Code action" })
+
+map("n", "<leader>cd", function()
+  vim.diagnostic.open_float()
+end, { desc = "Open floating diagnostic" })
+
+map("n", "<leader>cD", function()
+  vim.diagnostic.setloclist()
+end, { desc = "Set location list with diagnostics" })

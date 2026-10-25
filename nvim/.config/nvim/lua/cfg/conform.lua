@@ -36,6 +36,8 @@ local options = {
 		["*"] = { "trim_whitespace" },
 		["-"] = { "trim_newline" },
 		lua = { "stylua" },
+		c = { "clang_format" },
+		cpp = { "clang_format" },
 		-- css = { "prettier" },
 		-- html = { "prettier" },
 		markdown = function(bufnr)
@@ -48,7 +50,7 @@ local options = {
 		if vim.g.disable_autoformat or vim.b[bufnr].disable_autoformat then
 			return
 		end
-		return { timeout_ms = 500, lsp_format = "fallback" }
+		return { timeout_ms = 1000, lsp_format = "fallback" }
 	end,
 }
 
