@@ -23,6 +23,8 @@ M.opts = {
     "eslint_d",
     "shellcheck",
     "flake8",
+    "golangci-lint",
+    "hadolint",
 
     -- Debuggers
     "delve",
@@ -34,6 +36,9 @@ M.opts = {
     "json-lsp",
     "dockerfile-language-server",
     "terraform-ls",
+
+    -- Tools
+    "nvim-lint",
   },
 }
 
