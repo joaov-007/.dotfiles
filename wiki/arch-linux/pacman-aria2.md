@@ -16,6 +16,7 @@ tags:
   - aria2
   - downloads
   - mirrors
+categories: arch-linux
 type: reference
 status: evergreen
 created: 2026-10-11

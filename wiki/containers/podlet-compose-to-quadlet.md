@@ -19,6 +19,7 @@ tags:
   - compose
   - devops
   - arch-linux
+categories: containers
 type: guide
 status: evergreen
 created: 2026-10-11

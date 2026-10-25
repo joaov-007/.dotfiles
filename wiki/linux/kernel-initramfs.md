@@ -22,6 +22,7 @@ tags:
   - debugging
   - development
   - guide
+categories: linux
 type: guide
 status: draft
 created: 2026-09-28

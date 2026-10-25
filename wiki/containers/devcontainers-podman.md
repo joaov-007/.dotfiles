@@ -21,6 +21,7 @@ tags:
   - arch-linux
   - setup
   - cli
+categories: containers
 type: guide
 status: evergreen
 created: 2026-10-17

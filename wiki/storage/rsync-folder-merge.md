@@ -6,6 +6,7 @@ tags:
   - arch
   - storage
   - setup
+categories: storage
 type: guide
 status: draft
 created: 2026-09-27

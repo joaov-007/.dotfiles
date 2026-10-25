@@ -10,6 +10,7 @@ tags:
   - zram
   - storage
   - security
+categories: storage
 type: reference
 status: draft
 created: 2026-09-26

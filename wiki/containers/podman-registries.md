@@ -14,6 +14,7 @@ tags:
   - docker
   - devops
   - reference
+categories: containers
 type: reference
 status: evergreen
 created: 2026-09-27

@@ -28,6 +28,7 @@ tags:
   - runbook
   - troubleshooting
   - self-audit
+categories: storage
 type: audit
 status: needs-action
 confidence: high

@@ -29,6 +29,7 @@ tags:
   - initramfs
   - troubleshooting
   - reference
+categories: storage
 type: reference
 status: evergreen
 confidence: high

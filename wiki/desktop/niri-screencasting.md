@@ -6,6 +6,7 @@ tags:
   - arch
   - security
   - setup
+categories: desktop
 type: guide
 status: draft
 created: 2026-10-07

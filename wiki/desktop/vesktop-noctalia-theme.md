@@ -9,6 +9,7 @@ tags:
   - vesktop
   - discord
   - flatpak
+categories: desktop
 type: guide
 status: draft
 created: 2026-09-26

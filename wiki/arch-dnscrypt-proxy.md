@@ -24,6 +24,8 @@ tags:
   - security
   - privacy
   - networking
+categories:'networking'
+categories: networking
 type: runbook
 status: draft
 created: 2026-09-27
