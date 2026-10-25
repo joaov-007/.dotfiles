@@ -25,6 +25,34 @@ local servers = {
       },
     },
   },
+  clangd = {
+    cmd = {
+      "clangd",
+      "--background-index",
+      "--clang-tidy",
+      "--header-insertion=iwyu",
+      "--all-scopes-completion",
+    },
+    filetypes = { "c", "cpp", "objc", "objcpp", "h", "hpp", "cuda" },
+    root_dir = require("lspconfig").util.root_pattern(
+      "Makefile",
+      "compile_commands.json",
+      "build.json",
+      ".clangd",
+      ".git"
+    ),
+    settings = {
+      clangd = {
+        fallbackFlags = {
+          "-std=gnu11",
+          "-Wall",
+          "-Wextra",
+          "-Wpedantic",
+          "-Werror",
+        },
+      },
+    },
+  },
 }
 
 -- enable automatically installed servers

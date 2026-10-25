@@ -9,6 +9,7 @@ M.opts = {
     "html-lsp",
     "emmet-ls",
     "awk-language-server",
+    "clangd",
 
     -- Formatters
     "stylua",
@@ -18,6 +19,7 @@ M.opts = {
     "isort",
     "shfmt",
     "marksman",
+    "clang-format",
 
     -- Linters
     "eslint_d",
@@ -25,6 +27,8 @@ M.opts = {
     "flake8",
     "golangci-lint",
     "hadolint",
+    "cpplint",
+    "clang-tidy",
 
     -- Debuggers
     "delve",
@@ -39,6 +43,7 @@ M.opts = {
 
     -- Tools
     "nvim-lint",
+    "bear",
   },
 }
 
