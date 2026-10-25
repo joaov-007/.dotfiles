@@ -76,7 +76,7 @@ frontmatter following a single schema; see [[Vault Conventions]].
 - **System health & diagnostics** — [[system-diagnostics-and-self-healing]]
 - **Networking & DNS** — [[arch-dnscrypt-proxy]], [[dnscrypt-proxy-tor]], [[tor]]
 - **Linux desktop** — [[flatpak-apps]], [[niri-screencasting]], [[vesktop-noctalia-theme]], [[noctalia-wallpapers]]
-- **Linux & kernel** — [[kernel-initramfs]], [[libvirt-virt-manager]], [[libvirt-small-vms]], [[terminal-keybindings]]
+- **Linux & kernel** — [[kernel-initramfs]], [[linux-kernel-development-tasks]], [[libvirt-virt-manager]], [[libvirt-small-vms]], [[terminal-keybindings]]
 - **Firmware & hardware** — [[firmware-update-bricks]]
 - **Containers** — [[Quadlet]], [[podlet-compose-to-quadlet]], [[podman-registries]], [[container-registries]], [[searxng-tor]], [[dnscrypt-proxy-podman]], [[dnscrypt-proxy-tor]], [[devcontainers-podman]]
 - **Email** — [[email-clients]], [[himalaya-email-client]], [[matcha-email-client]]
@@ -200,3 +200,99 @@ SORT file.name ASC
   renders date pickers, checkboxes and number fields.
 - `related:` holds `[[wikilinks]]`; a link to a note that does not exist yet is an
   intentional topic placeholder, not a typo.
+
+## Kepano/zakatesh Categories Organization
+
+This wiki has been reorganized following the **Kepano/zakatesh methodology** (the note-taking system used by the Obsidian CEO, Steph Ango). Key principles:
+
+### Categories Property (Primary Organization)
+Notes are organized via the `categories` YAML property rather than deep folder hierarchies. Each note has a `categories:` field linking it to its topic area:
+
+| Category | Example Notes |
+|---|---|
+| `arch-linux` | arch-setup, kernel-dev-debugging, pacman-aria2 |
+| `containers` | container-registries, devcontainers-podman, quadlet |
+| `development` | git-email-workflow, rust-tools |
+| `email` | email-clients, himalaya-email-client, matcha-email-client |
+| `linux` | kernel-initramfs, terminal-keybindings |
+| `storage` | arch-encrypted-swap, arch-system-audit |
+| `desktop` | niri-screencasting, vesktop-noctalia-theme |
+| `networking` | arch-dnscrypt-proxy |
+
+### Inbox Folder
+- **`inbox/`**: New notes and notes needing triage
+- **Workflow**: Create notes in `inbox/`, add `categories` property, then move to root when ready
+- Keeps the vault root uncluttered while notes are being drafted
+
+### Minimal Folders (Kepano Style)
+- `inbox/` - New/untriaged notes
+- `attachments/` - Images, audio, video, PDFs
+- `clippings/` - External content/clippings
+- `daily/` - YYYY-MM-DD daily notes
+- `notes/` - Example notes per Kepano's system
+
+All other content notes reside in the vault root with the `categories` property, following the principle that **properties over folders** drive organization.
+
+### Using Categories for Discovery
+Your wiki now supports Dataview queries to find notes by category:
+
+```dataview
+# See all container-related notes
+LIST WHERE contains(categories, "containers")
+
+# View the category overview (Maps of Content)
+# Open categories/containers.md in Obsidian
+```
+
+### Creating New Notes (Frictionless Workflow)
+
+```bash
+# 1. Create note in inbox (Kepano's speed-first approach)
+cp templates/note-template.md inbox/my-new-note.md
+
+# 2. Fill frontmatter, then add categories property
+#    Edit frontmatter to add: categories: my-topic
+
+# 3. Move to root when ready (or keep in inbox until triaged)
+mv inbox/my-new-note.md my-new-note.md
+
+# 4. Git sync
+git add my-new-note.md
+git commit -m "docs: add new note about ..."
+git push origin dev
+```
+
+### Category Overview Files (New MOCs)
+Eight new category overview files were created in `categories/`:
+- `categories/arch-linux.md` - Map of all Arch Linux notes
+- `categories/containers.md` - Map of container/Podman notes
+- `categories/desktop.md` - Map of desktop/notes
+- `categories/development.md` - Map of development/tooling notes
+- `categories/email.md` - Map of email client notes
+- `categories/linux.md` - Map of Linux/kernel notes
+- `categories/networking.md` - Map of networking/DNS notes
+- `categories/storage.md` - Map of storage/encryption notes
+
+These serve as entry points for exploring notes by topic, following the Kepano emphasis on **Bases and properties** for navigation rather than folder hierarchies.
+
+### Kepano Philosophy Applied
+
+This reorganization rejects the "Wikipedia project" mentality of:
+- Rigid table of contents
+- Deep folder hierarchies
+- Obsessive wikilink tracking
+
+Instead it embraces:
+- **Properties over links** for organization structure
+- **Speed and laziness** - minimal overhead
+- **Emergent structure** - categories emerge naturally
+- **File-over-app** - notes are just Markdown files you control
+- **Fractal journaling** - the `daily/` and `inbox/` support the fractal review pattern
+- **Minimal folders** - only `inbox`, `attachments`, `clippings`, `daily`, `notes`
+
+### Backward Compatibility
+Existing folder structures (`arch-linux/`, `linux/`, etc.) are **retained** for notes that were already organized that way. The `categories` property adds a new organization layer without requiring migration of existing notes. New notes should use the `categories` property per the Kepano methodology.
+
+### Reference
+- [Lessons From Breaking Down Obsidian's CEO's Personal Vault](https://parazettel.com/articles/what-i-learned-after-kepano-vault/) - Parazettel article analyzing Kepano's vault system
+- [How I use Obsidian - Steph Ango](https://stephango.com/vault) - Original vault description
