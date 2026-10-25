@@ -11,6 +11,7 @@ tags:
   - himalaya
   - neomutt
   - development
+categories: development
 type: guide
 status: draft
 created: 2026-09-28

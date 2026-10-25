@@ -8,6 +8,8 @@ tags:
   - reference
   - wayland
   - linux
+categories: arch-linux
+categories: arch-linux
 type: reference-list
 status: draft
 created: 2026-09-28

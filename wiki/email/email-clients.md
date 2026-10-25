@@ -8,6 +8,7 @@ tags:
   - recommendations
   - git
   - linux
+categories: email
 type: reference-list
 status: draft
 created: 2026-09-28

@@ -28,6 +28,7 @@ tags:
   - security
   - privacy
   - sandboxing
+categories: containers
 type: runbook
 status: draft
 created: 2026-10-14

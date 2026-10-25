@@ -26,6 +26,7 @@ tags:
   - keyboard-shortcuts
   - job-control
   - signals
+categories: linux
 type: cheatsheet
 status: evergreen
 confidence: high

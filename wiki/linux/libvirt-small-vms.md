@@ -22,6 +22,7 @@ tags:
   - provisioning
   - storage
   - uefi
+categories: linux
 type: guide
 status: draft
 created: 2026-10-22

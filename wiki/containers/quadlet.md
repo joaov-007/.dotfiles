@@ -18,6 +18,7 @@ tags:
   - systemd
   - devops
   - arch-linux
+categories: containers
 type: reference
 status: evergreen
 created: 2026-10-11

@@ -9,6 +9,8 @@ tags:
   - flatpak
   - pacman
   - aur
+categories: arch-linux
+categories: arch-linux
 type: guide
 status: draft
 created: 2026-09-26

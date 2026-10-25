@@ -9,6 +9,7 @@ tags:
   - client
   - rust
   - linux
+categories: email
 type: reference
 status: draft
 created: 2026-09-28
