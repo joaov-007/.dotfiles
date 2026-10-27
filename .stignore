@@ -6,3 +6,21 @@
 .DS_Store
 .cache
 .local/share/Trash
+
+// Obsidian noise (per-device/state)
+.obsidian/workspace*.json
+**/.obsidian/workspace*.json
+.obsidian/graph.json
+**/.obsidian/graph.json
+.obsidian/workspace-mobile.json
+**/.obsidian/workspace-mobile.json
+.obsidian/hotkeys.json
+**/.obsidian/hotkeys.json
+.obsidian/community-plugins.json
+**/.obsidian/community-plugins.json
+.obsidian/plugins/
+**/.obsidian/plugins/
+.obsidian/snippets/*
+**/.obsidian/snippets/*
+!/.obsidian/snippets/.gitkeep
+!**/.obsidian/snippets/.gitkeep

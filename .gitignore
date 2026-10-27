@@ -3,18 +3,38 @@
 *.png
 *.jpeg
 *.7z
-node_modules
+
+**/node_modules*
+
+# syncthing
+*stfolder*
+*.stignore*
 
 password/
 
 # theme output of noctalia, rewritten on every theme change
 niri/.config/niri/noctalia.kdl
 
-# Obsidian workspace state
-wiki/.obsidian/workspace.json
+# Obsidian workspace/state (per-device, noisy)
+.obsidian/workspace*.json
+.obsidian/graph.json
+.obsidian/workspace-mobile.json
+**/.obsidian/workspace*.json
+**/.obsidian/graph.json
+**/.obsidian/workspace-mobile.json
 
-# Obsidian per-device state
-wiki/.obsidian/workspace*.json
-wiki/.obsidian/graph.json
-wiki/.obsidian/workspace-mobile.json
-wiki/.obsidian/snippets/noctalia*
+# Obsidian snippets (generated/theme-specific)
+.obsidian/snippets/*
+!/.obsidian/snippets/
+!.obsidian/snippets/.gitkeep
+**/.obsidian/snippets/*
+!**/.obsidian/snippets/
+!**/.obsidian/snippets/.gitkeep
+
+# Obsidian plugins/cache (rarely tracked)
+.obsidian/plugins/
+**/.obsidian/plugins/
+.obsidian/hotkeys.json
+**/.obsidian/hotkeys.json
+.obsidian/community-plugins.json
+**/.obsidian/community-plugins.json
