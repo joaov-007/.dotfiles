@@ -1,0 +1,11 @@
+{
+  "userIgnoreFilters": [
+    "_clones/",
+    "__clones/",
+    "templates/",
+    ".backup/",
+    "AGENTS.md",
+    ".obsidian/"
+  ],
+  "vimMode": true
+}

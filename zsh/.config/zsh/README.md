@@ -11,13 +11,14 @@ the binaries (fzf, zoxide, atuin, bat, eza, delta) from pacman.
 ~/.config/zsh/
   .zshrc               entry point, sources the numbered files in order
   00-paths.zsh         PATH helpers (append_path / prepend_path)
+  02-cache.zsh         cached initialisers (fzf, zoxide, atuin, mise)
   05-mise.zsh          mise activation
-  10-options.zsh       setopt
+  10-options.zsh       setopt, keymap
   20-history.zsh       HISTFILE, history options, atuin
   30-completion.zsh    compinit + zstyle
   35-zinit.zsh         zinit bootstrap + the zsh plugins
   40-plugins.zsh       fzf, fzf-tab styles, zoxide
-  45-enviroment.zsh    environment variables
+  45-environment.zsh   environment variables
   50-prompt.zsh        the prompt (pure)
   60-keys.zsh          keybindings
   70-aliases.zsh       aliases and small functions
@@ -70,6 +71,32 @@ startup, from the environment it already has. Setting `ZDOTDIR` inside
 but variable assignments. `~/.zshrc` remains only as a fallback in case
 `ZDOTDIR` is ever unset.
 
+## Tool versions
+
+`mise` manages the tool versions. It is the only version manager on this
+machine — the old asdf setup is gone.
+
+Which tools exist and which version each one is pinned to lives in
+`mise/.config/mise/config.toml`, stowed to `~/.config/mise/config.toml`:
+
+```toml
+[tools]
+jd = "latest"
+node = "latest"
+npm = "latest"
+```
+
+`05-mise.zsh` evaluates `mise activate zsh`, which puts the shims at the
+front of `PATH` and re-resolves the versions when the working directory
+changes.
+
+Everything else — `fzf`, `zoxide`, `atuin`, `bat`, `eza`, `delta`, `git` —
+is a pacman package and is deliberately absent from that list.
+
+The file holds no comments on purpose: mise rewrites it when it changes a
+pin, and the rewrite drops anything it cannot parse back. The list of
+tools it pins is short enough to read at a glance anyway.
+
 ## Plugins
 
 zinit manages the zsh plugins. It is **not** used as a package manager:
@@ -93,6 +120,28 @@ The system tools are used as they are:
 | `zoxide` | `z` jumps to frecent directories, `zi` picks one |
 | `atuin` | history synced across machines, fuzzy Ctrl-R |
 | `bat` / `delta` / `eza` | previews in the fzf menu |
+
+### fzf
+
+`40-plugins.zsh` sets the environment fzf reads:
+
+| variable | value |
+| --- | --- |
+| `FZF_DEFAULT_OPTS` | half the screen, reversed layout, rounded border, inline info |
+| `FZF_CTRL_T_COMMAND` | `fd`, so the file picker skips what `.gitignore` skips |
+| `FZF_CTRL_T_OPTS` | previews the file with `bat` |
+| `FZF_ALT_C_COMMAND` | `fd` on directories only |
+| `FZF_ALT_C_OPTS` | previews the directory as a tree |
+
+`FZF_DEFAULT_OPTS` reaches the completion menu too, because fzf-tab is
+told to use it. fzf-tab sets the height itself, so the menu is sized to
+the number of matches and not to the screen.
+
+### man
+
+`MANPAGER` points at `bat`, which keeps the bold and the underline that
+`man | less` throws away. `PAGER` is `less -R`, which keeps the colours
+and leaves the other escape sequences alone.
 
 ## Keybindings
 
@@ -120,6 +169,10 @@ a large repository does not slow the prompt down.
 
 It needs a font with the right glyphs — JetBrains Mono Nerd Font is
 already installed and already selected in Alacritty.
+
+`50-prompt.zsh` turns on the parts pure keeps off by default: the stash
+count, the number of dirty files instead of a single dot, the node
+version, and a dim `/` between the parts of the path.
 
 ## History
 
@@ -149,18 +202,55 @@ The shell side reads that history:
 | `git_ref` (`gref`) | browse the reflog, the way back to a lost commit |
 | `git_root` (`groot`) | jump to the top of the repository |
 
+`git_br` completes branch names with Tab.
+
 ## Performance
 
+A shell start costs **350 ms to 400 ms** on this machine, depending on
+what else is running; zsh itself, with no configuration at all, costs
+5 ms of that.
+
+| what | cost |
+| --- | --- |
+| zinit and the four plugins | ~155 ms |
+| `mise activate` | ~33 ms |
+| the rest of the config | ~150 ms |
+
+Measure it yourself with `time zsh -i -c exit`, and watch where the
+time goes with `zinit times`.
+
+zinit is the biggest part of it, and it is the price of the plugin
+manager: sourcing `fast-syntax-highlighting` on its own takes 35 ms, and
+zinit spends another 90 ms of bookkeeping around it.
+
+`mise activate` is the second biggest, and it cannot be cached: the
+script it writes bakes the PATH of the shell that asked for it, so a
+cached copy would freeze that PATH for every shell that came after.
+
+The four initialisers that *can* be cached are: the shell integrations of
+fzf, zoxide and atuin, and mise's completion script. They are written to
+`~/.cache/zsh/init` and sourced from there. The cached copy is thrown
+away when the binary that produced it is newer than the copy, so a
+package upgrade regenerates it. To rebuild them by hand:
+
+```sh
+rm -rf ~/.cache/zsh/init
+```
+
 The completion cache is rebuilt once a day and loaded straight from
-memory otherwise, so `compinit` costs about a millisecond on a warm
-shell. Everything else is lazy: no plugin is loaded that you do not use,
-and each block in `40-plugins.zsh` skips itself when its package is
-missing.
+memory otherwise. Everything else is lazy: no plugin is loaded that you
+do not use, and each block in `40-plugins.zsh` skips itself when its
+package is missing.
 
 ## Troubleshooting
 
 **Startup is slow or errors.** Comment out files in `~/.config/zsh/` one
-at a time to find the culprit; each section is independent.
+at a time to find the culprit; each section is independent. `zinit times`
+shows where the time went.
+
+**A key does nothing after an upgrade.** The cached initialiser in
+`~/.cache/zsh/init` may be from the old version of the program. Remove
+the directory and open a new shell.
 
 **Tab shows a plain list instead of fzf.** `fzf-tab` did not load. Check
 it with `zinit loaded` and reinstall it with `zinit delete Aloxaf/fzf-tab`

@@ -1,0 +1,80 @@
+filters:
+  and:
+    - not:
+        - file.inFolder("_clones")
+    - not:
+        - file.inFolder("__clones")
+    - not:
+        - file.inFolder("templates")
+    - not:
+        - file.inFolder(".obsidian")
+    - not:
+        - file.inFolder("scripts")
+views:
+  - type: table
+    name: All notes
+    order:
+      - file.name
+      - type
+      - status
+      - updated
+      - review_after
+      - description
+  - type: table
+    name: Needs attention
+    filters:
+      and:
+        - status != "evergreen"
+    order:
+      - file.name
+      - type
+      - status
+      - review_after
+  - type: table
+    name: Data notes
+    filters:
+      or:
+        - sample_size
+        - data_source
+        - methodology
+    order:
+      - file.name
+      - methodology
+      - sample_size
+      - metrics
+      - temporal_coverage
+      - verified
+  - type: table
+    name: Dev notes
+    filters:
+      or:
+        - entrypoint
+        - deps
+        - runtime
+    order:
+      - file.name
+      - runtime
+      - entrypoint
+      - deps
+      - version
+      - license
+  - type: table
+    name: Hosts
+    filters:
+      and:
+        - host
+    order:
+      - file.name
+      - host
+      - os
+      - kernel
+      - hardware
+  - type: table
+    name: By status
+    groupBy:
+      property: status
+      direction: ASC
+    order:
+      - file.name
+      - type
+      - updated

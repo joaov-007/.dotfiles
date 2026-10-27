@@ -31,14 +31,20 @@ else
 fi
 
 # ── Common tools ───────────────────────────────────────────
+# --color=auto turns the colour off when the output is piped, so these
+# are safe in a pipeline.
 alias grep='grep --color=auto'
-alias egrep='grep -E --color=auto'
 alias diff='diff --color=auto'
-alias mkdir='mkdir -p'
 alias df='df -h'
 alias du='du -h'
 alias free='free -h'
 alias lsblk='lsblk -f'
+
+# No `egrep` alias: GNU grep prints a deprecation warning on every call.
+# `grep -E` is the same thing without the noise.
+# No `mkdir -p` alias either: it makes `mkdir` succeed when the
+# directory is already there, which hides the mistake it was meant to
+# report. The `mkcd` function below does the same thing on purpose.
 
 # ── Shortcuts ──────────────────────────────────────────────
 alias g='git'

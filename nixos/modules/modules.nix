@@ -1,0 +1,12 @@
+{inputs, ...}: {
+  flake.nixosModules.overlays = {
+    imports = [
+      inputs.chaotic.nixosModules.default
+    ];
+    nixpkgs.overlays = [
+      inputs.nur.overlays.default
+      inputs.chaotic.overlays.default
+      inputs.neovim-nightly.overlays.default
+    ];
+  };
+}

@@ -20,5 +20,15 @@
 # Loaded last on purpose: pure owns PROMPT, and anything that touched the
 # prompt afterwards would fight it.
 
+# ── What the prompt shows ──────────────────────────────────
+#
+# These are the switches pure keeps off by default. They are set before
+# the plugin loads, because pure reads them when it draws the first
+# prompt.
+zstyle ':prompt:pure:git:stash' show yes           # how many stashes are waiting
+zstyle ':prompt:pure:git:dirty' detailed yes        # how many files are dirty
+zstyle ':prompt:pure:environment:node_version' show yes
+zstyle ':prompt:pure:path:separator' dim yes        # dim the / between path parts
+
 zinit ice compile'(pure|async).zsh' pick'async.zsh' src'pure.zsh'
 zinit light sindresorhus/pure

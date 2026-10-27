@@ -1,0 +1,10 @@
+result
+ollama.log
+*.log
+
+.slim/
+
+.slim/worktrees/
+.slim/worktrees.json
+
+*env.nix*

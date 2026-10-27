@@ -95,3 +95,17 @@ alias glg='git_lg'
 alias gbr='git_br'
 alias gref='git_ref'
 alias groot='git_root'
+
+# ── Completions ────────────────────────────────────────────
+# The branch picker works on refs, so it completes them. git's own
+# completion is not reused here: _git dispatches on the first word and
+# calls itself, so it cannot be pointed at a function name.
+_git_branches() {
+  local -a branches
+  branches=( ${(f)"$(git for-each-ref --format='%(refname:short)' refs/heads refs/remotes 2>/dev/null)"} )
+  (( $#branches )) && _describe -t branches 'branch' branches
+}
+
+if (( $+functions[compdef] )); then
+  compdef _git_branches git_br
+fi

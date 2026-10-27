@@ -1,0 +1,46 @@
+// ─── Environment (Global Theme) ─────────────────────────────────────
+//  Included from config.kdl — edit here, not in config.kdl
+
+environment {
+    // GTK_THEME intentionally unset. Noctalia publishes
+    // org.gnome.desktop.interface color-scheme (prefer-dark/prefer-light),
+    // which libadwaita + GTK4 follow on their own, and its gtk3/gtk4
+    // templates inject the palette via noctalia.css. Forcing a static
+    // theme here fights that: adw-gtk3 is the LIGHT variant, and
+    // adw-gtk3-dark would need a manual edit to ever go light again.
+    // Uncomment to pin one (adw-gtk3-dark is available, from adw-gtk-theme):
+    // GTK_THEME "adw-gtk3-dark"
+
+    QT_QPA_PLATFORMTHEME "qt6ct"   // reads ~/.config/qt6ct/colors/noctalia.conf
+
+    // QT_STYLE_OVERRIDE intentionally unset. "kvantum" needs Kvantum plus an
+    // SVG theme or Qt windows can come up blank. qt6ct above is the correct
+    // way to apply Noctalia's generated Qt colors.
+    // QT_STYLE_OVERRIDE "kvantum"
+
+    XCURSOR_THEME "Adwaita"
+    XCURSOR_SIZE "24"
+    NIXOS_OZONE_WL "1"
+    ELECTRON_OZONE_PLATFORM_HINT "auto"
+
+    // ─── XDG Base Directories ──────────────────────────────────────────
+    // Intentionally unset. Do NOT add them back with "$HOME/..." values.
+    //
+    // niri's `environment` block is a literal KDL string table: it performs
+    // no shell expansion, so "$HOME/.config" reaches apps as the 5-character
+    // string `$HOME`, not /home/joaov. Because the value has no leading `/`
+    // it is a *relative* path, and every app then resolves it against its own
+    // CWD -- which is how a literal `$HOME/` directory tree appeared in the
+    // home directory, with apps mkdir -p-ing state under it.
+    //
+    // Every one of these was already the spec default anyway
+    // ($HOME/.config, $HOME/.cache, $HOME/.local/share, $HOME/.local/state,
+    // $HOME/Desktop, ...), so omitting them is behaviour-preserving.
+    //
+    // Where they come from instead:
+    //   XDG_CONFIG_HOME / _DATA_ / _CACHE_ / _STATE_  ~/.zshenv
+    //   XDG_DESKTOP_DIR and the other user dirs        xdg-user-dirs
+    //                                                 (~/.config/user-dirs.dirs)
+    // Note ~/.config/user-dirs.dirs legitimately stores the "$HOME/Desktop"
+    // form -- that format is its spec. It is only wrong in *this* file.
+}

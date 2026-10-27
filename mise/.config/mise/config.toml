@@ -1,0 +1,4 @@
+[tools]
+jd = "latest"
+node = "latest"
+npm = "latest"

@@ -1,0 +1,81 @@
+// ─── Windows, Focus & Sizing ───
+//  Included from binds.kdl — edit here, not in binds.kdl
+binds {
+
+    // ── Window Management (vim :q / :w) ──
+    Mod+q hotkey-overlay-title="Close Window" repeat=false { close-window; }
+    Mod+w hotkey-overlay-title="Focus Column Right: focus-column-right" { focus-column-right; }
+    Mod+f hotkey-overlay-title="Toggle Fullscreen: fullscreen-window" { fullscreen-window; }
+    Mod+a hotkey-overlay-title="Toggle Floating Window: toggle-window-floating" { toggle-window-floating; }
+    Mod+Shift+w hotkey-overlay-title="Move Column Right: move-column-right" { move-column-right; }
+
+    // ── Focus — Vim hjkl ──
+    Mod+Left hotkey-overlay-title="Focus Column Left: focus-column-left" { focus-column-left; }
+    Mod+h hotkey-overlay-title="Focus Column Left: focus-column-left" { focus-column-left; }
+    Mod+Right hotkey-overlay-title="Focus Column Right: focus-column-right" { focus-column-right; }
+    Mod+l hotkey-overlay-title="Focus Column Right: focus-column-right" { focus-column-right; }
+    Mod+Up hotkey-overlay-title="Focus Window Up: focus-window-up" { focus-window-up; }
+    Mod+k hotkey-overlay-title="Focus Window Up: focus-window-up" { focus-window-up; }
+    Mod+Down hotkey-overlay-title="Focus Window Down: focus-window-down" { focus-window-down; }
+    Mod+j hotkey-overlay-title="Focus Window Down: focus-window-down" { focus-window-down; }
+
+    // ── Focus — Vim line jumps ──
+    Mod+g hotkey-overlay-title="Focus First Column: focus-column-first" { focus-column-first; }
+    Mod+Shift+G hotkey-overlay-title="Focus Last Column: focus-column-last" { focus-column-last; }
+
+    // ── Move Windows ──
+    Mod+Shift+Left hotkey-overlay-title="Move Column Left: move-column-left" { move-column-left; }
+    Mod+Shift+h hotkey-overlay-title="Move Column Left: move-column-left" { move-column-left; }
+    Mod+Shift+Right hotkey-overlay-title="Move Column Right: move-column-right" { move-column-right; }
+    Mod+Shift+l hotkey-overlay-title="Move Column Right: move-column-right" { move-column-right; }
+    Mod+Shift+Up hotkey-overlay-title="Move Window Up: move-window-up" { move-window-up; }
+    Mod+Shift+k hotkey-overlay-title="Move Window Up: move-window-up" { move-window-up; }
+    Mod+Shift+Down hotkey-overlay-title="Move Window Down: move-window-down" { move-window-down; }
+    Mod+Shift+j hotkey-overlay-title="Move Window Down: move-window-down" { move-window-down; }
+
+    // ── Resize (vim Ctrl+w + </>) ──
+    Mod+equal hotkey-overlay-title="Widen Column +10%: set-column-width +10%" { set-column-width "+10%"; }
+    Mod+minus hotkey-overlay-title="Narrow Column -10%: set-column-width -10%" { set-column-width "-10%"; }
+    Mod+r hotkey-overlay-title="Cycle Preset Column Width: switch-preset-column-width" { switch-preset-column-width; }
+
+    // ── Maximize (vim Ctrl+w | and Ctrl+w _) ──────────────────
+    //  `fullscreen-window` (Mod+f) is the real fullscreen. These two
+    //  are the "fill the screen but keep the tiling layout" flavours:
+    //
+    //    maximize-window-to-edges — window runs to the screen edges,
+    //                             gaps/border gone. This is the
+    //                             one you want for reading/coding.
+    //    maximize-column         — column takes the full width but
+    //                             KEEPS the layout gaps, so you can
+    //                             still see it is a tiling layout.
+    //
+    //  Both are toggles, so the same key restores what you had.
+    Mod+m hotkey-overlay-title="Maximize Window (Toggle): maximize-window-to-edges" { maximize-window-to-edges; }
+    Mod+backslash hotkey-overlay-title="Maximize Window (Toggle): maximize-window-to-edges" { maximize-window-to-edges; }
+    Mod+Shift+backslash hotkey-overlay-title="Maximize Window (Toggle): maximize-window-to-edges" { maximize-window-to-edges; }
+    Mod+Shift+m hotkey-overlay-title="Maximize Column (Toggle): maximize-column" { maximize-column; }
+
+    // ── Grow / Shrink (snap to full size / back to minimum) ────
+    //  Grow pins the window to the full size; Shrink collapses it
+    //  back toward its minimum — niri's tiling answer to "minimize"
+    //  without leaving the layout. The ±10% keys above stay for fine
+    //  tuning; these snap all the way.
+    //
+    //  Do NOT spell these with shift-level symbols. niri matches binds
+    //  against the RAW (unshifted) keysym and requires the modifiers to
+    //  match exactly, so `Mod+underscore` / `Mod+plus` are *dead* binds:
+    //  pressing Shift+minus reports keysym `minus` + SHIFT, which never
+    //  equals keysym `underscore` + no SHIFT. Always write Shift plus
+    //  the base key. (`underscore` silently shadowed Shrink below.)
+    //
+    //  Width snaps mirror the column width keys above; height snaps use
+    //  the literal +/- pair, same as niri's own default config.
+    //  NOTE: grow/shrink pin a fixed size; Reset hands it back to the
+    //  layout. (Mod+Shift+r stays the config reload in binds/system.kdl.)
+    Mod+Shift+period hotkey-overlay-title="Grow Window Width (+100%): set-window-width +100%" { set-window-width "+100%"; }
+    Mod+Shift+comma hotkey-overlay-title="Shrink Window Width (-100%): set-window-width -100%" { set-window-width "-100%"; }
+    Mod+Shift+equal hotkey-overlay-title="Grow Window Height (+100%): set-window-height +100%" { set-window-height "+100%"; }
+    Mod+Shift+minus hotkey-overlay-title="Shrink Window Height (-100%): set-window-height -100%" { set-window-height "-100%"; }
+    Mod+Ctrl+r repeat=false hotkey-overlay-title="Reset Window Height: reset-window-height" { reset-window-height; }
+
+}

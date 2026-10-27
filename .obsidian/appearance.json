@@ -1,0 +1,9 @@
+{
+  "enabledCssSnippets": [
+    "noctalia"
+  ],
+  "baseFontSize": 14,
+  "interfaceFontFamily": "JetBrains Mono NL",
+  "textFontFamily": "JetBrains Mono NL",
+  "monospaceFontFamily": "JetBrainsMono Nerd Font Mono"
+}

@@ -1,0 +1,77 @@
+// ─── Apps & Session ───
+//  Included from binds.kdl — edit here, not in binds.kdl
+binds {
+
+    // ── Noctalia Core ──
+    //  Panel toggles carry repeat=false so a held key cannot flap the panel.
+    Mod+Space repeat=false hotkey-overlay-title="Open Launcher: noctalia launcher" { spawn-sh "noctalia msg panel-toggle launcher"; }
+    Mod+Comma repeat=false hotkey-overlay-title="Open Settings: noctalia settings" { spawn-sh "noctalia msg settings-toggle"; }
+    Mod+p repeat=false hotkey-overlay-title="Clipboard History: noctalia clipboard" { spawn-sh "noctalia msg panel-toggle clipboard"; }
+    Mod+Shift+Return repeat=false hotkey-overlay-title="Wallpaper Selector: noctalia wallpaper" { spawn-sh "noctalia msg panel-toggle wallpaper"; }
+    Mod+Shift+Escape repeat=false hotkey-overlay-title="Hotkey Overlay: show-hotkey-overlay" { show-hotkey-overlay; }
+
+    // ── Applications ──
+    Mod+Slash repeat=false hotkey-overlay-title="Keybind Cheatsheet: noctalia cheatsheet" { spawn "noctalia" "msg" "panel-toggle" "kenn/keybind-cheatsheet:cheatsheet"; }
+    Mod+Return hotkey-overlay-title="Open Terminal: alacritty" { spawn "alacritty"; }
+    Mod+d repeat=false hotkey-overlay-title="Open App Launcher: noctalia launcher" { spawn-sh "noctalia msg panel-toggle launcher"; }
+    Mod+e hotkey-overlay-title="Open File Manager: yazi" { spawn "alacritty" "-e" "yazi"; }
+
+    // ── Nautilus (GNOME Files, Arch `extra` package) ──
+    //  Native pacman install, NOT the flatpak. It arrived as a
+    //  dependency of xdg-desktop-portal-gnome; if that ever gets
+    //  removed, keep nautilus explicitly:
+    //      sudo pacman -S nautilus
+    //  Nautilus is single-instance, so pressing this again raises
+    //  the open window instead of piling up new ones.
+    //  Mod+Shift+e is the GUI counterpart to the terminal file
+    //  manager on Mod+e (yazi); plain Mod+e stays untouched.
+    //  (The old "Mod+Shift+e is taken" note was wrong — the log-out
+    //  bind is Mod+Ctrl+Shift+E, so Shift alone is free.)
+    Mod+Shift+e hotkey-overlay-title="Open Nautilus (Files): nautilus" { spawn "nautilus"; }
+
+    // ── Browser (LibreWolf, installed as a user flatpak) ──
+    //  `flatpak run` hands the request to the already-running instance,
+    //  so this focuses the open window instead of piling up new ones.
+    Mod+B hotkey-overlay-title="Open Browser: librewolf" { spawn "flatpak" "run" "--user" "--command=librewolf" "io.gitlab.librewolf-community"; }
+    Mod+Shift+B hotkey-overlay-title="Open Private Browser Window: librewolf --private-window" { spawn "flatpak" "run" "--user" "--command=librewolf" "io.gitlab.librewolf-community" "--private-window"; }
+    //  Focus browser window by app_id (simplified)
+    Mod+Alt+B hotkey-overlay-title="Focus Browser Window" { spawn-sh "id=$(niri msg --json windows | jq -r '.id // empty')"; }
+
+    // ── FreeTube (YouTube client, user flatpak) ──
+    //  Privacy-focused YouTube front end (no Google account/tracking).
+    //  `flatpak run` hands the call to the running instance, so pressing
+    //  this again focuses the open window instead of stacking a new one.
+    Mod+Alt+f hotkey-overlay-title="Open FreeTube (YouTube): io.freetubeapp.FreeTube" { spawn "flatpak" "run" "--user" "io.freetubeapp.FreeTube"; }
+
+    //  Web apps (Brave, chromeless windows) live in binds/webapps.kdl.
+
+    // ── Warehouse (vim :Flatpak — flatpak manager, user install) ──
+    Mod+Shift+f hotkey-overlay-title="Open Warehouse (Flatpak Manager): io.github.flattool.Warehouse" { spawn "flatpak" "run" "--user" "io.github.flattool.Warehouse"; }
+
+    // ── Speech Note (installed as a user flatpak) ──
+    Mod+N hotkey-overlay-title="Open Speech Note: net.mkiol.SpeechNote" { spawn "flatpak" "run" "--user" "net.mkiol.SpeechNote"; }
+
+    // ── Terminal Variants (vim :new / :sp / :drop) ──
+    //  `--class` sets the Wayland app_id, which
+    //  layout/window-rules.kdl matches on to decide the size/position.
+    //  Change the class and the matching rule together.
+    //  Note: Mod+Shift+e is the Nautilus GUI file manager (see the
+    //  Nautilus section above), so the floating yazi variant lives
+    //  on Mod+Shift+y here.
+    Mod+t hotkey-overlay-title="Terminal in Projects: alacritty --working-directory ~/Projects" { spawn-sh "alacritty --working-directory ~/Projects"; }
+    Mod+grave repeat=false hotkey-overlay-title="Dropdown Terminal: alacritty --class=dropdown" { spawn "alacritty" "--class=dropdown"; }
+    Mod+Shift+grave repeat=false hotkey-overlay-title="Floating Terminal: alacritty --class=niri-float" { spawn "alacritty" "--class=niri-float"; }
+    Mod+Shift+y repeat=false hotkey-overlay-title="Floating File Manager: alacritty --class=niri-float -e yazi" { spawn "alacritty" "--class=niri-float" "-e" "yazi"; }
+    //  btop — vim `t` (top), Shift marks it as a terminal variant.
+    //  Same `niri-float` class as the line above, so window-rules.kdl
+    //  already floats it at 70% without any new rule. btop redraws
+    //  from the terminal size, so it fills that box on its own.
+    Mod+Shift+t repeat=false hotkey-overlay-title="Floating btop (System Monitor): alacritty --class=niri-float -e btop" { spawn "alacritty" "--class=niri-float" "-e" "btop"; }
+    Mod+Alt+t repeat=false hotkey-overlay-title="Terminal with herdr: alacritty -e herdr" { spawn "alacritty" "-e" "herdr"; }
+
+    // ── Session ──
+    Mod+Alt+L repeat=false hotkey-overlay-title="Lock Screen: noctalia lock" { spawn-sh "noctalia msg session lock"; }
+    Mod+Shift+Q repeat=false hotkey-overlay-title="Session Menu: noctalia sessionMenu" { spawn-sh "noctalia msg panel-toggle sessionMenu"; }
+    Mod+Ctrl+Shift+E repeat=false hotkey-overlay-title="Log Out of Niri (Confirm): niri msg quit" { spawn "niri" "msg" "quit"; }
+
+}
