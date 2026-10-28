@@ -55,6 +55,10 @@ alias v='nvim'
 alias rr='trash'
 alias please='sudo'    # if you mistype sudo
 
+# cgd: ChatGPT organizer daemon applying moves. Plain `cg daemon` is the
+# dry run, and extra flags pass through: cgd --once, cgd --cycles 3.
+alias cgd='cg daemon --yes'
+
 # ── Git ────────────────────────────────────────────────────
 alias gst='git status'
 alias ggp='git push'
