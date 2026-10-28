@@ -18,7 +18,8 @@
 │   ├── stow/       # aplica a blacklist do stow
 │   └── unbound/    # gerador de adblock do unbound
 ├── etc/            # arquivos espelhados de /etc
-├── zsh/ neovim/    # config de home (espelhada em ~/.config)
+├── zsh/ bash/      # shells: zsh principal, bash fallback
+├── nvim/           # editor (~/.config/nvim)
 ├── mise/           # config do mise (~/.config/mise/config.toml)
 └── ...             # flags por app, rclone-services, etc.
 ```
@@ -43,8 +44,9 @@ sudo nixos-rebuild switch --flake ./nixos#bacon
 
 ## Stow
 
-Cada diretório de topo é um *package* do GNU Stow: `stow -t ~ neovim` cria
-`~/.config/nvim` a partir de `neovim/.config/nvim`.
+Cada diretório de topo é um *package* do GNU Stow: `stow -t ~ nvim` cria
+`~/.config/nvim` a partir de `nvim/.config/nvim`. O `bash/` existe como
+fallback: `stow -t ~ bash` linka `~/.bashrc` com o mesmo alias `cgd` do zsh.
 
 O `.stow-local-ignore` na raiz é a blacklist lida pelo stow — o que está
 listado nunca é linkado:
@@ -66,7 +68,8 @@ passa a mesma blacklist para o stow e exige os packages na mão:
 ./scripts/stow/stow.sh --dry-run neovim
 
 # linka o package em ~
-./scripts/stow/stow.sh neovim
+./scripts/stow/stow.sh nvim
+./scripts/stow/stow.sh bash   # fallback: ~/.bashrc com o alias cgd
 
 # /etc precisa de root
 sudo stow -t /etc etc
