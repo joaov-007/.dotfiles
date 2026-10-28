@@ -891,6 +891,22 @@ class TestDaemon(unittest.TestCase):
         self.assertTrue(args.once)
         self.assertEqual((args.wait_min, args.wait_max), (20.0, 50.0))
 
+    def test_sync_job_gets_the_deep_controls(self):
+        args = self.args(no_deep=True, deep_limit=7, deep_sleep=0.25, max_retries=2)
+        sync = cg._daemon_sync_args(args)
+        self.assertFalse(sync.deep)
+        self.assertEqual((sync.limit, sync.deep_sleep), (7, 0.25))
+        self.assertEqual(sync.max_retries, 2)
+        self.assertEqual(sync.base_url, args.base_url)
+
+    def test_organize_job_gets_the_move_controls(self):
+        args = self.args(organize_limit=5, min=2, fallback="Triagem", sleep=0.5)
+        organize = cg._daemon_organize_args(args)
+        self.assertTrue(organize.yes)
+        self.assertEqual((organize.limit, organize.min), (5, 2))
+        self.assertEqual((organize.fallback, organize.sleep), ("Triagem", 0.5))
+        self.assertEqual(organize.base_url, args.base_url)
+
     def test_cycle_updates_index_before_organizing(self):
         calls = []
         out, err = self.quiet()
@@ -928,6 +944,37 @@ class TestDaemon(unittest.TestCase):
         self.assertEqual(jobs[0]["rc"], 2)
         self.assertEqual(jobs[1]["job"], "organize")
         self.assertIn("skipped", jobs[1])
+
+    def test_stop_codes_from_sync_skip_organize(self):
+        # cmd_sync returns 128+signum after committing; not every code is a
+        # failure to retry, and none of them should be followed by a move.
+        for rc in sorted(cg._DAEMON_STOP_RCS):
+            with self.subTest(rc=rc):
+                out, err = self.quiet()
+                with (
+                    mock.patch(
+                        "cg.exclusive_run",
+                        side_effect=lambda: contextlib.nullcontext(),
+                    ),
+                    mock.patch("cg.cmd_sync", return_value=rc),
+                    mock.patch("cg._organize") as move,
+                    out,
+                    err,
+                ):
+                    jobs = cg._daemon_cycle(self.args(), 1)
+                move.assert_not_called()
+                self.assertEqual([job["job"] for job in jobs], ["sync", "organize"])
+                self.assertEqual(jobs[0]["rc"], rc)
+                self.assertIn("skipped", jobs[1])
+                self.assertTrue(cg._daemon_stopped(jobs))
+
+    def test_only_signal_codes_count_as_stopped(self):
+        for rc in (0, 1, 2, 3, 4):
+            with self.subTest(rc=rc):
+                self.assertFalse(cg._daemon_stopped([{"rc": rc}]))
+        for rc in sorted(cg._DAEMON_STOP_RCS):
+            with self.subTest(rc=rc):
+                self.assertTrue(cg._daemon_stopped([{"rc": rc}]))
 
     def test_rate_limit_is_remembered_for_the_backoff(self):
         out, err = self.quiet()
@@ -1022,6 +1069,112 @@ class TestDaemon(unittest.TestCase):
             self.assertEqual(cg._daemon(self.args(cycles=2)), 0)
         self.assertEqual(runs, [1, 2])
         self.assertEqual(sleeps, [42.0])
+
+    def test_signal_that_ends_sync_stops_the_daemon(self):
+        # cmd_sync catches the signal, commits and returns 128+signum; the
+        # daemon must stop there instead of moving on to organize and sleeping.
+        calls = []
+        out, err = self.quiet()
+        with (
+            mock.patch(
+                "cg.exclusive_run",
+                side_effect=lambda: contextlib.nullcontext(),
+            ),
+            mock.patch(
+                "cg.cmd_sync", side_effect=lambda a: calls.append("sync") or 143
+            ),
+            mock.patch(
+                "cg._organize", side_effect=lambda a: calls.append("organize") or 0
+            ),
+            mock.patch(
+                "cg._daemon_sleep",
+                side_effect=AssertionError("parada não deve dormir"),
+            ),
+            out,
+            err,
+        ):
+            self.assertEqual(cg._daemon(self.args()), 143)
+        self.assertEqual(calls, ["sync"])
+        journal = next((Path(self.tmp.name) / "reports").glob("daemon-*.jsonl"))
+        records = [
+            json.loads(line) for line in journal.read_text().splitlines() if line
+        ]
+        cycle = next(record for record in records if record["kind"] == "cycle")
+        self.assertEqual([job["job"] for job in cycle["jobs"]], ["sync", "organize"])
+        self.assertIn("skipped", cycle["jobs"][1])
+        self.assertEqual(records[-1]["kind"], "stop")
+        self.assertEqual(records[-1]["rc"], 143)
+
+    def test_stop_with_organize_disabled_does_not_sleep(self):
+        out, err = self.quiet()
+        with (
+            mock.patch(
+                "cg.exclusive_run",
+                side_effect=lambda: contextlib.nullcontext(),
+            ),
+            mock.patch("cg.cmd_sync", return_value=130),
+            mock.patch("cg._organize") as move,
+            mock.patch("cg._daemon_sleep") as sleep,
+            out,
+            err,
+        ):
+            self.assertEqual(cg._daemon(self.args(no_organize=True)), 130)
+        move.assert_not_called()
+        sleep.assert_not_called()
+
+    def test_ordinary_sync_failure_does_not_stop_the_loop(self):
+        sleeps = []
+        out, err = self.quiet()
+        with (
+            mock.patch("cg._daemon_cycle", return_value=[{"job": "sync", "rc": 2}]),
+            mock.patch("cg._daemon_wait", return_value=10.0),
+            mock.patch("cg._daemon_sleep", side_effect=sleeps.append),
+            out,
+            err,
+        ):
+            self.assertEqual(cg._daemon(self.args(cycles=2)), 2)
+        self.assertEqual(sleeps, [10.0])
+
+    def test_interrupt_during_organize_unwinds_and_closes_the_journal(self):
+        out, err = self.quiet()
+        with (
+            mock.patch(
+                "cg.exclusive_run",
+                side_effect=lambda: contextlib.nullcontext(),
+            ),
+            mock.patch("cg.cmd_sync", return_value=0),
+            mock.patch("cg._organize", side_effect=cg.Interrupted(15, "SIGTERM")),
+            out,
+            err,
+            self.assertRaises(cg.Interrupted),
+        ):
+            cg._daemon(self.args(once=True))
+        journal = next((Path(self.tmp.name) / "reports").glob("daemon-*.jsonl"))
+        records = [
+            json.loads(line) for line in journal.read_text().splitlines() if line
+        ]
+        self.assertEqual([record["kind"] for record in records], ["start", "stop"])
+        self.assertEqual(records[-1]["rc"], 143)
+
+    def test_signal_during_the_wait_closes_the_journal_with_its_code(self):
+        out, err = self.quiet()
+        with (
+            mock.patch("cg._daemon_cycle", return_value=[]),
+            mock.patch("cg._daemon_wait", return_value=60.0),
+            mock.patch("cg._daemon_sleep", side_effect=cg.Interrupted(15, "SIGTERM")),
+            out,
+            err,
+            self.assertRaises(cg.Interrupted),
+        ):
+            cg._daemon(self.args(cycles=2))
+        journal = next((Path(self.tmp.name) / "reports").glob("daemon-*.jsonl"))
+        records = [
+            json.loads(line) for line in journal.read_text().splitlines() if line
+        ]
+        self.assertEqual(
+            [record["kind"] for record in records], ["start", "cycle", "stop"]
+        )
+        self.assertEqual(records[-1]["rc"], 143)
 
     def test_once_returns_the_worst_job_code(self):
         out, err = self.quiet()
