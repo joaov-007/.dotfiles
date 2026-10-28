@@ -45,3 +45,6 @@ niri/.config/niri/noctalia.kdl
 **/.obsidian/hotkeys.json
 .obsidian/community-plugins.json
 **/.obsidian/community-plugins.json
+
+# cache
+*__pycache__*
