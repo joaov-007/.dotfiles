@@ -29,6 +29,13 @@ Bulk reads (`sync --deep`, `export --fetch`) stop on 429 too and keep their
 progress; `--deep` is capped per run and resumes where it left off. There is
 deliberately no delete function in this file.
 
+`daemon` puts the same two steps on a loop without detaching: it refreshes the
+index in bounded batches, organizes what is ready, then sleeps a random while.
+Jobs run one at a time in the foreground, and every cycle is one JSONL line in
+`reports/daemon-*.jsonl` so a bad night can be diagnosed the next day. For a
+scheduler, run `daemon --once` from a systemd timer instead of leaving a process
+behind.
+
 Re-running ingest with a newer export only adds what is new: every conversation
 is keyed by its ChatGPT id. Old verdicts are recomputed, never resurrected.
 """
@@ -3753,6 +3760,7 @@ def cmd_help(ap: argparse.ArgumentParser) -> int:
         "  3. cg plan                   relatório com o que organizar/arquivar\n"
         "  4. cg organize               mostra o que seria movido (dry-run)\n"
         "  5. cg archive                idem, para as conversas sem valor\n"
+        "  6. cg daemon --yes           mantém índice + Projects sozinho, em ciclos\n"
         "\n"
         "  Nada é apagado: arquivar esconde da lista e mover é reversível.\n"
         "  Para aplicar qualquer passo, repita o comando com --yes.\n"
@@ -3781,6 +3789,7 @@ def build_parser() -> argparse.ArgumentParser:
             "~/.local/state/cg/reports\n"
             "  cg organize --yes           move para Projects (reversível)\n"
             "  cg archive --yes            arquiva o resto (reversível)\n"
+            "  cg daemon --yes             repete sync + organize com pausa aleatória\n"
             "\n"
             "desfazer\n"
             "  cg unorganize --log <organize-*.jsonl>\n"
@@ -4299,6 +4308,123 @@ def build_parser() -> argparse.ArgumentParser:
     _add_auth_args(at)
     at.set_defaults(func=cmd_auto)
 
+    da = sub.add_parser(
+        "daemon",
+        help="manter o índice fresco e organizar em ciclos (primeiro plano)",
+        description=(
+            "Um processo só, sem fork e sem job em background: a cada ciclo ele\n"
+            "atualiza o índice (`sync --deep`, retomável) e move o que já tem\n"
+            "conteúdo para Projects (`organize`). Entre ciclos, dorme um tempo\n"
+            "sorteado em [--wait-min, --wait-max] para não bater no servidor\n"
+            "sempre no mesmo minuto.\n\n"
+            "Sem --yes o organize continua sendo dry-run; o índice é sempre\n"
+            "atualizado. Se o sync falhar (sessão vencida, 429), o organize do\n"
+            "ciclo é pulado e o motivo fica registrado.\n\n"
+            "Cada ciclo vira uma linha JSON em reports/daemon-*.jsonl com tempos,\n"
+            "códigos de saída e erro; o HTTP continua em `cg log`.\n\n"
+            "Quer agendar em vez de deixar rodando? Use --once num .service e\n"
+            "deixe um .timer decidir a hora — o serviço roda em primeiro plano e\n"
+            "a saída vai para o journalctl, sem processo escondido."
+        ),
+        epilog=(
+            "exemplos\n"
+            "  cg daemon                    vigia e só sugere (sem mover)\n"
+            "  cg daemon --yes              vigia e aplica o organize\n"
+            "  cg daemon --once --yes       um ciclo só (systemd timer/cron)\n"
+            "  cg daemon --cycles 3 --yes   três ciclos e sai\n"
+            "  cg daemon --wait-min 30 --wait-max 90 --yes\n"
+            "\n"
+            "Ctrl+C/SIGTERM param entre um job e outro; o que já foi feito fica.\n"
+            "O daemon nunca arquiva nem apaga: isso continua manual."
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    da.add_argument("--yes", action="store_true", help="aplicar o organize")
+    da.add_argument("--once", action="store_true", help="rodar um ciclo e sair")
+    da.add_argument(
+        "--cycles",
+        type=int,
+        default=0,
+        metavar="N",
+        help="parar depois de N ciclos (padrão: 0 = infinito)",
+    )
+    da.add_argument(
+        "--wait-min",
+        type=float,
+        default=20,
+        metavar="MIN",
+        help="pausa mínima entre ciclos, em minutos (padrão: 20)",
+    )
+    da.add_argument(
+        "--wait-max",
+        type=float,
+        default=50,
+        metavar="MIN",
+        help="pausa máxima entre ciclos, em minutos (padrão: 50)",
+    )
+    da.add_argument(
+        "--backoff",
+        type=float,
+        default=60,
+        metavar="MIN",
+        help="pausa mínima depois de HTTP 429 (padrão: 60)",
+    )
+    da.add_argument(
+        "--no-sync", action="store_true", help="não atualizar o índice neste daemon"
+    )
+    da.add_argument(
+        "--no-organize", action="store_true", help="não mover conversas neste daemon"
+    )
+    da.add_argument(
+        "--no-deep",
+        action="store_true",
+        help="só atualizar a lista, sem baixar conteúdo",
+    )
+    da.add_argument(
+        "--deep-limit",
+        type=int,
+        default=50,
+        help="conversas baixadas por ciclo no --deep (padrão: 50; 0 = todas)",
+    )
+    da.add_argument(
+        "--deep-sleep", type=float, default=2.0, help="pausa entre conversas do --deep"
+    )
+    da.add_argument(
+        "--max-retries", type=int, default=4, help="tentativas em 429/5xx (padrão: 4)"
+    )
+    da.add_argument(
+        "--organize-limit",
+        type=int,
+        default=100,
+        help="movimentos por ciclo (padrão: 100)",
+    )
+    da.add_argument(
+        "--min",
+        type=int,
+        default=3,
+        help="mínimo de conversas para criar um Project (padrão: 3)",
+    )
+    da.add_argument(
+        "--map",
+        action="append",
+        metavar="CATEGORIA=PROJETO",
+        help="reusar um Project existente com outro nome (repetível)",
+    )
+    da.add_argument(
+        "--fallback",
+        default="Inbox",
+        metavar="PROJETO",
+        help="Project que recebe o que não encaixa",
+    )
+    da.add_argument(
+        "--no-fallback",
+        action="store_true",
+        help="deixar as conversas sem categoria fora de qualquer Project",
+    )
+    da.add_argument("--sleep", type=float, default=1.5, help="pausa entre chamadas")
+    _add_auth_args(da)
+    da.set_defaults(func=cmd_daemon)
+
     co = sub.add_parser(
         "completions",
         aliases=["tab"],
@@ -4549,6 +4675,245 @@ def _auto(args) -> int:
     print(f"backup  : {backup}")
     print(f"desfazer: cg unorganize --log {log_path}")
     return 0 if not failed else 1
+
+
+def cmd_daemon(args) -> int:
+    return _daemon(args)
+
+
+def _daemon_sync_args(args) -> argparse.Namespace:
+    return argparse.Namespace(
+        sleep=args.sleep,
+        deep=not args.no_deep,
+        limit=args.deep_limit,
+        max_retries=args.max_retries,
+        deep_sleep=args.deep_sleep,
+        cookie=args.cookie,
+        cookie_file=args.cookie_file,
+        base_url=args.base_url,
+    )
+
+
+def _daemon_organize_args(args) -> argparse.Namespace:
+    return argparse.Namespace(
+        yes=args.yes,
+        limit=args.organize_limit,
+        min=args.min,
+        map=args.map,
+        fallback=args.fallback,
+        no_fallback=args.no_fallback,
+        sleep=args.sleep,
+        cookie=args.cookie,
+        cookie_file=args.cookie_file,
+        base_url=args.base_url,
+    )
+
+
+def _daemon_job(name: str, run) -> dict:
+    """Run one job in this process and turn any failure into a record.
+
+    A long-lived daemon must survive a dead cookie or a rate limit; what it
+    must not do is guess. The record keeps the exit code and the message so a
+    later `journalctl`/JSONL read explains why a cycle did nothing.
+    """
+    started = time.monotonic()
+    log.info("daemon: %s começou", name)
+    rc, error, rate_limited = 0, None, False
+    try:
+        rc = run()
+    except KeyboardInterrupt:
+        raise
+    except SystemExit as exc:
+        rate_limited = isinstance(exc, RateLimited)
+        if rate_limited:
+            rc = 3
+        elif isinstance(exc.code, int):
+            rc = exc.code
+        else:
+            rc = 2
+        if exc.code not in (0, None):
+            error = str(exc.code)
+            print(error, file=sys.stderr)
+    except Exception as exc:
+        rc = 1
+        error = f"{type(exc).__name__}: {exc}"
+        log.exception("daemon: %s falhou", name)
+        print(f"error: {name} falhou: {error}", file=sys.stderr)
+    seconds = round(time.monotonic() - started, 1)
+    log.info("daemon: %s terminou rc=%d em %.1fs", name, rc, seconds)
+    return {
+        "job": name,
+        "rc": rc,
+        "seconds": seconds,
+        "error": error,
+        "rate_limited": rate_limited,
+    }
+
+
+def _daemon_cycle(args, cycle: int) -> list[dict]:
+    """One locked pass: refresh the index, then move what can be moved."""
+    sync_args = _daemon_sync_args(args)
+    organize_args = _daemon_organize_args(args)
+    jobs: list[dict] = []
+    try:
+        with exclusive_run():
+            if not args.no_sync:
+                jobs.append(_daemon_job("sync", lambda: cmd_sync(sync_args)))
+            if not args.no_organize:
+                sync_failed = any(
+                    job["job"] == "sync" and job["rc"] != 0 for job in jobs
+                )
+                if sync_failed:
+                    reason = "sync falhou neste ciclo"
+                    log.info("daemon: organize pulado — %s", reason)
+                    jobs.append(
+                        {
+                            "job": "organize",
+                            "rc": 0,
+                            "seconds": 0.0,
+                            "error": None,
+                            "rate_limited": False,
+                            "skipped": reason,
+                        }
+                    )
+                else:
+                    jobs.append(
+                        _daemon_job("organize", lambda: _organize(organize_args))
+                    )
+    except SystemExit as exc:
+        # Only the lock can land here: jobs swallow their own SystemExit.
+        message = str(exc.code) if exc.code not in (0, None) else "run.lock ocupado"
+        log.info("daemon: ciclo %d adiado — %s", cycle, message)
+        print(f"ciclo {cycle} adiado: {message}", file=sys.stderr)
+        jobs.append(
+            {
+                "job": "lock",
+                "rc": 4,
+                "seconds": 0.0,
+                "error": message,
+                "rate_limited": False,
+                "skipped": "outra execução do cg está escrevendo",
+            }
+        )
+    return jobs
+
+
+def _daemon_wait(args, jobs: list[dict]) -> float:
+    """Random pause in the configured window; a 429 pushes it to the backoff."""
+    seconds = (args.wait_min + jitter(args.wait_max - args.wait_min)) * 60
+    if any(job.get("rate_limited") for job in jobs):
+        seconds = max(seconds, args.backoff * 60)
+    return seconds
+
+
+def _daemon_rc(jobs: list[dict]) -> int:
+    # 4 is "the lock was busy", not a failure: the next cycle will try again.
+    return max((job["rc"] for job in jobs if job["rc"] not in (0, 4)), default=0)
+
+
+def _daemon_sleep(seconds: float) -> None:
+    """Sleep in slices so a signal is handled promptly instead of after the wait."""
+    deadline = time.monotonic() + seconds
+    while True:
+        left = deadline - time.monotonic()
+        if left <= 0:
+            return
+        time.sleep(min(left, 60.0))
+
+
+def _daemon(args) -> int:
+    if args.wait_min < 0 or args.wait_max < args.wait_min:
+        raise SystemExit("error: use --wait-max >= --wait-min (em minutos)")
+    if args.backoff < 0:
+        raise SystemExit("error: --backoff não pode ser negativo")
+    if args.cycles < 0:
+        raise SystemExit("error: --cycles não pode ser negativo")
+    if args.no_sync and args.no_organize:
+        raise SystemExit("error: --no-sync e --no-organize juntos não fazem nada")
+
+    total = 1 if args.once else args.cycles
+    sync_state = "não" if args.no_sync else "sim"
+    if args.no_organize:
+        organize_state = "não"
+    elif args.yes:
+        organize_state = "aplicar"
+    else:
+        organize_state = "dry-run"
+
+    REPORT_DIR.mkdir(parents=True, exist_ok=True)
+    stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+    journal_path = REPORT_DIR / f"daemon-{stamp}.jsonl"
+    print(f"cg daemon: sync={sync_state} · organize={organize_state}")
+    print(f"pausa   : {args.wait_min:g} a {args.wait_max:g} min (sorteada)")
+    print(f"journal : {journal_path}")
+    print("primeiro plano: sem fork e sem job em background; Ctrl+C para parar.")
+
+    worst, cycle = 0, 0
+    with journal_path.open("a", encoding="utf-8") as journal:
+        journal.write(
+            json.dumps(
+                {
+                    "kind": "start",
+                    "at": datetime.now().isoformat(timespec="seconds"),
+                    "pid": os.getpid(),
+                    "sync": not args.no_sync,
+                    "organize": not args.no_organize,
+                    "apply": bool(args.yes),
+                    "wait_min": args.wait_min,
+                    "wait_max": args.wait_max,
+                }
+            )
+            + "\n"
+        )
+        journal.flush()
+        try:
+            while True:
+                cycle += 1
+                total_label = f"/{total}" if total else ""
+                print(
+                    f"\n[{datetime.now():%H:%M:%S}] ciclo {cycle}{total_label}",
+                    flush=True,
+                )
+                began = time.monotonic()
+                jobs = _daemon_cycle(args, cycle)
+                elapsed = round(time.monotonic() - began, 1)
+                worst = max(worst, _daemon_rc(jobs))
+                done = bool(total and cycle >= total)
+                wait_s = 0.0 if done else _daemon_wait(args, jobs)
+                journal.write(
+                    json.dumps(
+                        {
+                            "kind": "cycle",
+                            "cycle": cycle,
+                            "seconds": elapsed,
+                            "jobs": jobs,
+                            "next_wait_s": round(wait_s, 1),
+                            "at": datetime.now().isoformat(timespec="seconds"),
+                        }
+                    )
+                    + "\n"
+                )
+                journal.flush()
+                if done:
+                    break
+                print(f"próximo ciclo em {wait_s / 60:.1f} min — Ctrl+C para parar")
+                _daemon_sleep(wait_s)
+        finally:
+            journal.write(
+                json.dumps(
+                    {
+                        "kind": "stop",
+                        "cycles": cycle,
+                        "rc": worst,
+                        "at": datetime.now().isoformat(timespec="seconds"),
+                    }
+                )
+                + "\n"
+            )
+            journal.flush()
+
+    print(f"\nciclos: {cycle} · journal: {journal_path}")
+    return worst
 
 
 def _silence_stdout() -> None:

@@ -7,6 +7,7 @@ python3 -m unittest -v test_cg.py
 import argparse
 import contextlib
 import io
+import json
 import os
 import signal
 import sqlite3
@@ -839,6 +840,210 @@ class TestAutoNeverArchives(unittest.TestCase):
             self.assertEqual(cg._auto(args), 0)
         move.assert_called_once()
         archive.assert_not_called()
+
+
+class TestDaemon(unittest.TestCase):
+    """The daemon stays in one process: ordered jobs, recorded failures."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self._reports = cg.REPORT_DIR
+        self.addCleanup(setattr, cg, "REPORT_DIR", self._reports)
+        cg.REPORT_DIR = Path(self.tmp.name) / "reports"
+
+    def args(self, **over):
+        base = {
+            "yes": True,
+            "once": False,
+            "cycles": 0,
+            "wait_min": 20.0,
+            "wait_max": 50.0,
+            "backoff": 60.0,
+            "no_sync": False,
+            "no_organize": False,
+            "no_deep": False,
+            "deep_limit": 50,
+            "deep_sleep": 0.0,
+            "max_retries": 4,
+            "organize_limit": 100,
+            "min": 3,
+            "map": None,
+            "fallback": "Inbox",
+            "no_fallback": False,
+            "sleep": 0.0,
+            "cookie": None,
+            "cookie_file": None,
+            "base_url": "https://chatgpt.com",
+        }
+        base.update(over)
+        return argparse.Namespace(**base)
+
+    def quiet(self):
+        return (
+            contextlib.redirect_stdout(io.StringIO()),
+            contextlib.redirect_stderr(io.StringIO()),
+        )
+
+    def test_parser_defaults_are_safe(self):
+        args = cg.build_parser().parse_args(["daemon", "--once"])
+        self.assertFalse(args.yes)
+        self.assertTrue(args.once)
+        self.assertEqual((args.wait_min, args.wait_max), (20.0, 50.0))
+
+    def test_cycle_updates_index_before_organizing(self):
+        calls = []
+        out, err = self.quiet()
+        with (
+            mock.patch(
+                "cg.exclusive_run",
+                side_effect=lambda: contextlib.nullcontext(),
+            ),
+            mock.patch("cg.cmd_sync", side_effect=lambda a: calls.append("sync") or 0),
+            mock.patch(
+                "cg._organize", side_effect=lambda a: calls.append("organize") or 0
+            ),
+            out,
+            err,
+        ):
+            jobs = cg._daemon_cycle(self.args(), 1)
+        self.assertEqual(calls, ["sync", "organize"])
+        self.assertEqual([job["job"] for job in jobs], ["sync", "organize"])
+        self.assertEqual(cg._daemon_rc(jobs), 0)
+
+    def test_failed_sync_skips_the_move(self):
+        out, err = self.quiet()
+        with (
+            mock.patch(
+                "cg.exclusive_run",
+                side_effect=lambda: contextlib.nullcontext(),
+            ),
+            mock.patch("cg.cmd_sync", side_effect=SystemExit("error: session expired")),
+            mock.patch("cg._organize") as move,
+            out,
+            err,
+        ):
+            jobs = cg._daemon_cycle(self.args(), 1)
+        move.assert_not_called()
+        self.assertEqual(jobs[0]["rc"], 2)
+        self.assertEqual(jobs[1]["job"], "organize")
+        self.assertIn("skipped", jobs[1])
+
+    def test_rate_limit_is_remembered_for_the_backoff(self):
+        out, err = self.quiet()
+        with (
+            mock.patch(
+                "cg.exclusive_run",
+                side_effect=lambda: contextlib.nullcontext(),
+            ),
+            mock.patch("cg.cmd_sync", side_effect=cg.RateLimited("error: HTTP 429")),
+            out,
+            err,
+        ):
+            jobs = cg._daemon_cycle(self.args(), 1)
+        self.assertEqual(jobs[0]["rc"], 3)
+        self.assertTrue(jobs[0]["rate_limited"])
+
+    def test_a_crashing_job_does_not_kill_the_daemon(self):
+        def boom():
+            raise OSError("disk")
+
+        out, err = self.quiet()
+        with out, err:
+            record = cg._daemon_job("sync", boom)
+        self.assertEqual(record["rc"], 1)
+        self.assertIn("OSError", record["error"])
+
+    def test_busy_lock_defers_the_cycle_without_failing_it(self):
+        out, err = self.quiet()
+        with (
+            mock.patch(
+                "cg.exclusive_run",
+                side_effect=SystemExit("error: run lock busy"),
+            ),
+            out,
+            err,
+        ):
+            jobs = cg._daemon_cycle(self.args(), 1)
+        self.assertEqual(jobs[0]["job"], "lock")
+        self.assertEqual(jobs[0]["rc"], 4)
+        self.assertEqual(cg._daemon_rc(jobs), 0)
+
+    def test_wait_is_random_inside_the_window(self):
+        args = self.args(wait_min=10, wait_max=20)
+        waits = {cg._daemon_wait(args, []) for _ in range(50)}
+        self.assertGreaterEqual(min(waits), 600)
+        self.assertLessEqual(max(waits), 1200)
+        self.assertGreater(len(waits), 1)
+
+    def test_rate_limit_pushes_the_wait_to_the_backoff(self):
+        args = self.args(wait_min=1, wait_max=1, backoff=90)
+        self.assertEqual(cg._daemon_wait(args, [{"rate_limited": True}]), 5400)
+
+    def test_once_runs_one_cycle_and_never_sleeps(self):
+        runs = []
+        out, err = self.quiet()
+        with (
+            mock.patch(
+                "cg._daemon_cycle",
+                side_effect=lambda a, n: runs.append(n) or [],
+            ),
+            mock.patch(
+                "cg._daemon_sleep",
+                side_effect=AssertionError("--once não deve dormir"),
+            ),
+            out,
+            err,
+        ):
+            self.assertEqual(cg._daemon(self.args(once=True)), 0)
+        self.assertEqual(runs, [1])
+        journals = list((Path(self.tmp.name) / "reports").glob("daemon-*.jsonl"))
+        self.assertEqual(len(journals), 1)
+        records = [
+            json.loads(line) for line in journals[0].read_text().splitlines() if line
+        ]
+        self.assertEqual(
+            [record["kind"] for record in records], ["start", "cycle", "stop"]
+        )
+
+    def test_cycles_stop_after_n_and_sleep_in_between(self):
+        runs, sleeps = [], []
+        out, err = self.quiet()
+        with (
+            mock.patch(
+                "cg._daemon_cycle",
+                side_effect=lambda a, n: runs.append(n) or [],
+            ),
+            mock.patch("cg._daemon_sleep", side_effect=sleeps.append),
+            mock.patch("cg._daemon_wait", return_value=42.0),
+            out,
+            err,
+        ):
+            self.assertEqual(cg._daemon(self.args(cycles=2)), 0)
+        self.assertEqual(runs, [1, 2])
+        self.assertEqual(sleeps, [42.0])
+
+    def test_once_returns_the_worst_job_code(self):
+        out, err = self.quiet()
+        with (
+            mock.patch(
+                "cg._daemon_cycle",
+                return_value=[{"job": "sync", "rc": 3, "rate_limited": True}],
+            ),
+            out,
+            err,
+        ):
+            self.assertEqual(cg._daemon(self.args(once=True)), 3)
+
+    def test_bad_windows_are_rejected_before_touching_the_index(self):
+        for over in (
+            {"wait_min": 10, "wait_max": 5},
+            {"wait_min": -1},
+            {"cycles": -1},
+            {"no_sync": True, "no_organize": True},
+        ):
+            with self.subTest(over=over), self.assertRaises(SystemExit):
+                cg._daemon(self.args(**over))
 
 
 class TestHttpRetries(unittest.TestCase):
