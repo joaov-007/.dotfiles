@@ -16,25 +16,16 @@ wiki
 # --- the task list, for the same reason
 ^/TODO\.md$
 
-# --- Obsidian per-device/workspace state
-/\.obsidian/workspace.*\.json$
-**/\.obsidian/workspace.*\.json$
-/\.obsidian/graph\.json$
-**/\.obsidian/graph\.json$
-/\.obsidian/workspace-mobile\.json$
-**/\.obsidian/workspace-mobile\.json$
-/\.obsidian/hotkeys\.json$
-**/\.obsidian/hotkeys\.json$
-/\.obsidian/community-plugins\.json$
-**/\.obsidian/community-plugins\.json$
-/\.obsidian/plugins(/|$)
-**/\.obsidian/plugins(/|$)
-/\.obsidian/snippets/[^/]+$
-**/\.obsidian/snippets/[^/]+$
-!**/\.obsidian/snippets/\.gitkeep$
-!^/\.obsidian/snippets/\.gitkeep$
+# --- Obsidian per-device/workspace state. Patterns are Perl regexes matched
+# --- against subpaths of the "/"-prefixed path, so no depth prefix is needed;
+# --- there is no glob `**/` and no `!` negation in this file.
+\.obsidian/(workspace.*|graph|hotkeys|community-plugins)\.json$
+\.obsidian/plugins$
+\.obsidian/snippets$
 
-/\.config/niri/noctalia\.kdl$
+# --- written by the noctalia theme template on every theme change: it is
+# --- machine state, not a dotfile
+\.config/niri/noctalia\.kdl$
 
 # --- stow defaults, repeated because this file replaces them
 RCS
