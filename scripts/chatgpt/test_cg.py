@@ -12,7 +12,9 @@ import signal
 import sqlite3
 import tempfile
 import unittest
-from datetime import datetime, timedelta
+import urllib.error
+from datetime import UTC, datetime, timedelta
+from email.utils import format_datetime
 from pathlib import Path
 from unittest import mock
 
@@ -588,6 +590,21 @@ class TestSafety(unittest.TestCase):
         ):
             pass
 
+    def test_every_write_command_takes_the_lock(self):
+        for name, inner in (
+            ("cmd_move", "_move"),
+            ("cmd_unarchive", "_unarchive"),
+            ("cmd_organize", "_organize"),
+        ):
+            with (
+                self.subTest(name),
+                mock.patch(f"cg.{inner}", return_value=7) as run,
+                mock.patch("cg.exclusive_run") as lock,
+            ):
+                self.assertEqual(getattr(cg, name)(argparse.Namespace()), 7)
+            lock.assert_called_once()
+            run.assert_called_once()
+
     def test_custom_gpt_chats_are_never_refiled(self):
         plans = [TestOrganize.plan("Programming", project_id="g-KpaoqUoH5")]
         targets, _ = cg.plan_projects(plans, {}, {}, 1)
@@ -610,6 +627,248 @@ class TestSafety(unittest.TestCase):
         con.commit()
         self.assertGreater(cg.index_age(con), 170)
         self.assertIn("h atrás", cg.describe_age(cg.index_age(con)))
+
+
+class TestRateLimitGuard(unittest.TestCase):
+    """A 429 during a bulk read must stop the run, not retry every row."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self._cache = cg.CONV_CACHE_DIR
+        self.addCleanup(self._restore)
+        cg.CONV_CACHE_DIR = Path(self.tmp.name) / "convs"
+
+    def _restore(self):
+        cg.CONV_CACHE_DIR = self._cache
+
+    def test_429_raises_instead_of_returning_none(self):
+        with (
+            mock.patch("cg.http_json", return_value=(429, "")),
+            self.assertRaises(cg.RateLimited),
+        ):
+            cg.fetch_conv_raw("https://chatgpt.com", "t", "conv0001")
+
+    def test_expired_session_stops_the_fetch(self):
+        with (
+            mock.patch("cg.http_json", return_value=(401, "")),
+            self.assertRaises(SystemExit),
+        ):
+            cg.fetch_conv_raw("https://chatgpt.com", "t", "conv0001")
+
+    def test_force_ignores_a_cached_body(self):
+        cache = cg.CONV_CACHE_DIR / "conv0001.json"
+        cache.parent.mkdir(parents=True, exist_ok=True)
+        cache.write_text('{"title": "velho"}', encoding="utf-8")
+        with mock.patch(
+            "cg.http_json", return_value=(200, '{"title": "novo"}')
+        ) as http:
+            self.assertEqual(
+                cg.fetch_conv_raw("https://chatgpt.com", "t", "conv0001", force=True),
+                {"title": "novo"},
+            )
+        http.assert_called_once()
+        self.assertEqual(cache.read_text(encoding="utf-8"), '{"title": "novo"}')
+
+
+class TestExportIsNonDestructive(unittest.TestCase):
+    """`export` writes notes; it must not eat notes that were edited by hand."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self._state, self._db, self._reports = (
+            cg.STATE_DIR,
+            cg.DB_PATH,
+            cg.REPORT_DIR,
+        )
+        self._cache = cg.CONV_CACHE_DIR
+        self.addCleanup(self._restore)
+        cg.STATE_DIR = Path(self.tmp.name)
+        cg.DB_PATH = cg.STATE_DIR / "cg.db"
+        cg.REPORT_DIR = cg.STATE_DIR / "reports"
+        cg.CONV_CACHE_DIR = cg.STATE_DIR / "convs"
+        con = cg.connect()
+        self.addCleanup(con.close)
+        self.con = con
+        con.execute(
+            "INSERT INTO conversations (conv_id, title, created_ts, turns,"
+            " user_turns, user_chars, body_sha, first_user, sample, indexed_at)"
+            " VALUES (?,?,?,?,?,?,?,?,?,?)",
+            (
+                "conv0001",
+                "Minha conversa",
+                1_700_000_000.0,
+                2,
+                1,
+                80,
+                "sha",
+                "pergunta",
+                "pergunta resposta",
+                datetime.now().isoformat(timespec="seconds"),
+            ),
+        )
+        con.commit()
+
+    def _restore(self):
+        cg.STATE_DIR, cg.DB_PATH, cg.REPORT_DIR = self._state, self._db, self._reports
+        cg.CONV_CACHE_DIR = self._cache
+
+    def args(self, **over):
+        base = {
+            "outdir": str(Path(self.tmp.name) / "out"),
+            "only_project": None,
+            "verdict": None,
+            "archived_only": False,
+            "not_archived": False,
+            "fetch": False,
+            "deep_fetch": False,
+            "skip_empty": False,
+            "overwrite": False,
+            "sleep": 1.5,
+        }
+        base.update(over)
+        return argparse.Namespace(**base)
+
+    def note(self):
+        files = list(Path(self.tmp.name, "out").rglob("*.md"))
+        self.assertEqual(len(files), 1)
+        return files[0]
+
+    def run_export(self, **over):
+        out = io.StringIO()
+        with (
+            mock.patch("cg.connect", return_value=self.con),
+            contextlib.redirect_stdout(out),
+        ):
+            cg.cmd_export(self.args(**over))
+        return out.getvalue()
+
+    def test_edited_note_is_preserved_without_overwrite(self):
+        self.run_export()
+        path = self.note()
+        path.write_text("nota minha, não mexa", encoding="utf-8")
+        out = self.run_export()
+        self.assertEqual(path.read_text(encoding="utf-8"), "nota minha, não mexa")
+        self.assertIn("preservados: 1", out)
+
+    def test_overwrite_replaces_an_edited_note(self):
+        self.run_export()
+        path = self.note()
+        path.write_text("nota minha", encoding="utf-8")
+        self.run_export(overwrite=True)
+        self.assertNotEqual(path.read_text(encoding="utf-8"), "nota minha")
+
+    def test_second_run_reports_unchanged_instead_of_rewriting(self):
+        self.run_export()
+        path = self.note()
+        before = path.stat().st_mtime_ns
+        out = self.run_export()
+        self.assertEqual(path.stat().st_mtime_ns, before)
+        self.assertIn("inalterados: 1", out)
+
+
+class TestAutoNeverArchives(unittest.TestCase):
+    """`auto --yes` may move chats; it must never archive or delete them."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self._state, self._db, self._reports = (
+            cg.STATE_DIR,
+            cg.DB_PATH,
+            cg.REPORT_DIR,
+        )
+        self.addCleanup(self._restore)
+        cg.STATE_DIR = Path(self.tmp.name)
+        cg.DB_PATH = cg.STATE_DIR / "cg.db"
+        cg.REPORT_DIR = cg.STATE_DIR / "reports"
+        con = cg.connect()
+        self.addCleanup(con.close)
+        self.con = con
+        con.execute(
+            "INSERT INTO conversations (conv_id, title, created_ts, turns,"
+            " user_turns, user_chars, body_sha, first_user, sample, has_content,"
+            " indexed_at) VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+            (
+                "conv0001",
+                "pacman arch linux systemd",
+                1_700_000_000.0,
+                4,
+                2,
+                400,
+                "sha",
+                "como configurar o arch linux",
+                "pacman arch linux systemd",
+                1,
+                datetime.now().isoformat(timespec="seconds"),
+            ),
+        )
+        con.commit()
+
+    def _restore(self):
+        cg.STATE_DIR, cg.DB_PATH, cg.REPORT_DIR = self._state, self._db, self._reports
+
+    def test_auto_moves_but_does_not_archive(self):
+        args = argparse.Namespace(
+            yes=True,
+            max_age=720,
+            base_url="https://chatgpt.com",
+            create=False,
+            map=None,
+            fallback="Inbox",
+            no_fallback=False,
+            min=1,
+            limit=10,
+            sleep=0.0,
+        )
+        project = {"id": "g-p-1", "name": "Linux & Arch"}
+        with (
+            mock.patch("cg.connect", return_value=self.con),
+            mock.patch("cg.open_session", return_value={"accessToken": "tok"}),
+            mock.patch("cg.resolve_cookie", return_value="cookie"),
+            mock.patch("cg.list_projects", return_value=[project]),
+            mock.patch(
+                "cg.set_project",
+                return_value=(200, '{"gizmo_id": "g-p-1"}'),
+            ) as move,
+            mock.patch("cg.set_archived") as archive,
+            mock.patch("cg.snapshot_db", return_value=Path(self.tmp.name, "b.db")),
+            contextlib.redirect_stdout(io.StringIO()),
+        ):
+            self.assertEqual(cg._auto(args), 0)
+        move.assert_called_once()
+        archive.assert_not_called()
+
+
+class TestHttpRetries(unittest.TestCase):
+    """A lost 500 on POST create must not fire the same request again."""
+
+    @staticmethod
+    def fail(status):
+        return urllib.error.HTTPError(
+            "https://chatgpt.com", status, "boom", {}, io.BytesIO(b"")
+        )
+
+    def call(self, method, status):
+        with (
+            mock.patch(
+                "cg.urlopen", side_effect=lambda *a, **k: self.fail(status)
+            ) as op,
+            mock.patch.object(cg.THROTTLE, "enabled", False),
+        ):
+            got, _ = cg.http_json(method, "https://chatgpt.com/x", {}, retries=3)
+        return got, op.call_count
+
+    def test_post_is_not_retried_on_5xx(self):
+        self.assertEqual(self.call("POST", 500), (500, 1))
+        self.assertEqual(self.call("POST", 503), (503, 1))
+
+    def test_get_is_retried_on_5xx(self):
+        self.assertEqual(self.call("GET", 500), (500, 4))
+
+    def test_post_is_retried_on_429(self):
+        self.assertEqual(self.call("POST", 429), (429, 4))
 
 
 class TestSignals(unittest.TestCase):
@@ -702,6 +961,13 @@ class TestThrottle(unittest.TestCase):
         self.assertEqual(cg._retry_after({"Retry-After": "5"}), 5.0)
         self.assertIsNone(cg._retry_after({"Retry-After": "soon"}))
         self.assertIsNone(cg._retry_after({}))
+
+    def test_retry_after_accepts_an_http_date(self):
+        when = datetime.now(UTC) + timedelta(seconds=40)
+        raw = format_datetime(when, usegmt=True)
+        self.assertAlmostEqual(cg._retry_after({"Retry-After": raw}), 40, delta=3)
+        past = format_datetime(datetime.now(UTC) - timedelta(seconds=5), usegmt=True)
+        self.assertEqual(cg._retry_after({"Retry-After": past}), 0.0)
 
     def test_cookie_is_redacted_from_the_log(self):
         self.assertEqual(

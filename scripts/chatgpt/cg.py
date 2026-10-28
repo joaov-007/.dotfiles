@@ -20,12 +20,14 @@ Archiving is the only write path, and it is opt-in and reversible:
 
     python cg.py auth                         # validate the browser session
     python cg.py archive                      # dry-run: who would be archived
-    python cg.py archive --yes --limit 20     # archive 20, 1.2s apart
+    python cg.py archive --yes --limit 20     # archive 20, 1.5s apart
     python cg.py unarchive --log <jsonl>      # undo
 
 It uses the session cookie you paste in, hits the same endpoint the web app
 uses, and stops at the first 401/403/429 instead of hammering your account.
-There is deliberately no delete function in this file.
+Bulk reads (`sync --deep`, `export --fetch`) stop on 429 too and keep their
+progress; `--deep` is capped per run and resumes where it left off. There is
+deliberately no delete function in this file.
 
 Re-running ingest with a newer export only adds what is new: every conversation
 is keyed by its ChatGPT id. Old verdicts are recomputed, never resurrected.
@@ -53,7 +55,8 @@ import urllib.parse
 import urllib.request
 import zipfile
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
+from email.utils import parsedate_to_datetime
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 from urllib.request import Request, urlopen
@@ -1226,10 +1229,22 @@ def conv_to_markdown(conv: Conversation) -> str:
     return "\n".join(out)
 
 
-def fetch_conv_raw(base: str, token: str, conv_id: str) -> dict | None:
+class RateLimited(SystemExit):
+    """HTTP 429 during a bulk read: stop the whole run, do not hammer every row.
+
+    Write commands already abort on 429. The read loops used to count the 429 as
+    one failed row and keep going, which is exactly the pattern the backend
+    throttles. Raising this unwinds the command with a clear message; the index
+    is committed before it leaves.
+    """
+
+
+def fetch_conv_raw(
+    base: str, token: str, conv_id: str, *, force: bool = False
+) -> dict | None:
     CONV_CACHE_DIR.mkdir(parents=True, exist_ok=True)
     cache = CONV_CACHE_DIR / f"{conv_id}.json"
-    if cache.exists():
+    if not force and cache.exists():
         try:
             return json.loads(cache.read_text(encoding="utf-8"))
         except (OSError, ValueError):
@@ -1239,49 +1254,78 @@ def fetch_conv_raw(base: str, token: str, conv_id: str) -> dict | None:
             cache.unlink(missing_ok=True)
     url = f"{base}/backend-api/conversation/{conv_id}"
     status, body = http_json("GET", url, api_headers(token, base), retries=3)
+    if status == 429:
+        raise RateLimited(
+            "error: HTTP 429 ao baixar conteúdo — o ChatGPT pediu pausa.\n"
+            "  Nada foi perdido: rode o mesmo comando daqui a ~1h "
+            "(o progresso fica salvo)."
+        )
+    if status in (401, 403):
+        raise SystemExit(
+            f"error: HTTP {status} ao baixar conteúdo — sessão expirada ou sem "
+            "permissão."
+        )
     if status != 200:
+        log.warning("conversa %s: HTTP %d ao baixar o corpo", conv_id, status)
         return None
     try:
         data = json.loads(body)
-    except Exception:
+    except ValueError:
         return None
-    with contextlib.suppress(Exception):
-        cache.write_text(json.dumps(data), encoding="utf-8")
+    # Write through a temp file: a Ctrl+C in the middle must not leave a
+    # half-written cache that the next run has to throw away.
+    tmp = cache.with_name(f".{cache.name}.{os.getpid()}.tmp")
+    try:
+        tmp.write_text(json.dumps(data), encoding="utf-8")
+        os.replace(tmp, cache)
+    except OSError as exc:
+        log.debug("não gravou o cache %s: %s", cache.name, exc)
+        tmp.unlink(missing_ok=True)
     return data
 
 
 def load_conv_full(
-    con: sqlite3.Connection, row: sqlite3.Row, base: str | None, token: str | None
-) -> Conversation | None:
+    con: sqlite3.Connection,
+    row: sqlite3.Row,
+    base: str | None,
+    token: str | None,
+    *,
+    force: bool = False,
+) -> tuple[Conversation, bool]:
+    """Return (conversation, fetched_now). Cache is read unless `force`."""
     # Try cache first
     CONV_CACHE_DIR.mkdir(parents=True, exist_ok=True)
     cache = CONV_CACHE_DIR / f"{row['conv_id']}.json"
     raw = None
-    if cache.exists():
+    if not force and cache.exists():
         try:
             raw = json.loads(cache.read_text(encoding="utf-8"))
-        except Exception:
+        except (OSError, ValueError):
             raw = None
+    fetched = False
     if raw is None and base and token and row["conv_id"]:
-        raw = fetch_conv_raw(base, token, row["conv_id"])
+        raw = fetch_conv_raw(base, token, row["conv_id"], force=force)
+        fetched = raw is not None
     if raw is None:
         # Fall back to DB metadata only - no turns
         created = None
         if row["created_ts"]:
             try:
                 created = datetime.fromtimestamp(row["created_ts"]).astimezone()
-            except Exception:
+            except (OSError, OverflowError, ValueError):
                 created = None
-        return Conversation(
-            conv_id=row["conv_id"],
-            title=row["title"] or "(sem título)",
-            created=created,
-            archived=bool(row["archived"]),
-            project_id=row["project_id"],
-            turns=[],
+        return (
+            Conversation(
+                conv_id=row["conv_id"],
+                title=row["title"] or "(sem título)",
+                created=created,
+                archived=bool(row["archived"]),
+                project_id=row["project_id"],
+                turns=[],
+            ),
+            fetched,
         )
-    conv = parse_conversation(raw)
-    return conv
+    return parse_conversation(raw), fetched
 
 
 def build_plan(rows: list[sqlite3.Row]) -> list[dict]:
@@ -1587,14 +1631,21 @@ THROTTLE = Throttle()
 
 
 def _retry_after(headers) -> float | None:
-    """Retry-After is either seconds or an HTTP date; only seconds are useful."""
+    """Retry-After is either seconds or an HTTP date; both mean "wait"."""
     raw = headers.get("Retry-After") if headers else None
     if not raw:
         return None
     try:
-        return float(raw)
+        return max(0.0, float(raw))
+    except (TypeError, ValueError):
+        pass
+    try:
+        when = parsedate_to_datetime(str(raw))
     except (TypeError, ValueError):
         return None
+    if when.tzinfo is None:
+        when = when.replace(tzinfo=UTC)
+    return max(0.0, (when - datetime.now(UTC)).total_seconds())
 
 
 def http_json(
@@ -1625,6 +1676,7 @@ def http_json(
             status = exc.code
             body = exc.read().decode("utf-8", "replace")
             retry_after = _retry_after(exc.headers)
+            exc.close()
         except urllib.error.URLError as exc:
             log.error("%s %s falhou: %s", method, url, exc.reason)
             raise SystemExit(f"error: cannot reach {url}: {exc.reason}") from None
@@ -1634,6 +1686,11 @@ def http_json(
         THROTTLE.observe(status, retry_after)
 
         if status in (429, 500, 502, 503) and attempt < retries:
+            # A POST is not idempotent: retrying a 5xx can create the same
+            # Project twice when the first request succeeded but the response
+            # was lost. 429 means the request was rejected, so it is safe.
+            if method == "POST" and status != 429:
+                break
             wait = max(THROTTLE.interval * (2**attempt), retry_after or 0.0)
             THROTTLE.pause(wait)
             log.warning(
@@ -2226,7 +2283,9 @@ def cmd_sync(args) -> int:
             "ORDER BY created_ts DESC"
         )
     ]
-    if args.limit:
+    remaining = 0
+    if args.limit and args.limit > 0 and len(pending) > args.limit:
+        remaining = len(pending) - args.limit
         pending = pending[: args.limit]
     if not pending:
         print("\nconteúdo: tudo já indexado — rode `cg.py plan`.")
@@ -2247,6 +2306,13 @@ def cmd_sync(args) -> int:
             if status in (401, 403):
                 con.commit()
                 raise SystemExit(f"error: HTTP {status} — session expired.")
+            if status == 429:
+                con.commit()
+                raise RateLimited(
+                    f"error: HTTP 429 — rate limit com {done} conversas baixadas.\n"
+                    "  Progresso salvo; espere ~1h e rode o mesmo comando para "
+                    "retomar daqui."
+                )
             if status == 404:
                 missing += 1
                 mark_gone(con, conv_id)
@@ -2270,6 +2336,8 @@ def cmd_sync(args) -> int:
     con.commit()
     log.info("deep: %d ok, %d falhas, %d sumidas", done, failed, missing)
     print(f"conteúdo: {done} baixadas · {failed} falhas · {missing} sumidas")
+    if remaining:
+        print(f"faltam  : {remaining} (rode o mesmo comando para continuar)")
     print("\npróximo passo: cg.py plan")
     return 0
 
@@ -2467,7 +2535,10 @@ def archive_run(args) -> int:
     if args.ids:
         wanted = {
             line.strip()
-            for line in Path(args.ids).read_text().splitlines()
+            for line in Path(args.ids)
+            .expanduser()
+            .read_text(encoding="utf-8")
+            .splitlines()
             if line.strip()
         }
         targets = [p for p in targets if p["row"]["conv_id"] in wanted]
@@ -2499,12 +2570,17 @@ def archive_run(args) -> int:
     REPORT_DIR.mkdir(parents=True, exist_ok=True)
     stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
     log_path = REPORT_DIR / f"archive-{stamp}.jsonl"
+    backup = snapshot_db(con, "archive-backup")
     done = failed = 0
 
     with log_path.open("a", encoding="utf-8") as journal:
         for i, p in enumerate(batch, 1):
             r = p["row"]
             cid = r["conv_id"]
+            if not valid_conv_id(cid):
+                failed += 1
+                print(f"[{i:>3}/{len(batch)}] id inválido  {cid!r}")
+                continue
             status, _body = set_archived(base, token, cid, True)
 
             if status in (401, 403):
@@ -2543,11 +2619,17 @@ def archive_run(args) -> int:
     log.info("archive: %d ok, %d falhas", done, failed)
     print(f"\narquivadas: {done} · falhas: {failed}")
     print(f"log      : {log_path}")
+    print(f"backup   : {backup}")
     print(f"desfazer : cg.py unarchive --log {log_path}")
     return 0 if not failed else 1
 
 
 def cmd_unarchive(args) -> int:
+    with exclusive_run():
+        return _unarchive(args)
+
+
+def _unarchive(args) -> int:
     base = args.base_url.rstrip("/")
     if args.log:
         ids = []
@@ -2557,15 +2639,20 @@ def cmd_unarchive(args) -> int:
             if not line.strip():
                 continue
             entry = json.loads(line)
-            if entry.get("ok"):
+            # `unarchive --log` only understands archive journals. Passing an
+            # organize log here used to send ids that were never archived.
+            if entry.get("kind", "archive") != "archive":
+                continue
+            if entry.get("ok") and valid_conv_id(entry.get("conv_id")):
                 ids.append(entry["conv_id"])
     elif args.all:
         con = connect()
         ids = [
             r["conv_id"]
             for r in con.execute(
-                "SELECT conv_id FROM conversations WHERE archived = 1"
+                "SELECT conv_id FROM conversations WHERE archived = 1 AND gone = 0"
             ).fetchall()
+            if valid_conv_id(r["conv_id"])
         ]
     else:
         raise SystemExit("error: pass --log <archive-*.jsonl> or --all")
@@ -2874,13 +2961,20 @@ def _unorganize(args) -> int:
 
 
 def cmd_move(args) -> int:
+    with exclusive_run():
+        return _move(args)
+
+
+def _move(args) -> int:
     base = args.base_url.rstrip("/")
     session = open_session(base, resolve_cookie(args))
     token = session["accessToken"]
 
     THROTTLE.set_floor(args.sleep)
     con = connect()
-    rows = con.execute("SELECT * FROM conversations ORDER BY created_ts").fetchall()
+    rows = con.execute(
+        "SELECT * FROM conversations WHERE gone = 0 ORDER BY created_ts"
+    ).fetchall()
     if not rows:
         raise SystemExit(
             "error: empty index — run `cg.py sync` or `cg.py ingest` first"
@@ -2996,11 +3090,16 @@ def cmd_move(args) -> int:
     REPORT_DIR.mkdir(parents=True, exist_ok=True)
     stamp = datetime.now().strftime("%Y%m%d-%H%M%S")
     log_path = REPORT_DIR / f"move-{stamp}.jsonl"
+    backup = snapshot_db(con, "move-backup")
     done = failed = 0
 
     with log_path.open("a", encoding="utf-8") as journal:
         for i, r in enumerate(batch, 1):
             cid = r["conv_id"]
+            if not valid_conv_id(cid):
+                failed += 1
+                print(f"[{i:>3}/{len(batch)}] id inválido  {cid!r}")
+                continue
             status, _body = set_project(base, token, cid, tgt["id"])
             if status in (401, 403):
                 print(f"\nabortado: HTTP {status} — sessão inválida.")
@@ -3043,6 +3142,7 @@ def cmd_move(args) -> int:
     log.info("move: %d movidas, %d falhas", done, failed)
     print(f"\nmovidas: {done} · falhas: {failed}")
     print(f"log     : {log_path}")
+    print(f"backup  : {backup}")
     print(f"desfazer: cg unorganize --log {log_path}")
     return 0 if not failed else 1
 
@@ -3060,6 +3160,32 @@ def cmd_log(args) -> int:
     return 0
 
 
+def write_note(path: Path, text: str, *, overwrite: bool) -> str:
+    """Write a Markdown note without destroying edits made by hand.
+
+    Returns "written", "unchanged" or "kept". "kept" means the file on disk has
+    different content and `--overwrite` was not given, so the export leaves the
+    user's version alone. Writes go through a temp file so an interrupted run
+    never leaves a truncated note behind.
+    """
+    if path.exists():
+        try:
+            current = path.read_text(encoding="utf-8")
+        except OSError:
+            current = None
+        if current == text:
+            return "unchanged"
+        if not overwrite:
+            return "kept"
+    tmp = path.with_name(f".{path.name}.{os.getpid()}.tmp")
+    try:
+        tmp.write_text(text, encoding="utf-8")
+        os.replace(tmp, path)
+    finally:
+        tmp.unlink(missing_ok=True)
+    return "written"
+
+
 def cmd_export(args) -> int:
     con = connect()
     rows = con.execute(
@@ -3073,16 +3199,10 @@ def cmd_export(args) -> int:
     base = None
     token = None
     if args.fetch or args.deep_fetch:
-        try:
-            base = args.base_url.rstrip("/")
-            session = open_session(base, resolve_cookie(args))
-            token = session["accessToken"]
-            THROTTLE.set_floor(args.sleep)
-        except SystemExit:
-            if args.deep_fetch:
-                raise
-            base = None
-            token = None
+        base = args.base_url.rstrip("/")
+        session = open_session(base, resolve_cookie(args))
+        token = session["accessToken"]
+        THROTTLE.set_floor(args.sleep)
 
     outdir = Path(args.outdir).expanduser() if args.outdir else EXPORT_DIR
     outdir.mkdir(parents=True, exist_ok=True)
@@ -3095,6 +3215,8 @@ def cmd_export(args) -> int:
 
     done = 0
     skipped = 0
+    kept = 0
+    unchanged = 0
     fetched = 0
     for p in plans:
         r = p["row"]
@@ -3115,21 +3237,17 @@ def cmd_export(args) -> int:
             skipped += 1
             continue
 
-        conv = load_conv_full(
-            con, r, base if args.fetch else None, token if args.fetch else None
+        conv, did_fetch = load_conv_full(
+            con,
+            r,
+            base,
+            token,
+            force=getattr(args, "deep_fetch", False),
         )
-        if conv is None:
-            skipped += 1
-            continue
+        fetched += int(did_fetch)
         if not conv.turns and args.skip_empty:
             skipped += 1
             continue
-        if (args.fetch or args.deep_fetch) and not conv.turns and base and token:
-            # try to fetch once more explicitly
-            raw = fetch_conv_raw(base, token, cid)
-            if raw:
-                conv = parse_conversation(raw)
-                fetched += 1
 
         project = proj_map.get(cid) or conv.project_id or "Inbox"
         folder = outdir / project_folder_name(project)
@@ -3138,18 +3256,31 @@ def cmd_export(args) -> int:
         fname = f"{slug}-{cid[:8]}.md"
         path = folder / fname
         try:
-            path.write_text(conv_to_markdown(conv), encoding="utf-8")
-            done += 1
-        except Exception as e:
+            outcome = write_note(path, conv_to_markdown(conv), overwrite=args.overwrite)
+        except OSError as e:
             log.error("falha ao escrever %s: %s", path, e)
             skipped += 1
+            continue
+        if outcome == "written":
+            done += 1
+        elif outcome == "unchanged":
+            unchanged += 1
+        else:
+            kept += 1
 
-    print(f"saída     : {outdir}")
-    print(f"exportados: {done}")
+    print(f"saída      : {outdir}")
+    print(f"exportados : {done}")
+    if unchanged:
+        print(f"inalterados: {unchanged}")
+    if kept:
+        print(
+            f"preservados: {kept} (o arquivo foi editado à mão; use --overwrite "
+            "para substituir)"
+        )
     if fetched:
-        print(f"baixados  : {fetched} (sob demanda)")
+        print(f"baixados   : {fetched} (sob demanda)")
     if skipped:
-        print(f"ignorados : {skipped}")
+        print(f"ignorados  : {skipped}")
     print("\nfeito.")
     return 0
 
@@ -3737,7 +3868,15 @@ def build_parser() -> argparse.ArgumentParser:
     sy.add_argument(
         "--deep", action="store_true", help="baixar também o corpo de cada conversa"
     )
-    sy.add_argument("--limit", type=int, help="com --deep, parar depois de N conversas")
+    sy.add_argument(
+        "--limit",
+        type=int,
+        default=200,
+        help=(
+            "com --deep, parar depois de N conversas (padrão: 200; 0 = todas). "
+            "O progresso fica salvo"
+        ),
+    )
     sy.add_argument(
         "--max-retries",
         type=int,
@@ -3870,6 +4009,39 @@ def build_parser() -> argparse.ArgumentParser:
     uo.add_argument("--sleep", type=float, default=1.5)
     _add_auth_args(uo)
     uo.set_defaults(func=cmd_unorganize)
+
+    mv = sub.add_parser(
+        "move",
+        help="mover conversas entre Projects (dry-run por padrão)",
+        description=(
+            "Move um lote explícito de conversas para um Project.\n"
+            "Use --ids com uma lista de conv_id, ou --from para filtrar pela\n"
+            "origem. Sem --yes nada sai do lugar; o log permite desfazer com\n"
+            "`cg unorganize --log`."
+        ),
+        epilog=(
+            "exemplos\n"
+            "  cg move --to 'Linux & Arch' --from 'Inbox'\n"
+            "  cg move --to 'Agents' --ids lista.txt --yes --limit 50\n"
+            "  cg move --to 'Triagem' --from none --create --yes"
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    mv.add_argument("--to", required=True, metavar="PROJETO", help="Project de destino")
+    mv.add_argument("--from", metavar="PROJETO", help="Project de origem")
+    mv.add_argument("--ids", help="arquivo com um conv_id por linha")
+    mv.add_argument(
+        "--create", action="store_true", help="criar o Project de destino se faltar"
+    )
+    mv.add_argument(
+        "--yes", action="store_true", help="aplicar de verdade (sem isso é dry-run)"
+    )
+    mv.add_argument(
+        "--limit", type=int, default=100, help="máximo por execução (0 = todas)"
+    )
+    mv.add_argument("--sleep", type=float, default=1.5, help="pausa entre chamadas")
+    _add_auth_args(mv)
+    mv.set_defaults(func=cmd_move)
 
     def archive_options(p: argparse.ArgumentParser) -> None:
         p.add_argument(
@@ -4021,7 +4193,10 @@ def build_parser() -> argparse.ArgumentParser:
         description=(
             "Gera arquivos .md por conversa, em pastas com o nome do Project.\n"
             "Usa o índice local; se faltar o corpo completo, pode baixar sob demanda\n"
-            "pela API com --fetch (precisa de sessão salva via `cg login`)."
+            "pela API com --fetch (precisa de sessão salva via `cg login`).\n\n"
+            "Nunca sobrescreve um .md que você editou à mão: se o conteúdo mudou,\n"
+            "o arquivo é preservado e contado no resumo. Use --overwrite para\n"
+            "substituir de propósito."
         ),
         epilog=(
             "exemplos\n"
@@ -4029,6 +4204,8 @@ def build_parser() -> argparse.ArgumentParser:
             "  cg export --outdir ~/backup/chatgpt\n"
             "  cg export --only-project 'Linux & Arch'\n"
             "  cg export --fetch                   baixa conteúdo que falta pela API\n"
+            "  cg export --deep-fetch              ignora o cache e busca de novo\n"
+            "  cg export --overwrite               substitui .md editados à mão\n"
             "  cg export --skip-empty              pula conversas sem conteúdo\n"
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -4058,6 +4235,14 @@ def build_parser() -> argparse.ArgumentParser:
     )
     ex.add_argument(
         "--skip-empty", action="store_true", help="pular conversas sem mensagens"
+    )
+    ex.add_argument(
+        "--overwrite",
+        action="store_true",
+        help=(
+            "substituir .md existentes que você editou à mão "
+            "(sem isso eles são preservados)"
+        ),
     )
     ex.add_argument(
         "--sleep", type=float, default=1.5, help="pausa entre requisições ao buscar"

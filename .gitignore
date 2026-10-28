@@ -4,6 +4,13 @@
 *.jpeg
 *.7z
 
+# Python caches (scripts/chatgpt)
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.venv/
+
 **/node_modules*
 
 # syncthing
