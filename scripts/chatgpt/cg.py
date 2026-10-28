@@ -4312,14 +4312,16 @@ def build_parser() -> argparse.ArgumentParser:
         "daemon",
         help="manter o índice fresco e organizar em ciclos (primeiro plano)",
         description=(
-            "Um processo só, sem fork e sem job em background: a cada ciclo ele\n"
-            "atualiza o índice (`sync --deep`, retomável) e move o que já tem\n"
-            "conteúdo para Projects (`organize`). Entre ciclos, dorme um tempo\n"
-            "sorteado em [--wait-min, --wait-max] para não bater no servidor\n"
-            "sempre no mesmo minuto.\n\n"
+            "Um processo só, sem fork e sem job em background. Cada ciclo tem\n"
+            "dois jobs em ordem: `sync --deep` (job 1, retomável) atualiza o\n"
+            "índice, e `organize` (job 2) move o que já tem conteúdo para\n"
+            "Projects. Entre ciclos, dorme um tempo sorteado em\n"
+            "[--wait-min, --wait-max] para não bater no servidor sempre no\n"
+            "mesmo minuto.\n\n"
             "Sem --yes o organize continua sendo dry-run; o índice é sempre\n"
             "atualizado. Se o sync falhar (sessão vencida, 429), o organize do\n"
-            "ciclo é pulado e o motivo fica registrado.\n\n"
+            "ciclo é pulado e o motivo fica registrado. Uma parada durante o\n"
+            "sync encerra o ciclo ali, sem mover nada.\n\n"
             "Cada ciclo vira uma linha JSON em reports/daemon-*.jsonl com tempos,\n"
             "códigos de saída e erro; o HTTP continua em `cg log`.\n\n"
             "Quer agendar em vez de deixar rodando? Use --once num .service e\n"
@@ -4334,8 +4336,9 @@ def build_parser() -> argparse.ArgumentParser:
             "  cg daemon --cycles 3 --yes   três ciclos e sai\n"
             "  cg daemon --wait-min 30 --wait-max 90 --yes\n"
             "\n"
-            "Ctrl+C/SIGTERM param entre um job e outro; o que já foi feito fica.\n"
-            "O daemon nunca arquiva nem apaga: isso continua manual."
+            "Ctrl+C/SIGTERM interrompem o job atual e encerram o daemon; o que\n"
+            "já foi feito fica salvo e o próximo ciclo retoma. O daemon nunca\n"
+            "arquiva nem apaga: isso continua manual."
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
@@ -4709,6 +4712,20 @@ def _daemon_organize_args(args) -> argparse.Namespace:
     )
 
 
+# `cmd_sync` catches the stop signal itself, commits the index and returns
+# 128+signum instead of letting the exception unwind. The daemon must read that
+# return as "stop after this job", not as an ordinary failure to retry.
+_DAEMON_STOP_RCS = frozenset(
+    128 + sig
+    for sig in (
+        getattr(signal, "SIGINT", None),
+        getattr(signal, "SIGTERM", None),
+        getattr(signal, "SIGHUP", None),
+    )
+    if sig is not None
+)
+
+
 def _daemon_job(name: str, run) -> dict:
     """Run one job in this process and turn any failure into a record.
 
@@ -4750,8 +4767,30 @@ def _daemon_job(name: str, run) -> dict:
     }
 
 
+def _daemon_skipped(name: str, reason: str) -> dict:
+    """A job that did not run; the cycle still records why it was skipped."""
+    return {
+        "job": name,
+        "rc": 0,
+        "seconds": 0.0,
+        "error": None,
+        "rate_limited": False,
+        "skipped": reason,
+    }
+
+
+def _daemon_stopped(jobs: list[dict]) -> bool:
+    """True when a stop signal cut a job short, even if it returned a code."""
+    return any(job.get("rc") in _DAEMON_STOP_RCS for job in jobs)
+
+
 def _daemon_cycle(args, cycle: int) -> list[dict]:
-    """One locked pass: refresh the index, then move what can be moved."""
+    """One locked pass: sync is job one, organize is job two.
+
+    Organize only runs after a clean sync. A stop signal during sync (which
+    returns 128+signum after committing) ends the cycle there; the caller sees
+    the code and exits instead of sleeping.
+    """
     sync_args = _daemon_sync_args(args)
     organize_args = _daemon_organize_args(args)
     jobs: list[dict] = []
@@ -4760,22 +4799,14 @@ def _daemon_cycle(args, cycle: int) -> list[dict]:
             if not args.no_sync:
                 jobs.append(_daemon_job("sync", lambda: cmd_sync(sync_args)))
             if not args.no_organize:
-                sync_failed = any(
-                    job["job"] == "sync" and job["rc"] != 0 for job in jobs
-                )
-                if sync_failed:
+                if _daemon_stopped(jobs):
+                    reason = "parada pedida durante o sync"
+                    log.info("daemon: organize pulado — %s", reason)
+                    jobs.append(_daemon_skipped("organize", reason))
+                elif any(job["job"] == "sync" and job["rc"] != 0 for job in jobs):
                     reason = "sync falhou neste ciclo"
                     log.info("daemon: organize pulado — %s", reason)
-                    jobs.append(
-                        {
-                            "job": "organize",
-                            "rc": 0,
-                            "seconds": 0.0,
-                            "error": None,
-                            "rate_limited": False,
-                            "skipped": reason,
-                        }
-                    )
+                    jobs.append(_daemon_skipped("organize", reason))
                 else:
                     jobs.append(
                         _daemon_job("organize", lambda: _organize(organize_args))
@@ -4878,7 +4909,8 @@ def _daemon(args) -> int:
                 jobs = _daemon_cycle(args, cycle)
                 elapsed = round(time.monotonic() - began, 1)
                 worst = max(worst, _daemon_rc(jobs))
-                done = bool(total and cycle >= total)
+                stopped = _daemon_stopped(jobs)
+                done = stopped or bool(total and cycle >= total)
                 wait_s = 0.0 if done else _daemon_wait(args, jobs)
                 journal.write(
                     json.dumps(
@@ -4894,10 +4926,21 @@ def _daemon(args) -> int:
                     + "\n"
                 )
                 journal.flush()
+                if stopped:
+                    log.info("daemon: parada pedida, encerrando no ciclo %d", cycle)
+                    print("parada pedida — encerrando sem dormir.", flush=True)
                 if done:
                     break
                 print(f"próximo ciclo em {wait_s / 60:.1f} min — Ctrl+C para parar")
                 _daemon_sleep(wait_s)
+        except Interrupted as exc:
+            # A signal cut a job (or the sleep) before any record could carry
+            # its code; keep the stop line honest about how the daemon ended.
+            worst = max(worst, 128 + exc.signum)
+            raise
+        except KeyboardInterrupt:
+            worst = max(worst, 130)
+            raise
         finally:
             journal.write(
                 json.dumps(
