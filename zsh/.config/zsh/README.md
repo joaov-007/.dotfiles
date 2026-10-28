@@ -15,7 +15,7 @@ the binaries (fzf, zoxide, atuin, bat, eza, delta) from pacman.
   05-mise.zsh          mise activation
   10-options.zsh       setopt, keymap
   20-history.zsh       HISTFILE, history options, atuin
-  30-completion.zsh    compinit + zstyle
+  30-completion.zsh    compinit, zstyle, cg completions
   35-zinit.zsh         zinit bootstrap + the zsh plugins
   40-plugins.zsh       fzf, fzf-tab styles, zoxide
   45-environment.zsh   environment variables
@@ -227,10 +227,10 @@ zinit spends another 90 ms of bookkeeping around it.
 script it writes bakes the PATH of the shell that asked for it, so a
 cached copy would freeze that PATH for every shell that came after.
 
-The four initialisers that *can* be cached are: the shell integrations of
-fzf, zoxide and atuin, and mise's completion script. They are written to
-`~/.cache/zsh/init` and sourced from there. The cached copy is thrown
-away when the binary that produced it is newer than the copy, so a
+The five initialisers that *can* be cached are: the shell integrations of
+fzf, zoxide and atuin, and the completion scripts of mise and cg. They are
+written to `~/.cache/zsh/init` and sourced from there. The cached copy is
+thrown away when the binary that produced it is newer than the copy, so a
 package upgrade regenerates it. To rebuild them by hand:
 
 ```sh

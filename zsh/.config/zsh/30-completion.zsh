@@ -56,3 +56,15 @@ mkdir -p "${XDG_CACHE_HOME:-$HOME/.cache}/zsh" 2>/dev/null
 if (( $+commands[mise] )); then
   cache_init "$commands[mise]" mise-completion.zsh mise completion zsh
 fi
+
+# cg completions — scripts/chatgpt/cg.py in this repo.
+#
+# The script writes its own _cg from its argparse parser, so the words
+# cannot drift from the commands. That file is cached in ~/.cache/zsh/init
+# and regenerated on the next shell after cg.py changes: cache_init
+# compares the copy against the binary, and the symlink resolves to the
+# script itself. Sourcing the file only defines _cg — compdef binds it.
+if (( $+commands[cg] )); then
+  cache_init "$commands[cg]" cg.zsh "$commands[cg]" completions zsh
+  (( $+functions[_cg] )) && compdef _cg cg
+fi

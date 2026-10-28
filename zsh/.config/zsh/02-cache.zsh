@@ -1,7 +1,7 @@
 # 02-cache.zsh — cached initialisers
 #
-# fzf, zoxide, atuin and mise each write a small shell script when they
-# are asked to set themselves up. Asking costs a process spawn each —
+# fzf, zoxide, atuin, mise and cg each write a small shell script when
+# they are asked to set themselves up. Asking costs a process spawn each —
 # around 55 ms of the startup on this machine — and the script they
 # produce only changes when the program itself changes.
 #
