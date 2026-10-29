@@ -57,8 +57,10 @@ import logging
 import os
 import random
 import re
+import shutil
 import signal
 import sqlite3
+import subprocess  # nosec B404
 import sys
 import time
 import unicodedata
@@ -1796,11 +1798,29 @@ def build_cookie(raw: str) -> str:
     return "; ".join(f"{SESSION_COOKIE}.{i}={chunk}" for i, chunk in enumerate(lines))
 
 
+class SessionExpired(SystemExit):
+    """The server refused a well-formed cookie: worth harvesting a fresh one."""
+
+
+def session_path() -> Path:
+    """Where the validated cookie header is kept between runs."""
+    return STATE_DIR / "session"
+
+
+def save_cookie(cookie: str, path: Path | None = None) -> Path:
+    """Persist a cookie header the server already accepted: 0600, state dir."""
+    target = Path(path).expanduser() if path else session_path()
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(cookie.strip() + "\n", encoding="utf-8")
+    os.chmod(target, 0o600)
+    return target
+
+
 def resolve_cookie(args) -> str:
     raw = (getattr(args, "cookie", None) or os.environ.get("CG_COOKIE") or "").strip()
     path = getattr(args, "cookie_file", None)
     if not raw:
-        p = Path(path).expanduser() if path else STATE_DIR / "session"
+        p = Path(path).expanduser() if path else session_path()
         if p.is_file():
             if p.stat().st_mode & 0o077:
                 print(
@@ -1813,9 +1833,8 @@ def resolve_cookie(args) -> str:
     if not raw:
         raise SystemExit(
             "error: no session cookie.\n"
-            "  DevTools -> Network -> any chatgpt.com request -> Request Headers ->\n"
-            "  right-click `cookie:` -> Copy value -> save it to a 600 file, or pass "
-            "--cookie."
+            "  Run `cg login` to read it from the browser, or paste the DevTools\n"
+            "  `cookie:` request header into a 600 file and pass --cookie-file."
         )
     return build_cookie(raw)
 
@@ -1826,6 +1845,10 @@ def open_session(base: str, cookie: str) -> dict:
         f"{base}/api/auth/session",
         {"Cookie": cookie, "User-Agent": UA, "Accept": "application/json"},
     )
+    if status in (401, 403):
+        raise SessionExpired(
+            f"error: session check failed (HTTP {status}) — cookie expired."
+        )
     if status != 200:
         raise SystemExit(
             f"error: session check failed (HTTP {status}) — "
@@ -1838,7 +1861,7 @@ def open_session(base: str, cookie: str) -> dict:
             "error: /api/auth/session returned non-JSON — Cloudflare challenge?"
         ) from None
     if not data.get("accessToken"):
-        raise SystemExit(
+        raise SessionExpired(
             "error: the server answered with an empty session — the cookie was "
             "rejected.\n"
             f"  Sent {len(cookie)} chars of cookie. Usual causes: expired session, or "
@@ -1848,6 +1871,36 @@ def open_session(base: str, cookie: str) -> dict:
             "  `cookie:` request header."
         )
     return data
+
+
+def authenticate(base: str, args) -> dict:
+    """Open the API session, healing a stale saved cookie from the browser.
+
+    An explicit --cookie/CG_COOKIE/--cookie-file always wins and is never
+    replaced. Otherwise the saved header is tried first, the browser stores are
+    the fallback, and a cookie the server accepted is written back so the next
+    run starts from the file. Nothing is persisted before that validation.
+    """
+    explicit = (
+        getattr(args, "cookie", None) or os.environ.get("CG_COOKIE") or ""
+    ).strip()
+    if explicit:
+        return open_session(base, build_cookie(explicit))
+    if getattr(args, "cookie_file", None):
+        return open_session(base, resolve_cookie(args))
+
+    if session_path().is_file():
+        try:
+            return open_session(base, resolve_cookie(args))
+        except SessionExpired:
+            log.warning("sessão salva recusada — relendo os cookies do navegador")
+
+    cookie, store = harvest_cookie(None)
+    session = open_session(base, cookie)
+    save_cookie(cookie)
+    log.info("sessão renovada de %s", store)
+    print(f"sessão  : renovada de {store}", file=sys.stderr)
+    return session
 
 
 def set_archived(
@@ -2118,10 +2171,91 @@ FIREFOX_STORES = (
     "~/.librewolf/*/cookies.sqlite",
 )
 OSCRYPT_PASSWORDS = ("peanuts", "Brave Safe Storage", "Chrome Safe Storage")
+# Chromium puts the cookie key in libsecret under this schema and attribute.
+OSCRYPT_SCHEMA = "chrome_libsecret_os_crypt_password_v2"
+OSCRYPT_APPLICATIONS = ("chrome", "chromium", "brave", "microsoft-edge", "vivaldi")
+OSCRYPT_STORE_HINTS = (
+    ("brave", "brave"),
+    ("chromium", "chromium"),
+    ("google-chrome", "chrome"),
+    ("microsoft-edge", "microsoft-edge"),
+    ("vivaldi", "vivaldi"),
+)
 HOST_DIGEST = 32  # SHA256(host_key) prefix added to cookie plaintext in Chromium 127+
+_KEYRING_CACHE: dict[str, tuple[str, ...]] = {}
 
 
-def _decrypt_chromium(blob: bytes) -> str | None:
+def _chromium_application(path: Path | None) -> str | None:
+    """Which libsecret `application` attribute belongs to this profile."""
+    text = str(path or "").lower()
+    for needle, application in OSCRYPT_STORE_HINTS:
+        if needle in text:
+            return application
+    return None
+
+
+def _keyring_password(application: str) -> tuple[str, ...]:
+    """Ask libsecret for Chromium's cookie key, once per run.
+
+    `secret-tool` ships with libsecret; no browser helper and no keyring API
+    binding is needed. The secret is read from stdout and never logged.
+    """
+    tool = shutil.which("secret-tool")
+    if not tool:
+        return ()
+    queries = (
+        ("application", application, "xdg:schema", OSCRYPT_SCHEMA),
+        ("application", application),
+    )
+    for attributes in queries:
+        try:
+            proc = subprocess.run(  # noqa: S603  # nosec B603
+                [tool, "lookup", *attributes],
+                capture_output=True,
+                text=True,
+                timeout=5,
+                check=False,
+            )
+        except (OSError, subprocess.SubprocessError):
+            return ()
+        password = proc.stdout.strip()
+        if proc.returncode == 0 and password:
+            return (password,)
+    return ()
+
+
+def _keyring_passwords(application: str) -> tuple[str, ...]:
+    if application not in _KEYRING_CACHE:
+        _KEYRING_CACHE[application] = _keyring_password(application)
+    return _KEYRING_CACHE[application]
+
+
+def _oscrypt_passwords(path: Path | None = None) -> tuple[str, ...]:
+    """Keys to try for v10/v11 cookies, most likely first.
+
+    The keyring wins when it answers, so profiles using the desktop password
+    store decrypt without extra flags. CG_OSCRYPT_PASSWORD covers the rare case
+    of a key living somewhere else; the legacy plaintext store stays last so
+    old profiles keep working.
+    """
+    explicit = os.environ.get("CG_OSCRYPT_PASSWORD", "").strip()
+    first = _chromium_application(path)
+    applications = dict.fromkeys(filter(None, (first, *OSCRYPT_APPLICATIONS)))
+    candidates: list[str] = []
+    if explicit:
+        candidates.append(explicit)
+    for application in applications:
+        found = _keyring_passwords(application)
+        if found:
+            candidates.extend(found)
+            break
+    candidates.extend(OSCRYPT_PASSWORDS)
+    return tuple(dict.fromkeys(candidates))
+
+
+def _decrypt_chromium(
+    blob: bytes, passwords: tuple[str, ...] = OSCRYPT_PASSWORDS
+) -> str | None:
     """v10/v11 = AES-128-CBC, key = PBKDF2(password, 'saltysalt', 1)."""
     try:
         from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
@@ -2132,7 +2266,7 @@ def _decrypt_chromium(blob: bytes) -> str | None:
         ) from None
     if blob[:3] not in (b"v10", b"v11"):
         return None
-    for password in OSCRYPT_PASSWORDS:
+    for password in passwords:
         key = hashlib.pbkdf2_hmac("sha1", password.encode(), b"saltysalt", 1, 16)
         dec = Cipher(algorithms.AES(key), modes.CBC(b" " * 16)).decryptor()
         raw = dec.update(blob[3:]) + dec.finalize()
@@ -2150,44 +2284,60 @@ def _decrypt_chromium(blob: bytes) -> str | None:
     return None
 
 
+@contextlib.contextmanager
+def _cookie_store_copy(path: Path):
+    """Copy a live browser database aside so its locks do not block the read.
+
+    The copy holds session tokens, so it is 0600 inside the state directory and
+    disappears even when the read fails.
+    """
+    STATE_DIR.mkdir(parents=True, exist_ok=True)
+    snapshot = STATE_DIR / f".cookies-{os.getpid()}.sqlite"
+    try:
+        shutil.copy2(path, snapshot)
+        os.chmod(snapshot, 0o600)
+        yield snapshot
+    finally:
+        snapshot.unlink(missing_ok=True)
+
+
 def _cookies_from_chromium(path: Path) -> dict[str, str]:
-    import shutil
     import sqlite3
 
-    snapshot = STATE_DIR / "cookies.snapshot"
-    shutil.copy2(path, snapshot)  # live DB is locked by the running browser
-    con = sqlite3.connect(snapshot)
-    rows = con.execute(
-        "SELECT name, encrypted_value, value FROM cookies "
-        "WHERE host_key LIKE '%chatgpt.com' OR host_key LIKE '%openai.com'"
-    ).fetchall()
-    con.close()
-    snapshot.unlink(missing_ok=True)
+    passwords = _oscrypt_passwords(path)
+    with _cookie_store_copy(path) as snapshot:
+        con = sqlite3.connect(snapshot)
+        try:
+            rows = con.execute(
+                "SELECT name, encrypted_value, value FROM cookies "
+                "WHERE host_key LIKE '%chatgpt.com' OR host_key LIKE '%openai.com'"
+            ).fetchall()
+        finally:
+            con.close()
 
     out: dict[str, str] = {}
     for name, encrypted, plain in rows:
         if plain:
             out[name] = plain
             continue
-        value = _decrypt_chromium(bytes(encrypted)) if encrypted else None
+        value = _decrypt_chromium(bytes(encrypted), passwords) if encrypted else None
         if value:
             out[name] = value
     return out
 
 
 def _cookies_from_firefox(path: Path) -> dict[str, str]:
-    import shutil
     import sqlite3
 
-    snapshot = STATE_DIR / "cookies.snapshot"
-    shutil.copy2(path, snapshot)
-    con = sqlite3.connect(snapshot)
-    rows = con.execute(
-        "SELECT name, value FROM moz_cookies "
-        "WHERE host LIKE '%chatgpt.com' OR host LIKE '%openai.com'"
-    ).fetchall()
-    con.close()
-    snapshot.unlink(missing_ok=True)
+    with _cookie_store_copy(path) as snapshot:
+        con = sqlite3.connect(snapshot)
+        try:
+            rows = con.execute(
+                "SELECT name, value FROM moz_cookies "
+                "WHERE host LIKE '%chatgpt.com' OR host LIKE '%openai.com'"
+            ).fetchall()
+        finally:
+            con.close()
     return {name: value for name, value in rows if value}
 
 
@@ -2238,10 +2388,7 @@ def cmd_login(args) -> int:
     session = open_session(base, cookie)
     user = session.get("user") or {}
 
-    target = Path(args.save).expanduser() if args.save else STATE_DIR / "session"
-    target.parent.mkdir(parents=True, exist_ok=True)
-    target.write_text(cookie + "\n", encoding="utf-8")
-    os.chmod(target, 0o600)
+    target = save_cookie(cookie, Path(args.save) if args.save else None)
 
     print(f"conta   : {user.get('email')}")
     print(f"plano   : {user.get('planType') or '?'}")
@@ -2276,7 +2423,7 @@ def cmd_sync(args) -> int:
 
 def _sync(args) -> int:
     base = args.base_url.rstrip("/")
-    session = open_session(base, resolve_cookie(args))
+    session = authenticate(base, args)
     token = session["accessToken"]
 
     THROTTLE.set_floor(args.sleep)
@@ -2402,7 +2549,7 @@ def _sync(args) -> int:
 
 def cmd_auth(args) -> int:
     base = args.base_url.rstrip("/")
-    session = open_session(base, resolve_cookie(args))
+    session = authenticate(base, args)
     user = session.get("user") or {}
     print(f"conta   : {user.get('email') or user.get('name') or '?'}")
     print(f"plano   : {(user.get('planType') or '?')}")
@@ -2622,7 +2769,7 @@ def archive_run(args) -> int:
 
     THROTTLE.set_floor(args.sleep)
     base = args.base_url.rstrip("/")
-    session = open_session(base, resolve_cookie(args))
+    session = authenticate(base, args)
     token = session["accessToken"]
 
     REPORT_DIR.mkdir(parents=True, exist_ok=True)
@@ -2720,7 +2867,7 @@ def _unarchive(args) -> int:
         return 0
 
     THROTTLE.set_floor(args.sleep)
-    session = open_session(base, resolve_cookie(args))
+    session = authenticate(base, args)
     token = session["accessToken"]
     con = connect()
     done = 0
@@ -2747,7 +2894,7 @@ def _unarchive(args) -> int:
 
 def cmd_projects(args) -> int:
     base = args.base_url.rstrip("/")
-    session = open_session(base, resolve_cookie(args))
+    session = authenticate(base, args)
     projects = list_projects(base, session["accessToken"])
 
     con = connect()
@@ -2784,7 +2931,7 @@ def _organize(args) -> int:
 
     THROTTLE.set_floor(args.sleep)
     base = args.base_url.rstrip("/")
-    session = open_session(base, resolve_cookie(args))
+    session = authenticate(base, args)
     token = session["accessToken"]
     projects = list_projects(base, token)
     existing = {project_key(p["name"]): p for p in projects}
@@ -2979,7 +3126,7 @@ def _unorganize(args) -> int:
 
     THROTTLE.set_floor(args.sleep)
     base = args.base_url.rstrip("/")
-    session = open_session(base, resolve_cookie(args))
+    session = authenticate(base, args)
     token = session["accessToken"]
     con = connect()
     done = 0
@@ -3025,7 +3172,7 @@ def cmd_move(args) -> int:
 
 def _move(args) -> int:
     base = args.base_url.rstrip("/")
-    session = open_session(base, resolve_cookie(args))
+    session = authenticate(base, args)
     token = session["accessToken"]
 
     THROTTLE.set_floor(args.sleep)
@@ -3258,7 +3405,7 @@ def cmd_export(args) -> int:
     token = None
     if args.fetch or args.deep_fetch:
         base = args.base_url.rstrip("/")
-        session = open_session(base, resolve_cookie(args))
+        session = authenticate(base, args)
         token = session["accessToken"]
         THROTTLE.set_floor(args.sleep)
 
@@ -4020,7 +4167,8 @@ def build_parser() -> argparse.ArgumentParser:
         description=(
             "Lê os cookies do Brave/Chromium ou do LibreWolf/Firefox, valida com\n"
             "/api/auth/session e grava em ~/.local/state/cg/session (modo 600).\n"
-            "Depois disso nenhum comando precisa de --cookie."
+            "Depois disso nenhum comando precisa de --cookie.\n"
+            "Com chaveiro (libsecret), a chave do Chromium vem do secret-tool."
         ),
         epilog=(
             "exemplos\n"
@@ -4841,7 +4989,7 @@ def _auto(args) -> int:
         )
 
     base = args.base_url.rstrip("/")
-    session = open_session(base, resolve_cookie(args))
+    session = authenticate(base, args)
     token = session["accessToken"]
     THROTTLE.set_floor(args.sleep)
 

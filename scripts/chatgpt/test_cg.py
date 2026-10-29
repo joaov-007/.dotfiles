@@ -7,6 +7,7 @@ python3 -m unittest -v test_cg.py
 import argparse
 import contextlib
 import fcntl
+import hashlib
 import io
 import json
 import os
@@ -645,8 +646,7 @@ class TestSafety(unittest.TestCase):
         )
         with (
             mock.patch("cg.connect", return_value=con),
-            mock.patch("cg.resolve_cookie", return_value=""),
-            mock.patch("cg.open_session", return_value={"accessToken": "tok"}),
+            mock.patch("cg.authenticate", return_value={"accessToken": "tok"}),
             mock.patch("cg.http_json", side_effect=fake_http),
             contextlib.redirect_stdout(io.StringIO()),
         ):
@@ -708,6 +708,195 @@ class TestSafety(unittest.TestCase):
         con.commit()
         self.assertGreater(cg.index_age(con), 170)
         self.assertIn("h atrás", cg.describe_age(cg.index_age(con)))
+
+
+class CookieState(unittest.TestCase):
+    """Point cg at a throwaway state dir: every auth path writes there."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self._state = cg.STATE_DIR
+        self.addCleanup(setattr, cg, "STATE_DIR", self._state)
+        cg.STATE_DIR = Path(self.tmp.name)
+        self._env = dict(os.environ)
+        self.addCleanup(self._restore_env)
+        for name in ("CG_COOKIE", "CG_OSCRYPT_PASSWORD"):
+            os.environ.pop(name, None)
+        cg._KEYRING_CACHE.clear()
+        self.addCleanup(cg._KEYRING_CACHE.clear)
+
+    def _restore_env(self):
+        os.environ.clear()
+        os.environ.update(self._env)
+
+
+class TestAuth(CookieState):
+    """A saved cookie heals itself; explicit input is never overridden."""
+
+    def args(self, **over):
+        base = {
+            "cookie": None,
+            "cookie_file": None,
+            "base_url": "https://chatgpt.com",
+        }
+        base.update(over)
+        return argparse.Namespace(**base)
+
+    def test_a_valid_saved_cookie_never_touches_the_browser(self):
+        cg.save_cookie(f"{cg.SESSION_COOKIE}=good")
+        with (
+            mock.patch("cg.open_session", return_value={"accessToken": "t"}),
+            mock.patch("cg.harvest_cookie") as harvest,
+        ):
+            session = cg.authenticate("https://chatgpt.com", self.args())
+        self.assertEqual(session["accessToken"], "t")
+        harvest.assert_not_called()
+
+    def test_an_expired_saved_cookie_is_replaced_from_the_browser(self):
+        cg.save_cookie(f"{cg.SESSION_COOKIE}=old")
+        fresh = f"{cg.SESSION_COOKIE}=new"
+
+        def open_session(base, cookie):
+            if cookie.endswith("old"):
+                raise cg.SessionExpired("expired")
+            return {"accessToken": "t"}
+
+        with (
+            mock.patch("cg.open_session", side_effect=open_session),
+            mock.patch("cg.harvest_cookie", return_value=(fresh, Path("/b/Cookies"))),
+        ):
+            cg.authenticate("https://chatgpt.com", self.args())
+        self.assertEqual(cg.session_path().read_text().strip(), fresh)
+        self.assertEqual(cg.session_path().stat().st_mode & 0o777, 0o600)
+
+    def test_a_missing_session_is_bootstrapped_from_the_browser(self):
+        fresh = f"{cg.SESSION_COOKIE}=boot"
+        with (
+            mock.patch("cg.open_session", return_value={"accessToken": "t"}),
+            mock.patch("cg.harvest_cookie", return_value=(fresh, Path("/b/Cookies"))),
+        ):
+            cg.authenticate("https://chatgpt.com", self.args())
+        self.assertEqual(cg.session_path().read_text().strip(), fresh)
+
+    def test_an_explicit_cookie_is_used_and_never_replaced(self):
+        given = f"{cg.SESSION_COOKIE}=cli"
+        with (
+            mock.patch("cg.open_session", return_value={"accessToken": "t"}) as sess,
+            mock.patch("cg.harvest_cookie") as harvest,
+            mock.patch("cg.save_cookie") as save,
+        ):
+            cg.authenticate("https://chatgpt.com", self.args(cookie=given))
+        self.assertEqual(sess.call_args.args[1], given)
+        harvest.assert_not_called()
+        save.assert_not_called()
+
+    def test_a_cookie_file_is_used_as_given(self):
+        path = Path(self.tmp.name) / "cookie"
+        path.write_text(f"{cg.SESSION_COOKIE}=file\n", encoding="utf-8")
+        with (
+            mock.patch("cg.open_session", return_value={"accessToken": "t"}) as sess,
+            mock.patch("cg.harvest_cookie") as harvest,
+        ):
+            cg.authenticate("https://chatgpt.com", self.args(cookie_file=str(path)))
+        self.assertEqual(sess.call_args.args[1], f"{cg.SESSION_COOKIE}=file")
+        harvest.assert_not_called()
+
+    def test_a_rejected_browser_cookie_is_not_saved(self):
+        with (
+            mock.patch("cg.open_session", side_effect=cg.SessionExpired("nope")),
+            mock.patch("cg.harvest_cookie", return_value=("x=1", Path("/b/Cookies"))),
+            self.assertRaises(SystemExit),
+        ):
+            cg.authenticate("https://chatgpt.com", self.args())
+        self.assertFalse(cg.session_path().exists())
+
+    def test_open_session_separates_expiry_from_other_failures(self):
+        with (
+            mock.patch("cg.http_json", return_value=(401, "")),
+            self.assertRaises(cg.SessionExpired),
+        ):
+            cg.open_session("https://chatgpt.com", "c")
+        with (
+            mock.patch("cg.http_json", return_value=(200, '{"user": {}}')),
+            self.assertRaises(cg.SessionExpired),
+        ):
+            cg.open_session("https://chatgpt.com", "c")
+        with (
+            mock.patch("cg.http_json", return_value=(503, "")),
+            self.assertRaises(SystemExit) as caught,
+        ):
+            cg.open_session("https://chatgpt.com", "c")
+        self.assertNotIsInstance(caught.exception, cg.SessionExpired)
+
+
+class TestCookieStore(CookieState):
+    """Chromium's key comes from libsecret first, legacy passwords last."""
+
+    @staticmethod
+    def seal(password: str, plaintext: str) -> bytes:
+        from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+
+        key = hashlib.pbkdf2_hmac("sha1", password.encode(), b"saltysalt", 1, 16)
+        pad = 16 - len(plaintext.encode()) % 16
+        data = plaintext.encode() + bytes([pad]) * pad
+        enc = Cipher(algorithms.AES(key), modes.CBC(b" " * 16)).encryptor()
+        return b"v10" + enc.update(data) + enc.finalize()
+
+    def test_the_keyring_key_is_tried_first(self):
+        proc = mock.Mock(returncode=0, stdout="s3cret\n")
+        store = Path("/home/u/.config/BraveSoftware/Brave-Browser/Default/Cookies")
+        with (
+            mock.patch("cg.shutil.which", return_value="/usr/bin/secret-tool"),
+            mock.patch("cg.subprocess.run", return_value=proc) as run,
+        ):
+            self.assertEqual(cg._oscrypt_passwords(store)[0], "s3cret")
+        argv = run.call_args_list[0].args[0]
+        self.assertEqual(argv[1], "lookup")
+        self.assertIn("brave", argv)
+
+    def test_the_legacy_store_remains_the_fallback(self):
+        with mock.patch("cg.shutil.which", return_value=None):
+            self.assertEqual(cg._oscrypt_passwords(), cg.OSCRYPT_PASSWORDS)
+
+    def test_an_explicit_key_override_is_tried_first(self):
+        with (
+            mock.patch("cg.shutil.which", return_value=None),
+            mock.patch.dict(os.environ, {"CG_OSCRYPT_PASSWORD": "env-key"}),  # nosec B105
+        ):
+            self.assertEqual(cg._oscrypt_passwords()[0], "env-key")
+
+    def test_a_broken_keyring_falls_back_instead_of_raising(self):
+        with (
+            mock.patch("cg.shutil.which", return_value="/usr/bin/secret-tool"),
+            mock.patch("cg.subprocess.run", side_effect=OSError("no bus")),
+        ):
+            self.assertEqual(cg._oscrypt_passwords(), cg.OSCRYPT_PASSWORDS)
+
+    def test_a_v10_cookie_decrypts_with_the_matching_key(self):
+        sealed = self.seal("s3cret", "session-token-value")
+        self.assertEqual(
+            cg._decrypt_chromium(sealed, ("wrong-key", "s3cret")),
+            "session-token-value",
+        )
+
+    def test_unknown_keys_return_none_instead_of_garbage(self):
+        sealed = self.seal("s3cret", "session-token-value")
+        self.assertIsNone(cg._decrypt_chromium(sealed, ("nope",)))
+
+    def test_the_snapshot_is_private_and_removed_on_failure(self):
+        store = Path(self.tmp.name) / "Cookies"
+        store.write_bytes(b"x")
+        seen = {}
+        with (
+            self.assertRaises(RuntimeError),
+            cg._cookie_store_copy(store) as copy,
+        ):
+            seen["mode"] = copy.stat().st_mode & 0o777
+            seen["path"] = copy
+            raise RuntimeError("boom")
+        self.assertEqual(seen["mode"], 0o600)
+        self.assertFalse(seen["path"].exists())
 
 
 class TestRateLimitGuard(unittest.TestCase):
@@ -906,8 +1095,7 @@ class TestAutoNeverArchives(unittest.TestCase):
         project = {"id": "g-p-1", "name": "Linux & Arch"}
         with (
             mock.patch("cg.connect", return_value=self.con),
-            mock.patch("cg.open_session", return_value={"accessToken": "tok"}),
-            mock.patch("cg.resolve_cookie", return_value="cookie"),
+            mock.patch("cg.authenticate", return_value={"accessToken": "tok"}),
             mock.patch("cg.list_projects", return_value=[project]),
             mock.patch(
                 "cg.set_project",
