@@ -678,6 +678,9 @@ STATE_DIR = Path(
 )
 DB_PATH = STATE_DIR / "cg.db"
 REPORT_DIR = STATE_DIR / "reports"
+# Seconds a writer waits for the index lock before giving up. The daemon and a
+# manual run can overlap; the old default (5s) turned that into a hard failure.
+BUSY_TIMEOUT_S = 30
 EXPORT_DIR = Path(
     os.environ.get("CG_EXPORT_DIR") or (Path.home() / "Documents" / "ChatGPT")
 )
@@ -875,8 +878,19 @@ def parse_conversation(raw: dict) -> Conversation:
 
 def connect() -> sqlite3.Connection:
     STATE_DIR.mkdir(parents=True, exist_ok=True)
-    con = sqlite3.connect(DB_PATH)
+    # WAL lets `plan`/`status` read the index while a sync is writing; the busy
+    # timeout makes a second writer wait instead of dying mid-cycle.
+    con = sqlite3.connect(DB_PATH, timeout=BUSY_TIMEOUT_S)
+    con.execute(f"PRAGMA busy_timeout = {BUSY_TIMEOUT_S * 1000}")
     con.row_factory = sqlite3.Row
+    mode = con.execute("PRAGMA journal_mode").fetchone()[0].lower()
+    if mode != "wal":
+        # Needs an exclusive moment to switch; an older process holding the
+        # index keeps it in `delete` mode for now, which still works.
+        with contextlib.suppress(sqlite3.OperationalError):
+            mode = con.execute("PRAGMA journal_mode = WAL").fetchone()[0].lower()
+    if mode == "wal":
+        con.execute("PRAGMA synchronous = NORMAL")
     con.executescript(
         """
         CREATE TABLE IF NOT EXISTS conversations (
@@ -1946,13 +1960,29 @@ def move_confirmed(status: int, body: str, project_id: str | None) -> bool:
     return (echoed.get("gizmo_id") or None) == (project_id or None)
 
 
+_LOCK_DEPTH = 0
+
+
 @contextlib.contextmanager
 def exclusive_run():
     """Refuse to run two write commands at once.
 
     Two overlapping `--yes` runs would interleave journals and re-send the same
     PATCH. The lock turns that into a hard error instead of a mess.
+
+    Reentrant on purpose: the daemon holds the lock for a whole cycle and the
+    jobs it calls (`sync`, `organize`) ask for it again. A second `flock` on
+    another handle of the same file fails even inside one process, so an inner
+    request trusts the outer one instead of reopening run.lock.
     """
+    global _LOCK_DEPTH
+    if _LOCK_DEPTH:
+        _LOCK_DEPTH += 1
+        try:
+            yield
+        finally:
+            _LOCK_DEPTH -= 1
+        return
     STATE_DIR.mkdir(parents=True, exist_ok=True)
     handle = (STATE_DIR / "run.lock").open("w")
     try:
@@ -1963,7 +1993,11 @@ def exclusive_run():
             raise SystemExit(
                 "error: outra execução do cg ainda está escrevendo (run.lock)."
             ) from None
-        yield
+        _LOCK_DEPTH = 1
+        try:
+            yield
+        finally:
+            _LOCK_DEPTH = 0
     finally:
         handle.close()
 
@@ -2236,6 +2270,11 @@ def cmd_sync(args) -> int:
     individually for the message bodies. Deep sync is resumable: it only visits
     chats whose content was never fetched.
     """
+    with exclusive_run():
+        return _sync(args)
+
+
+def _sync(args) -> int:
     base = args.base_url.rstrip("/")
     session = open_session(base, resolve_cookie(args))
     token = session["accessToken"]
@@ -2246,6 +2285,8 @@ def cmd_sync(args) -> int:
     offset, total, new, updated = 0, 0, 0, 0
 
     while True:
+        # Same rule as the deep loop: no open transaction during a request.
+        con.commit()
         url = (
             f"{base}/backend-api/conversations?offset={offset}&limit=100"
             "&order=updated&hide_snorlax=false"
@@ -2313,6 +2354,10 @@ def cmd_sync(args) -> int:
     done = failed = missing = 0
     try:
         for i, conv_id in enumerate(pending, 1):
+            # Close the previous conversation's transaction before the request.
+            # A 429 retry sleeps ~30s, and a write transaction left open that
+            # long keeps the daemon (or any other writer) locked out.
+            con.commit()
             url = f"{base}/backend-api/conversation/{conv_id}"
             status, body = http_json(
                 "GET", url, api_headers(token, base), retries=args.max_retries
@@ -2340,7 +2385,6 @@ def cmd_sync(args) -> int:
                 else:
                     missing += 1
             if i % 20 == 0 or i == len(pending):
-                con.commit()
                 print(f"  {i}/{len(pending)} · {done} ok · {failed} erros", flush=True)
     except KeyboardInterrupt as exc:
         con.commit()
@@ -5036,6 +5080,15 @@ _DAEMON_STOP_RCS = frozenset(
     if sig is not None
 )
 
+# A cycle deferred by a busy index retries at most this long after the lock
+# clears, instead of waiting out the 20-50 min window with nothing to show.
+_LOCK_RETRY_S = 300.0
+
+
+def _db_locked(exc: BaseException) -> bool:
+    """True when the failure is just another writer holding the index."""
+    return isinstance(exc, sqlite3.OperationalError) and "locked" in str(exc).lower()
+
 
 def _daemon_job(name: str, run) -> dict:
     """Run one job in this process and turn any failure into a record.
@@ -5063,10 +5116,19 @@ def _daemon_job(name: str, run) -> dict:
             error = str(exc.code)
             print(error, file=sys.stderr)
     except Exception as exc:
-        rc = 1
         error = f"{type(exc).__name__}: {exc}"
-        log.exception("daemon: %s falhou", name)
-        print(f"error: {name} falhou: {error}", file=sys.stderr)
+        if _db_locked(exc):
+            # Another writer has the index: the next cycle will do the work.
+            rc = 4
+            log.info("daemon: %s adiado — índice ocupado (%s)", name, error)
+            print(
+                f"ciclo adiado: {name} — o índice está em uso por outra execução",
+                file=sys.stderr,
+            )
+        else:
+            rc = 1
+            log.exception("daemon: %s falhou", name)
+            print(f"error: {name} falhou: {error}", file=sys.stderr)
     seconds = round(time.monotonic() - started, 1)
     log.info("daemon: %s terminou rc=%d em %.1fs", name, rc, seconds)
     return {
@@ -5115,7 +5177,12 @@ def _daemon_cycle(args, cycle: int) -> list[dict]:
                     log.info("daemon: organize pulado — %s", reason)
                     jobs.append(_daemon_skipped("organize", reason))
                 elif any(job["job"] == "sync" and job["rc"] != 0 for job in jobs):
-                    reason = "sync falhou neste ciclo"
+                    deferred = any(job.get("rc") == 4 for job in jobs)
+                    reason = (
+                        "sync adiado (índice ocupado)"
+                        if deferred
+                        else "sync falhou neste ciclo"
+                    )
                     log.info("daemon: organize pulado — %s", reason)
                     jobs.append(_daemon_skipped("organize", reason))
                 else:
@@ -5145,6 +5212,10 @@ def _daemon_wait(args, jobs: list[dict]) -> float:
     seconds = (args.wait_min + jitter(args.wait_max - args.wait_min)) * 60
     if any(job.get("rate_limited") for job in jobs):
         seconds = max(seconds, args.backoff * 60)
+    elif any(job.get("rc") == 4 for job in jobs):
+        # Deferred, not failed: the other writer will be gone soon, so retry
+        # sooner instead of burning the whole random window.
+        seconds = min(seconds, _LOCK_RETRY_S)
     return seconds
 
 
