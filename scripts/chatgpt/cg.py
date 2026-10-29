@@ -34,7 +34,12 @@ index in bounded batches, organizes what is ready, then sleeps a random while.
 Jobs run one at a time in the foreground, and every cycle is one JSONL line in
 `reports/daemon-*.jsonl` so a bad night can be diagnosed the next day. For a
 scheduler, run `daemon --once` from a systemd timer instead of leaving a process
-behind.
+behind. `services` generates those user units for you:
+
+    cg services register            # timer, one cycle per hour, dry-run organize
+    cg services register --yes      # same timer, applying moves
+    cg services status
+    cg services unregister
 
 Re-running ingest with a newer export only adds what is new: every conversation
 is keyed by its ChatGPT id. Old verdicts are recomputed, never resurrected.
@@ -67,6 +72,8 @@ from email.utils import parsedate_to_datetime
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 from urllib.request import Request, urlopen
+
+import cg_services
 
 # Roles and content types that carry real conversation text. The rest of the
 # export (thoughts, tool output, browsing stubs, memory context) is machine
@@ -3761,15 +3768,73 @@ def cmd_help(ap: argparse.ArgumentParser) -> int:
         "  4. cg organize               mostra o que seria movido (dry-run)\n"
         "  5. cg archive                idem, para as conversas sem valor\n"
         "  6. cg daemon --yes           mantém índice + Projects sozinho, em ciclos\n"
+        "  7. cg services register      instala .service/.timer no systemd --user\n"
         "\n"
         "  Nada é apagado: arquivar esconde da lista e mover é reversível.\n"
         "  Para aplicar qualquer passo, repita o comando com --yes.\n"
         "\n"
         f"  índice : {DB_PATH}\n"
         f"  log    : {LOG_PATH}   (veja com `cg log -n 40`)\n"
+        "  systemd: cg services status · logs -f · unregister\n"
         "  ajuda de um comando: cg <comando> --help\n"
     )
     return 0
+
+
+def _service_spec(args) -> cg_services.ServiceSpec:
+    try:
+        return cg_services.ServiceSpec(
+            name=getattr(args, "name", cg_services.DEFAULT_NAME),
+            mode=getattr(args, "mode", "timer"),
+            apply=bool(getattr(args, "apply", False)),
+            every=getattr(args, "every", cg_services.DEFAULT_EVERY),
+            wait_min=getattr(args, "wait_min", None),
+            wait_max=getattr(args, "wait_max", None),
+            unit_dir=cg_services.resolve_unit_dir(getattr(args, "unit_dir", None)),
+            cg_argv=cg_services.detect_cg_argv(getattr(args, "cg", None)),
+        )
+    except ValueError as exc:
+        raise SystemExit(f"error: {exc}") from exc
+
+
+def cmd_services(args) -> int:
+    verb = getattr(args, "services_cmd", None) or "status"
+    if verb == "list":
+        return cg_services.list_registered(getattr(args, "unit_dir", None))
+
+    spec = _service_spec(args)
+    if verb == "register":
+        return cg_services.register(
+            spec,
+            activate=not getattr(args, "no_enable", False),
+            dry_run=bool(getattr(args, "dry_run", False)),
+            force=bool(getattr(args, "force", False)),
+        )
+    if verb == "unregister":
+        return cg_services.unregister(
+            spec,
+            dry_run=bool(getattr(args, "dry_run", False)),
+            force=bool(getattr(args, "force", False)),
+        )
+    if verb == "status":
+        return cg_services.status(spec)
+    if verb == "show":
+        return cg_services.show(spec)
+    if verb == "logs":
+        return cg_services.logs(
+            spec,
+            lines=getattr(args, "lines", 60),
+            follow=bool(getattr(args, "follow", False)),
+            dry_run=bool(getattr(args, "dry_run", False)),
+        )
+    if verb in {"start", "stop", "restart", "enable", "disable", "run"}:
+        return cg_services.action(
+            spec,
+            verb,
+            now=bool(getattr(args, "now", False)),
+            dry_run=bool(getattr(args, "dry_run", False)),
+        )
+    raise SystemExit(f"error: subcomando de services desconhecido: {verb}")
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -3790,10 +3855,12 @@ def build_parser() -> argparse.ArgumentParser:
             "  cg organize --yes           move para Projects (reversível)\n"
             "  cg archive --yes            arquiva o resto (reversível)\n"
             "  cg daemon --yes             repete sync + organize com pausa aleatória\n"
+            "  cg services register --yes  deixa o systemd --user cuidando do daemon\n"
             "\n"
             "desfazer\n"
             "  cg unorganize --log <organize-*.jsonl>\n"
             "  cg unarchive  --log <archive-*.jsonl>\n"
+            "  cg services unregister\n"
             "\n"
             "log de depuração: cg log -n 40   ·   ~/.cache/cg/cg.log\n"
             "ajuda detalhada: cg <comando> --help"
@@ -4427,6 +4494,250 @@ def build_parser() -> argparse.ArgumentParser:
     da.add_argument("--sleep", type=float, default=1.5, help="pausa entre chamadas")
     _add_auth_args(da)
     da.set_defaults(func=cmd_daemon)
+
+    sv = sub.add_parser(
+        "services",
+        aliases=["svc"],
+        help="gerar e controlar as unidades systemd --user do daemon",
+        description=(
+            "Escreve .service/.timer em ~/.config/systemd/user e fala com\n"
+            "`systemctl --user`. O modo padrão é timer: um ciclo por hora, sem\n"
+            "processo permanente. Use --mode daemon para um serviço longo com\n"
+            "Restart=on-failure.\n\n"
+            "Sem --yes o daemon continua em dry-run no organize; o índice é\n"
+            "atualizado do mesmo jeito. Nada é instalado fora da pasta do usuário."
+        ),
+        epilog=(
+            "exemplos\n"
+            "  cg services register                 timer de 1h (dry-run no organize)\n"
+            "  cg services register --yes           timer aplicando o organize\n"
+            "  cg services register --every 2h --yes\n"
+            "  cg services register --mode daemon --yes\n"
+            "  cg services status\n"
+            "  cg services logs -f\n"
+            "  cg services run                      dispara um ciclo agora\n"
+            "  cg services unregister\n"
+            "\n"
+            "para rodar sem sessão aberta: loginctl enable-linger $USER\n"
+            "um arquivo que não foi criado pelo cg nunca é sobrescrito sem --force."
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    sv.set_defaults(func=cmd_services)
+    sv_sub = sv.add_subparsers(
+        dest="services_cmd", metavar="subcomando", title="subcomandos"
+    )
+
+    def service_target(p: argparse.ArgumentParser) -> None:
+        p.add_argument(
+            "--name",
+            default=cg_services.DEFAULT_NAME,
+            help="nome das unidades (padrão: cg)",
+        )
+        p.add_argument(
+            "--unit-dir",
+            type=Path,
+            help="pasta das unidades (padrão: ~/.config/systemd/user)",
+        )
+
+    def service_recipe(p: argparse.ArgumentParser) -> None:
+        p.add_argument(
+            "--mode",
+            choices=cg_services.MODES,
+            default="timer",
+            help="timer (um ciclo por vez) ou daemon (processo longo)",
+        )
+        p.add_argument(
+            "--every",
+            default=cg_services.DEFAULT_EVERY,
+            metavar="DURAÇÃO",
+            help="intervalo do timer: 30m, 1h, 2d (padrão: 1h)",
+        )
+        p.add_argument(
+            "--wait-min",
+            type=float,
+            default=20,
+            metavar="MIN",
+            help="pausa mínima entre ciclos no modo daemon (padrão: 20)",
+        )
+        p.add_argument(
+            "--wait-max",
+            type=float,
+            default=50,
+            metavar="MIN",
+            help="pausa máxima entre ciclos no modo daemon (padrão: 50)",
+        )
+        p.add_argument(
+            "--yes",
+            action="store_true",
+            dest="apply",
+            help="deixar o daemon aplicar o organize (padrão: dry-run)",
+        )
+
+    def service_action(
+        name: str,
+        help_text: str,
+        description: str,
+        *,
+        now: bool = False,
+    ) -> None:
+        p = sv_sub.add_parser(
+            name,
+            help=help_text,
+            description=description,
+            formatter_class=argparse.RawDescriptionHelpFormatter,
+        )
+        service_target(p)
+        if now:
+            p.add_argument(
+                "--now", action="store_true", help="aplicar e iniciar/parar agora"
+            )
+        p.add_argument("--dry-run", action="store_true", help="só mostrar os comandos")
+        p.set_defaults(func=cmd_services)
+
+    sv_reg = sv_sub.add_parser(
+        "register",
+        help="criar as unidades e ativar (timer ou daemon)",
+        description=(
+            "Grava cg.service e, no modo timer, cg.timer; roda daemon-reload e\n"
+            "enable --now. Repetir é seguro: arquivos iguais não são reescritos."
+        ),
+        epilog=(
+            "exemplos\n"
+            "  cg services register\n"
+            "  cg services register --yes --every 2h\n"
+            "  cg services register --mode daemon --yes --wait-min 30\n"
+            "  cg services register --no-enable --dry-run"
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    service_target(sv_reg)
+    sv_reg.add_argument(
+        "--cg",
+        metavar="COMANDO",
+        help="binário do cg que a unidade executa (padrão: cg no PATH)",
+    )
+    service_recipe(sv_reg)
+    sv_reg.add_argument(
+        "--no-enable",
+        action="store_true",
+        help="gravar os arquivos sem enable/start",
+    )
+    sv_reg.add_argument(
+        "--dry-run", action="store_true", help="mostrar unidades e comandos"
+    )
+    sv_reg.add_argument(
+        "--force", action="store_true", help="substituir unidades que não são do cg"
+    )
+    sv_reg.set_defaults(func=cmd_services)
+
+    sv_unreg = sv_sub.add_parser(
+        "unregister",
+        help="parar, desativar e remover as unidades",
+        description=(
+            "Faz disable --now nas unidades, remove os arquivos e recarrega o\n"
+            "systemd. Arquivos que não foram criados pelo cg são preservados,\n"
+            "a menos que você use --force."
+        ),
+        epilog="exemplo\n  cg services unregister",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    service_target(sv_unreg)
+    sv_unreg.add_argument(
+        "--dry-run", action="store_true", help="só mostrar os comandos"
+    )
+    sv_unreg.add_argument(
+        "--force", action="store_true", help="remover unidades que não são do cg"
+    )
+    sv_unreg.set_defaults(func=cmd_services)
+
+    sv_status = sv_sub.add_parser(
+        "status",
+        help="mostrar arquivos, estado e próximo disparo do timer",
+        description=(
+            "Lê o disco e pergunta ao systemd --user. Funciona como `cg services`\n"
+            "sem subcomando."
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    service_target(sv_status)
+    sv_status.set_defaults(func=cmd_services)
+
+    sv_show = sv_sub.add_parser(
+        "show",
+        help="imprimir as unidades que seriam gravadas",
+        description="Não escreve nada; serve para conferir antes do register.",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    service_target(sv_show)
+    sv_show.add_argument(
+        "--cg",
+        metavar="COMANDO",
+        help="binário do cg que a unidade executa (padrão: cg no PATH)",
+    )
+    service_recipe(sv_show)
+    sv_show.set_defaults(func=cmd_services)
+
+    sv_list = sv_sub.add_parser(
+        "list",
+        help="listar as unidades criadas pelo cg",
+        description=(
+            "Procura o marcador do cg; unidades de outros programas ficam fora."
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    sv_list.add_argument(
+        "--unit-dir",
+        type=Path,
+        help="pasta das unidades (padrão: ~/.config/systemd/user)",
+    )
+    sv_list.set_defaults(func=cmd_services)
+
+    sv_logs = sv_sub.add_parser(
+        "logs",
+        help="ver o journal do serviço",
+        description="Atalho para `journalctl --user -u cg.service`.",
+        epilog="exemplos\n  cg services logs\n  cg services logs -n 200 -f",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    service_target(sv_logs)
+    sv_logs.add_argument("-n", "--lines", type=int, default=60, help="linhas (60)")
+    sv_logs.add_argument("-f", "--follow", action="store_true", help="seguir o log")
+    sv_logs.add_argument("--dry-run", action="store_true", help="só mostrar o comando")
+    sv_logs.set_defaults(func=cmd_services)
+
+    service_action(
+        "start",
+        "iniciar o timer ou o serviço",
+        "No modo timer inicia o timer; no modo daemon inicia o serviço.",
+    )
+    service_action(
+        "stop",
+        "parar timer e serviço",
+        "Para as duas unidades quando existem; não remove nada.",
+    )
+    service_action(
+        "restart",
+        "parar e iniciar de novo",
+        "No modo timer reinicia o agendamento; use `run` para um ciclo imediato.",
+    )
+    service_action(
+        "run",
+        "rodar um ciclo agora",
+        "No modo timer inicia o serviço uma vez; no modo daemon reinicia o processo.",
+    )
+    service_action(
+        "enable",
+        "ativar no boot/login",
+        "Ativa a unidade sem necessariamente iniciar; use --now para iniciar junto.",
+        now=True,
+    )
+    service_action(
+        "disable",
+        "desativar no boot/login",
+        "Desativa a unidade; use --now para parar junto.",
+        now=True,
+    )
 
     co = sub.add_parser(
         "completions",

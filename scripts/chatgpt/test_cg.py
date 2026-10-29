@@ -9,6 +9,7 @@ import contextlib
 import io
 import json
 import os
+import shutil
 import signal
 import sqlite3
 import tempfile
@@ -20,6 +21,7 @@ from pathlib import Path
 from unittest import mock
 
 import cg
+import cg_services
 
 CASES = {
     "pacman -Syu broke grub after the kernel update on arch linux": "Linux & Arch",
@@ -489,6 +491,27 @@ class TestCompletions(unittest.TestCase):
             with self.subTest(child=child):
                 self.assertIn(f"'{child}:", self.scripts["zsh"])
                 self.assertIn(f"-a {child} ", self.scripts["fish"])
+
+    def test_services_verbs_are_completed(self):
+        verbs = (
+            "register",
+            "unregister",
+            "status",
+            "show",
+            "list",
+            "logs",
+            "start",
+            "stop",
+            "restart",
+            "run",
+            "enable",
+            "disable",
+        )
+        for verb in verbs:
+            with self.subTest(verb=verb):
+                self.assertIn(verb, self.scripts["bash"])
+                self.assertIn(verb, self.scripts["zsh"])
+                self.assertIn(verb, self.scripts["fish"])
 
     def test_the_tab_alias_works_but_is_not_advertised(self):
         self.assertIn("tab", cg.subcommands(self.ap))
@@ -1332,6 +1355,486 @@ class TestThrottle(unittest.TestCase):
             cg._safe_argv(["--cookie", "super-secret", "sync", "--deep"]),
             "--cookie *** sync --deep",
         )
+
+
+class TestServiceHelpers(unittest.TestCase):
+    def test_durations_are_parsed(self):
+        for text, seconds in {
+            "30s": 30,
+            "90m": 5400,
+            "2h": 7200,
+            "1d": 86400,
+            " 1H ": 3600,
+            "45": 45,
+        }.items():
+            with self.subTest(text=text):
+                self.assertEqual(cg_services.parse_duration(text), seconds)
+
+    def test_bad_durations_are_rejected(self):
+        for text in ("", "0", "0m", "-5m", "1w", "soon", "1.5h"):
+            with self.subTest(text=text), self.assertRaises(ValueError):
+                cg_services.parse_duration(text)
+
+    def test_durations_are_formatted_compactly(self):
+        for seconds, text in {
+            30: "30s",
+            60: "1m",
+            7200: "2h",
+            86400: "1d",
+            72: "72s",
+        }.items():
+            with self.subTest(seconds=seconds):
+                self.assertEqual(cg_services.format_duration(seconds), text)
+
+    def test_randomized_delay_is_bounded(self):
+        self.assertEqual(cg_services.jitter_delay(10), 1)
+        self.assertEqual(cg_services.jitter_delay(3600), 300)
+        self.assertEqual(cg_services.jitter_delay(86400), 300)
+
+    def test_unit_quote_escapes_systemd_specials(self):
+        self.assertEqual(cg_services.unit_quote("/usr/bin/cg"), "/usr/bin/cg")
+        self.assertEqual(cg_services.unit_quote("a b"), '"a b"')
+        self.assertEqual(cg_services.unit_quote('a"b'), '"a\\"b"')
+        self.assertEqual(cg_services.unit_quote("100%"), '"100%%"')
+        self.assertEqual(cg_services.unit_quote("$HOME"), '"$$HOME"')
+        self.assertEqual(cg_services.unit_quote(""), '""')
+
+    def test_exec_start_quotes_each_argument(self):
+        self.assertEqual(
+            cg_services.exec_start(["/usr/bin/cg", "daemon", "--name", "my cg"]),
+            '/usr/bin/cg daemon --name "my cg"',
+        )
+
+    def test_spec_rejects_unsafe_names(self):
+        for name in ("", "a/b", "../cg", "cg service", "cg;rm", ".cg"):
+            with self.subTest(name=name), self.assertRaises(ValueError):
+                cg_services.ServiceSpec(name=name, cg_argv=["/bin/cg"])
+
+    def test_spec_rejects_invalid_modes_and_windows(self):
+        for over in (
+            {"mode": "cron"},
+            {"every": "soon"},
+            {"wait_min": -1},
+            {"wait_min": 10, "wait_max": 5},
+        ):
+            with self.subTest(over=over), self.assertRaises(ValueError):
+                cg_services.ServiceSpec(cg_argv=["/bin/cg"], **over)
+
+    def test_spec_paths_and_arguments(self):
+        tmp = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, tmp, True)
+        timer = cg_services.ServiceSpec(
+            name="cg-test",
+            apply=True,
+            every="2h",
+            unit_dir=tmp,
+            cg_argv=["/bin/cg"],
+        )
+        self.assertEqual(timer.service_path, tmp / "cg-test.service")
+        self.assertEqual(timer.timer_path, tmp / "cg-test.timer")
+        self.assertEqual(timer.exec_argv(), ["/bin/cg", "daemon", "--once", "--yes"])
+
+        daemon = cg_services.ServiceSpec(
+            mode="daemon",
+            wait_min=30,
+            wait_max=90,
+            unit_dir=tmp,
+            cg_argv=["/bin/cg"],
+        )
+        self.assertEqual(
+            daemon.exec_argv(),
+            [
+                "/bin/cg",
+                "daemon",
+                "--wait-min",
+                "30",
+                "--wait-max",
+                "90",
+            ],
+        )
+        self.assertFalse(daemon.uses_timer)
+        self.assertTrue(timer.uses_timer)
+
+    def test_detect_cg_argv_prefers_path_and_accepts_override(self):
+        tmp = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, tmp, True)
+        script = tmp / "cg"
+        script.write_text("#!/bin/sh\n", encoding="utf-8")
+        with mock.patch("cg_services.shutil.which", return_value=str(script)):
+            self.assertEqual(cg_services.detect_cg_argv(), [str(script.resolve())])
+        self.assertEqual(cg_services.detect_cg_argv(str(script)), [str(script)])
+
+    def test_detect_cg_argv_falls_back_to_the_sibling_script(self):
+        tmp = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, tmp, True)
+        module = tmp / "cg_services.py"
+        with (
+            mock.patch("cg_services.shutil.which", return_value=None),
+            mock.patch("cg_services.os.access", return_value=True),
+            mock.patch("cg_services.__file__", str(module)),
+        ):
+            self.assertEqual(
+                cg_services.detect_cg_argv(), [str((tmp / "cg.py").resolve())]
+            )
+
+
+class ServiceTempDir(unittest.TestCase):
+    """Throwaway unit directory and spec builder; no real systemd involved."""
+
+    def setUp(self):
+        self.tmp = Path(tempfile.mkdtemp())
+        self.addCleanup(shutil.rmtree, self.tmp, True)
+
+    def spec(self, **over):
+        base = {
+            "unit_dir": self.tmp,
+            "cg_argv": ["/bin/cg"],
+        }
+        base.update(over)
+        return cg_services.ServiceSpec(**base)
+
+
+class TestServiceUnits(ServiceTempDir):
+    def test_timer_mode_renders_a_oneshot_and_a_timer(self):
+        spec = self.spec(apply=True)
+        service = cg_services.render_service(spec)
+        timer = cg_services.render_timer(spec)
+
+        self.assertIn(cg_services.MARKER, service)
+        self.assertIn("Type=oneshot", service)
+        self.assertIn("ExecStart=/bin/cg daemon --once --yes", service)
+        self.assertNotIn("[Install]", service)
+        self.assertIn("OnUnitActiveSec=1h", timer)
+        self.assertIn("RandomizedDelaySec=5m", timer)
+        self.assertIn("Unit=cg.service", timer)
+        self.assertIn("WantedBy=timers.target", timer)
+
+    def test_daemon_mode_renders_a_restarting_service(self):
+        spec = self.spec(mode="daemon", wait_min=15, wait_max=45)
+        service = cg_services.render_service(spec)
+
+        self.assertIn("Type=simple", service)
+        self.assertIn("Restart=on-failure", service)
+        self.assertIn("RestartSec=60", service)
+        self.assertIn("SuccessExitStatus=143", service)
+        self.assertIn("ExecStart=/bin/cg daemon --wait-min 15 --wait-max 45", service)
+        self.assertIn("WantedBy=default.target", service)
+
+    def test_show_returns_the_generated_files_on_stdout(self):
+        spec = self.spec(every="30m")
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            self.assertEqual(cg_services.show(spec), 0)
+        text = out.getvalue()
+        self.assertIn(str(spec.service_path), text)
+        self.assertIn(str(spec.timer_path), text)
+        self.assertIn("OnUnitActiveSec=30m", text)
+        self.assertFalse(spec.service_path.exists())
+
+    def test_write_and_remove_are_idempotent(self):
+        path = self.tmp / "cg.service"
+        self.assertTrue(cg_services.write_unit(path, "one\n"))
+        self.assertFalse(cg_services.write_unit(path, "one\n"))
+        self.assertTrue(cg_services.write_unit(path, "two\n"))
+        self.assertEqual(path.read_text(encoding="utf-8"), "two\n")
+        self.assertTrue(cg_services.remove_unit(path))
+        self.assertFalse(cg_services.remove_unit(path))
+
+    def test_managed_marker_and_discovery(self):
+        managed = self.tmp / "cg.service"
+        manual = self.tmp / "other.service"
+        noise = self.tmp / "cg.conf"
+        cg_services.write_unit(managed, f"{cg_services.MARKER}\n[Unit]\n")
+        manual.write_text("[Unit]\n", encoding="utf-8")
+        noise.write_text("x", encoding="utf-8")
+
+        self.assertTrue(cg_services.is_managed(managed))
+        self.assertFalse(cg_services.is_managed(manual))
+        self.assertEqual(cg_services.discover_units(self.tmp), [managed])
+        self.assertEqual(cg_services.discover_units(self.tmp / "missing"), [])
+
+
+class TestServiceCommands(ServiceTempDir):
+    def recorder(self):
+        calls = []
+
+        def fake(*args, **kwargs):
+            calls.append((args, kwargs))
+            return 0, ""
+
+        return calls, fake
+
+    def test_register_writes_units_and_activates_the_timer(self):
+        calls, fake = self.recorder()
+        spec = self.spec(apply=True)
+        with mock.patch("cg_services.systemctl", side_effect=fake):
+            self.assertEqual(cg_services.register(spec), 0)
+
+        self.assertTrue(spec.service_path.exists())
+        self.assertTrue(spec.timer_path.exists())
+        commands = [args for args, _kwargs in calls]
+        self.assertIn(("daemon-reload",), commands)
+        self.assertIn(("enable", "--now", "cg.timer"), commands)
+        self.assertIn("--yes", spec.service_path.read_text(encoding="utf-8"))
+
+    def test_register_can_skip_activation(self):
+        calls, fake = self.recorder()
+        with mock.patch("cg_services.systemctl", side_effect=fake):
+            self.assertEqual(cg_services.register(self.spec(), activate=False), 0)
+        self.assertNotIn("enable", [args[0] for args, _kwargs in calls])
+
+    def test_register_dry_run_writes_nothing(self):
+        spec = self.spec()
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            self.assertEqual(cg_services.register(spec, dry_run=True), 0)
+        self.assertFalse(spec.service_path.exists())
+        self.assertFalse(spec.timer_path.exists())
+        text = out.getvalue()
+        self.assertIn("+ systemctl --user daemon-reload", text)
+        self.assertIn("+ systemctl --user enable --now cg.timer", text)
+
+    def test_register_refuses_a_foreign_file_without_force(self):
+        manual = self.tmp / "cg.service"
+        manual.write_text("manual\n", encoding="utf-8")
+        with self.assertRaises(SystemExit):
+            cg_services.register(self.spec())
+        self.assertEqual(manual.read_text(encoding="utf-8"), "manual\n")
+
+        _calls, fake = self.recorder()
+        with mock.patch("cg_services.systemctl", side_effect=fake):
+            self.assertEqual(cg_services.register(self.spec(), force=True), 0)
+        self.assertIn(cg_services.MARKER, manual.read_text(encoding="utf-8"))
+
+    def test_switching_to_daemon_stops_and_disables_the_stale_timer(self):
+        timer_spec = self.spec()
+        cg_services.write_unit(
+            timer_spec.timer_path, cg_services.render_timer(timer_spec)
+        )
+        daemon = self.spec(mode="daemon")
+        calls, fake = self.recorder()
+        with mock.patch("cg_services.systemctl", side_effect=fake):
+            self.assertEqual(cg_services.register(daemon), 0)
+        self.assertFalse(daemon.timer_path.exists())
+        self.assertIn("Type=simple", daemon.service_path.read_text(encoding="utf-8"))
+        commands = [args for args, _kwargs in calls]
+        self.assertIn(("stop", "cg.service"), commands)
+        self.assertIn(("disable", "--now", "cg.timer"), commands)
+
+    def test_unregister_disables_and_removes_units(self):
+        spec = self.spec()
+        cg_services.write_unit(spec.service_path, cg_services.render_service(spec))
+        cg_services.write_unit(spec.timer_path, cg_services.render_timer(spec))
+        calls, fake = self.recorder()
+        with mock.patch("cg_services.systemctl", side_effect=fake):
+            self.assertEqual(cg_services.unregister(spec), 0)
+        self.assertFalse(spec.service_path.exists())
+        self.assertFalse(spec.timer_path.exists())
+        disabled = {args for args, _kwargs in calls if args[0] == "disable"}
+        self.assertEqual(
+            disabled,
+            {
+                ("disable", "--now", "cg.timer"),
+                ("disable", "--now", "cg.service"),
+            },
+        )
+
+    def test_unregister_is_idempotent_and_rejects_foreign_files(self):
+        spec = self.spec()
+        _calls, fake = self.recorder()
+        with mock.patch("cg_services.systemctl", side_effect=fake):
+            self.assertEqual(cg_services.unregister(spec), 0)
+
+        foreign = self.tmp / "cg.timer"
+        foreign.write_text("manual\n", encoding="utf-8")
+        with self.assertRaises(SystemExit):
+            cg_services.unregister(spec)
+        self.assertTrue(foreign.exists())
+
+    def test_status_reports_files_and_states(self):
+        spec = self.spec()
+        cg_services.write_unit(spec.service_path, cg_services.render_service(spec))
+        cg_services.write_unit(spec.timer_path, cg_services.render_timer(spec))
+
+        def fake(*args, **kwargs):
+            if args[0] == "is-active":
+                return 0, "active"
+            if args[0] == "is-enabled":
+                return 0, "enabled"
+            if args[0] == "show":
+                return 0, "Wed 2026-10-28 22:00:00 -03"
+            return 0, ""
+
+        out = io.StringIO()
+        with (
+            mock.patch("cg_services.systemctl", side_effect=fake),
+            contextlib.redirect_stdout(out),
+        ):
+            self.assertEqual(cg_services.status(spec), 0)
+        text = out.getvalue()
+        self.assertIn("modo    : timer", text)
+        self.assertIn("ativo=active", text)
+        self.assertIn("enabled=enabled", text)
+        self.assertIn("próximo : Wed 2026-10-28 22:00:00 -03", text)
+
+    def test_status_without_units_is_not_an_error(self):
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            self.assertEqual(cg_services.status(self.spec()), 1)
+        self.assertIn("nada registrado", out.getvalue())
+
+    def test_actions_pick_the_timer_or_the_service(self):
+        spec = self.spec()
+        cg_services.write_unit(spec.service_path, cg_services.render_service(spec))
+        cg_services.write_unit(spec.timer_path, cg_services.render_timer(spec))
+        calls, fake = self.recorder()
+        with mock.patch("cg_services.systemctl", side_effect=fake):
+            self.assertEqual(cg_services.action(spec, "start"), 0)
+            self.assertEqual(cg_services.action(spec, "run"), 0)
+            self.assertEqual(cg_services.action(spec, "stop"), 0)
+        commands = [args for args, _kwargs in calls]
+        self.assertIn(("start", "cg.timer"), commands)
+        self.assertIn(("start", "cg.service"), commands)
+        self.assertIn(("stop", "cg.timer"), commands)
+        self.assertIn(("stop", "cg.service"), commands)
+
+    def test_enable_now_and_disable_now(self):
+        spec = self.spec()
+        cg_services.write_unit(spec.service_path, cg_services.render_service(spec))
+        cg_services.write_unit(spec.timer_path, cg_services.render_timer(spec))
+        calls, fake = self.recorder()
+        with mock.patch("cg_services.systemctl", side_effect=fake):
+            self.assertEqual(cg_services.action(spec, "enable", now=True), 0)
+            self.assertEqual(cg_services.action(spec, "disable", now=True), 0)
+        commands = [args for args, _kwargs in calls]
+        self.assertIn(("enable", "--now", "cg.timer"), commands)
+        self.assertIn(("disable", "--now", "cg.timer"), commands)
+        self.assertIn(("disable", "--now", "cg.service"), commands)
+
+    def test_action_requires_registration(self):
+        with self.assertRaises(SystemExit):
+            cg_services.action(self.spec(), "start")
+
+    def test_logs_uses_journalctl_for_the_service(self):
+        spec = self.spec()
+        proc = mock.Mock(returncode=0)
+        with mock.patch("cg_services.subprocess.run", return_value=proc) as run:
+            self.assertEqual(cg_services.logs(spec, lines=7, follow=True), 0)
+        argv = run.call_args.args[0]
+        self.assertEqual(argv[:4], ["journalctl", "--user", "-u", "cg.service"])
+        self.assertEqual(argv[argv.index("-n") + 1], "7")
+        self.assertIn("-f", argv)
+
+    def test_logs_dry_run_does_not_spawn_journalctl(self):
+        out = io.StringIO()
+        with (
+            mock.patch("cg_services.subprocess.run") as run,
+            contextlib.redirect_stdout(out),
+        ):
+            self.assertEqual(cg_services.logs(self.spec(), dry_run=True), 0)
+        run.assert_not_called()
+        self.assertIn("+ journalctl --user -u cg.service", out.getvalue())
+
+    def test_list_only_shows_managed_units(self):
+        spec = self.spec()
+        cg_services.write_unit(spec.service_path, cg_services.render_service(spec))
+        cg_services.write_unit(spec.timer_path, cg_services.render_timer(spec))
+        (self.tmp / "manual.service").write_text("manual\n", encoding="utf-8")
+
+        out = io.StringIO()
+        with contextlib.redirect_stdout(out):
+            self.assertEqual(cg_services.list_registered(self.tmp), 0)
+        text = out.getvalue()
+        self.assertIn("cg.service", text)
+        self.assertIn("cg.timer", text)
+        self.assertNotIn("manual.service", text)
+
+    def test_systemctl_always_uses_the_user_manager(self):
+        proc = mock.Mock(returncode=3, stdout="inactive\n")
+        with mock.patch("cg_services.subprocess.run", return_value=proc) as run:
+            rc, out = cg_services.systemctl("is-active", "cg.service")
+        self.assertEqual((rc, out), (3, "inactive"))
+        self.assertEqual(
+            run.call_args.args[0],
+            ["systemctl", "--user", "is-active", "cg.service"],
+        )
+        self.assertFalse(run.call_args.kwargs["capture_output"])
+
+    def test_systemctl_dry_run_prints_without_running(self):
+        out = io.StringIO()
+        with (
+            mock.patch("cg_services.subprocess.run") as run,
+            contextlib.redirect_stdout(out),
+        ):
+            self.assertEqual(cg_services.systemctl("daemon-reload", dry_run=True)[0], 0)
+        run.assert_not_called()
+        self.assertIn("+ systemctl --user daemon-reload", out.getvalue())
+
+
+class TestServicesParser(unittest.TestCase):
+    def test_bare_services_means_status(self):
+        args = cg.build_parser().parse_args(["services"])
+        self.assertIsNone(args.services_cmd)
+        self.assertIs(args.func, cg.cmd_services)
+
+    def test_register_options_are_wired(self):
+        args = cg.build_parser().parse_args(
+            [
+                "services",
+                "register",
+                "--mode",
+                "daemon",
+                "--every",
+                "2h",
+                "--wait-min",
+                "30",
+                "--wait-max",
+                "90",
+                "--yes",
+                "--no-enable",
+                "--dry-run",
+            ]
+        )
+        self.assertEqual(args.services_cmd, "register")
+        self.assertEqual((args.mode, args.every), ("daemon", "2h"))
+        self.assertEqual((args.wait_min, args.wait_max), (30.0, 90.0))
+        self.assertTrue(args.apply)
+        self.assertTrue(args.no_enable)
+        self.assertTrue(args.dry_run)
+
+    def test_alias_and_action_flags(self):
+        ap = cg.build_parser()
+        self.assertEqual(ap.parse_args(["svc", "status"]).services_cmd, "status")
+        args = ap.parse_args(["services", "enable", "--now"])
+        self.assertTrue(args.now)
+        args = ap.parse_args(["services", "logs", "-n", "5", "-f"])
+        self.assertEqual((args.lines, args.follow), (5, True))
+
+    def test_cmd_services_dispatches_register_with_a_spec(self):
+        args = cg.build_parser().parse_args(
+            ["services", "register", "--name", "cg-test", "--every", "30m"]
+        )
+        with (
+            mock.patch("cg_services.detect_cg_argv", return_value=["/bin/cg"]),
+            mock.patch("cg_services.register", return_value=0) as register,
+        ):
+            self.assertEqual(cg.cmd_services(args), 0)
+        spec = register.call_args.args[0]
+        self.assertEqual((spec.name, spec.every), ("cg-test", "30m"))
+        self.assertEqual(spec.cg_argv, ["/bin/cg"])
+
+    def test_cmd_services_dispatches_status_and_list(self):
+        ap = cg.build_parser()
+        with (
+            mock.patch("cg_services.detect_cg_argv", return_value=["/bin/cg"]),
+            mock.patch("cg_services.status", return_value=0) as status,
+        ):
+            self.assertEqual(cg.cmd_services(ap.parse_args(["services"])), 0)
+        status.assert_called_once()
+
+        with mock.patch("cg_services.list_registered", return_value=0) as listed:
+            self.assertEqual(cg.cmd_services(ap.parse_args(["services", "list"])), 0)
+        listed.assert_called_once()
 
 
 if __name__ == "__main__":

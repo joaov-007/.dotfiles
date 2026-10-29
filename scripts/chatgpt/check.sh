@@ -35,7 +35,7 @@ echo "== security =="
 bandit -q -r . -x ./__pycache__
 
 echo "== dead code =="
-vulture --min-confidence 80 cg.py test_cg.py
+vulture --min-confidence 80 cg.py cg_services.py test_cg.py
 
 echo "== completions =="
 for sh in bash zsh fish; do
