@@ -6,6 +6,7 @@ python3 -m unittest -v test_cg.py
 
 import argparse
 import contextlib
+import fcntl
 import io
 import json
 import os
@@ -606,12 +607,67 @@ class TestSafety(unittest.TestCase):
             copy.execute("SELECT COUNT(*) FROM conversations").fetchone()[0], 1
         )
 
-    def test_second_run_is_refused_while_the_lock_is_held(self):
+    def test_the_index_waits_for_a_busy_writer(self):
+        con = self.db()
+        self.assertEqual(con.execute("PRAGMA busy_timeout").fetchone()[0], 30_000)
+        self.assertEqual(
+            con.execute("PRAGMA journal_mode").fetchone()[0].lower(), "wal"
+        )
+
+    def test_deep_sync_leaves_no_transaction_open_between_requests(self):
+        # A 429 retry can sleep ~30s inside http_json; a write transaction left
+        # open there is what starved the daemon (`database is locked`).
+        con = self.db()
+        for conv_id in ("c1", "c2", "c3"):
+            con.execute(
+                "INSERT INTO conversations (conv_id, title, turns, user_chars,"
+                " body_sha, first_user, sample, indexed_at)"
+                " VALUES (?,?,?,?,?,?,?,?)",
+                (conv_id, "t", 0, 0, "", "", "", "now"),
+            )
+        con.commit()
+        open_at_request = []
+
+        def fake_http(method, url, headers, **kwargs):
+            open_at_request.append(con.in_transaction)
+            conv_id = url.rsplit("/", 1)[-1]
+            return 200, json.dumps({"id": conv_id, "title": "t", "mapping": {}})
+
+        args = argparse.Namespace(
+            deep=True,
+            limit=0,
+            max_retries=4,
+            deep_sleep=0.0,
+            sleep=0.0,
+            cookie=None,
+            cookie_file=None,
+            base_url="https://chatgpt.com",
+        )
         with (
-            cg.exclusive_run(),
-            self.assertRaises(SystemExit),
-            cg.exclusive_run(),
+            mock.patch("cg.connect", return_value=con),
+            mock.patch("cg.resolve_cookie", return_value=""),
+            mock.patch("cg.open_session", return_value={"accessToken": "tok"}),
+            mock.patch("cg.http_json", side_effect=fake_http),
+            contextlib.redirect_stdout(io.StringIO()),
         ):
+            self.assertEqual(cg._sync(args), 0)
+        self.assertEqual(len(open_at_request), 4)  # 1 list + 3 deep fetches
+        self.assertEqual(set(open_at_request), {False})
+
+    def test_the_lock_is_reentrant_inside_one_process(self):
+        # The daemon holds it for a whole cycle and cmd_sync asks for it again;
+        # a second flock on another handle would fail, so nested use is trusted.
+        with cg.exclusive_run(), cg.exclusive_run():
+            pass
+        handle = (cg.STATE_DIR / "run.lock").open("w")
+        self.addCleanup(handle.close)
+        fcntl.flock(handle, fcntl.LOCK_EX | fcntl.LOCK_NB)
+
+    def test_another_handle_cannot_take_the_lock(self):
+        handle = (cg.STATE_DIR / "run.lock").open("w")
+        self.addCleanup(handle.close)
+        fcntl.flock(handle, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        with self.assertRaises(SystemExit), cg.exclusive_run():
             pass
 
     def test_every_write_command_takes_the_lock(self):
@@ -619,6 +675,7 @@ class TestSafety(unittest.TestCase):
             ("cmd_move", "_move"),
             ("cmd_unarchive", "_unarchive"),
             ("cmd_organize", "_organize"),
+            ("cmd_sync", "_sync"),
         ):
             with (
                 self.subTest(name),
@@ -1023,6 +1080,21 @@ class TestDaemon(unittest.TestCase):
             record = cg._daemon_job("sync", boom)
         self.assertEqual(record["rc"], 1)
         self.assertIn("OSError", record["error"])
+
+    def test_a_locked_index_defers_the_cycle(self):
+        def locked():
+            raise sqlite3.OperationalError("database is locked")
+
+        out, err = self.quiet()
+        with out, err:
+            record = cg._daemon_job("sync", locked)
+        self.assertEqual(record["rc"], 4)
+        self.assertIn("locked", record["error"])
+        self.assertEqual(cg._daemon_rc([record]), 0)
+
+    def test_deferred_cycle_retries_before_the_random_window(self):
+        args = self.args(wait_min=20, wait_max=50)
+        self.assertLessEqual(cg._daemon_wait(args, [{"rc": 4}]), cg._LOCK_RETRY_S)
 
     def test_busy_lock_defers_the_cycle_without_failing_it(self):
         out, err = self.quiet()
