@@ -32,10 +32,13 @@ Commands:
                         checked out instead of being recreated.
   list                  List the worktrees of the current repository.
   path <branch>         Print the worktree directory for <branch>.
-  merge <branch> [--force]
-                        Fast-forward <branch> into the current branch, then
-                        remove its worktree and delete the branch. --force
-                        discards local changes in that worktree.
+  merge <branch> [--force] [--rebase] [--squash]
+                        Integrate <branch> into the current branch, then
+                        remove its worktree and delete the branch.
+                        Default: fast-forward only. --rebase rebases
+                        <branch> onto the current branch before merging.
+                        --squash performs a squash merge (commits changes).
+                        --force discards local changes in that worktree.
   remove <branch> [--force] [--delete-branch]
                         Remove the worktree. --delete-branch also deletes
                         the local branch, but only if it is merged.
@@ -141,13 +144,15 @@ cmd_path() {
 }
 
 cmd_merge() {
-	local branch=${1:-} force=0
+	local branch=${1:-} force=0 strategy=ff
 	[[ -n $branch ]] || die "branch name required (see '$PROG help')"
 	shift || true
 	while (($#)); do
 		case $1 in
 		-f | --force) force=1 ;;
-		*) die "usage: $PROG merge <branch> [--force]" ;;
+		--rebase) strategy=rebase ;;
+		--squash) strategy=squash ;;
+		*) die "usage: $PROG merge <branch> [--force] [--rebase] [--squash]" ;;
 		esac
 		shift
 	done
@@ -160,8 +165,25 @@ cmd_merge() {
 	git -C "$repo" rev-parse --verify --quiet "refs/heads/$branch" >/dev/null ||
 		die "no local branch: $branch"
 
-	echo "Merging $branch into $current (fast-forward only)"
-	git -C "$repo" merge --ff-only "$branch"
+	case $strategy in
+	ff)
+		echo "Merging $branch into $current (fast-forward only)"
+		git -C "$repo" merge --ff-only "$branch"
+		;;
+	rebase)
+		echo "Rebasing $branch onto $current"
+		git -C "$repo" rebase "$current" "$branch"
+		git -C "$repo" checkout "$current"
+		echo "Merging $branch into $current (fast-forward)"
+		git -C "$repo" merge --ff-only "$branch"
+		;;
+	squash)
+		echo "Squash merging $branch into $current"
+		git -C "$repo" merge --squash "$branch"
+		git -C "$repo" commit
+		;;
+	*) die "unknown merge strategy: $strategy" ;;
+	esac
 
 	dir=$(worktree_dir "$branch")
 	if [[ -d $dir ]]; then
@@ -172,7 +194,11 @@ cmd_merge() {
 		fi
 		echo "Removed worktree: $dir"
 	fi
-	git -C "$repo" branch -d "$branch"
+	if [[ $strategy == squash ]]; then
+		git -C "$repo" branch -D "$branch"
+	else
+		git -C "$repo" branch -d "$branch"
+	fi
 }
 
 cmd_remove() {
