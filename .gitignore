@@ -23,28 +23,9 @@ password/
 niri/.config/niri/noctalia.kdl
 
 # Obsidian workspace/state (per-device, noisy)
-.obsidian/workspace*.json
-.obsidian/graph.json
-.obsidian/workspace-mobile.json
 **/.obsidian/workspace*.json
 **/.obsidian/graph.json
 **/.obsidian/workspace-mobile.json
-
-# Obsidian snippets (generated/theme-specific)
-.obsidian/snippets/*
-!/.obsidian/snippets/
-!.obsidian/snippets/.gitkeep
-**/.obsidian/snippets/*
-!**/.obsidian/snippets/
-!**/.obsidian/snippets/.gitkeep
-
-# Obsidian plugins/cache (rarely tracked)
-.obsidian/plugins/
-**/.obsidian/plugins/
-.obsidian/hotkeys.json
-**/.obsidian/hotkeys.json
-.obsidian/community-plugins.json
-**/.obsidian/community-plugins.json
 
 # cache
 *__pycache__*
