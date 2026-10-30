@@ -1,0 +1,3 @@
+# Panicking is acceptable in tests, never in production paths.
+allow-unwrap-in-tests = true
+allow-expect-in-tests = true
