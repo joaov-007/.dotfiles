@@ -11,6 +11,5 @@ alias grep='grep --color=auto'
 
 # cgd: ChatGPT organizer daemon applying moves. Plain `cg daemon` is the
 # dry run, and extra flags pass through: cgd --once, cgd --cycles 3.
-alias cgd='cg daemon --yes'
 
 PS1='[\u@\h \W]\$ '

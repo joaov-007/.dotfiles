@@ -27,6 +27,7 @@ prepend_path () {
 
 # User binaries. ~/.local/bin is the XDG default, not always on PATH.
 append_path '~/.local/bin'
+append_path '~/.cargo/bin/'
 append_path '~/bin'
 
 # SSH agent socket (systemd user service, socket-activated).
