@@ -10,7 +10,7 @@ tags:
 type: reference-list
 status: evergreen
 created: 2026-09-27
-updated: 2026-10-17
+updated: 2026-10-28
 review_after: 2027-03-27
 related:
   - "[[Home]]"
@@ -29,3 +29,6 @@ Notes about programming, tooling, and developer workflows.
 
 ## Project Organization
 - Project structure and conventions
+
+## Git
+- [[git-worktree-helper|Git Worktree Helper]]
