@@ -5,11 +5,11 @@
 *.7z
 
 # Python caches (scripts/chatgpt)
-__pycache__/
+*__pycache__*
 *.py[cod]
-.pytest_cache/
-.ruff_cache/
-.venv/
+**/.pytest_cache/
+**/.ruff_cache/
+**/.venv/*
 
 **/node_modules*
 
@@ -26,6 +26,5 @@ niri/.config/niri/noctalia.kdl
 **/.obsidian/workspace*.json
 **/.obsidian/graph.json
 **/.obsidian/workspace-mobile.json
-
-# cache
-*__pycache__*
+**/.obsidian/appearance.json
+**/.obsidian/snippets/noctalia.css
