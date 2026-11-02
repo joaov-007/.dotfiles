@@ -23,8 +23,7 @@ password/
 niri/.config/niri/noctalia.kdl
 
 # Obsidian workspace/state (per-device, noisy)
-**/.obsidian/workspace*.json
-**/.obsidian/graph.json
-**/.obsidian/workspace-mobile.json
-**/.obsidian/appearance.json
-**/.obsidian/snippets/noctalia.css
+**/.obsidian/*
+
+## Ignore my data app
+**/*data*/*

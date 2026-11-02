@@ -1,6 +1,6 @@
-# ~/.bashrc — managed by the dotfiles repo (`bash` package).
+# ~/.bashrc — managed by the dotfiles repo (`config` package).
 #
-#   stow -t ~ bash
+#   stow -t ~ config
 #
 # Bash is the fallback shell here; the interactive setup is zsh.
 
