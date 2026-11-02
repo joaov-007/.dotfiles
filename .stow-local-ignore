@@ -13,6 +13,9 @@ zsh.old
 # --- documentation: it is read in the browser, not linked into $HOME
 wiki
 
+# --- Apps with compose.yaml, podman quadlets --
+apps
+
 # --- the task list, for the same reason
 ^/TODO\.md$
 
