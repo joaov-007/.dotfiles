@@ -20,10 +20,11 @@
 password/
 
 # theme output of noctalia, rewritten on every theme change
-niri/.config/niri/noctalia.kdl
+config/.config/niri/noctalia.kdl
 
 # Obsidian workspace/state (per-device, noisy)
 **/.obsidian/*
+!/.obsidian/core-plugins.json
 
 ## Ignore my data app
 **/*data*/*
