@@ -45,10 +45,21 @@ sudo nixos-rebuild switch --flake ./nixos#bacon
 
 ## Stow
 
-Há um único *package*: `config`. Ele espelha `$HOME`, então
-`stow -t ~ config` linka `~/.config/*` e os dotfiles de topo (`.zshrc`,
-`.zshenv`, `.bashrc`, `.curlrc`). O `.stowrc` na raiz já fixa
-`--target=$HOME`, o que permite rodar de dentro do repositório.
+Há um único *package*: `config`. Ele espelha `$HOME`, então `stow config`
+linka `~/.config/*` e os dotfiles de topo (`.zshrc`, `.zshenv`, `.bashrc`,
+`.curlrc`).
+
+O `.stowrc` fixa `--dir=$HOME/.dotfiles` e `--target=$HOME`. Linkado em
+`~` ele faz `stow config` funcionar de qualquer diretório, já que o stow
+só procura `.stowrc` no diretório atual e em `$HOME`:
+
+```bash
+ln -sfn ~/.dotfiles/.stowrc ~/.stowrc
+```
+
+O stow lê o `.stowrc` com `shellwords`, sem suporte a comentários: uma
+linha com `#` é tratada como argumentos, e qualquer `-x` nela vira opção
+inválida. Deixe esse arquivo só com opções.
 
 O `.stow-local-ignore` na raiz é a blacklist lida pelo stow — o que está
 listado nunca é linkado:
