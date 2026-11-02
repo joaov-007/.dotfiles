@@ -13,15 +13,16 @@
 .
 ├── nixos/          # config NixOS (flake dendrítico) — veio do nixos-config
 ├── scripts/        # único diretório de scripts
+│   ├── chatgpt/    # cg-rs e utilitários
 │   ├── git/        # bootstrap de config do git
 │   ├── nixos/      # suíte de checks do flake
-│   ├── stow/       # aplica a blacklist do stow
 │   └── unbound/    # gerador de adblock do unbound
 ├── etc/            # arquivos espelhados de /etc
-├── zsh/ bash/      # shells: zsh principal, bash fallback
-├── nvim/           # editor (~/.config/nvim)
-├── mise/           # config do mise (~/.config/mise/config.toml)
-└── ...             # flags por app, rclone-services, etc.
+├── config/         # único package do stow: espelha $HOME
+│   ├── .bashrc .zshrc .zshenv .curlrc
+│   └── .config/    # zsh, nvim, niri, espanso, halloy, mise, git, w3m, ...
+├── apps/           # quadlets/compose do podman — não é dotfile
+└── wiki/           # documentação
 ```
 
 A documentação completa está em [`wiki/`](wiki/README.md): o mapa do
@@ -44,9 +45,10 @@ sudo nixos-rebuild switch --flake ./nixos#bacon
 
 ## Stow
 
-Cada diretório de topo é um *package* do GNU Stow: `stow -t ~ nvim` cria
-`~/.config/nvim` a partir de `nvim/.config/nvim`. O `bash/` existe como
-fallback: `stow -t ~ bash` linka `~/.bashrc` com o mesmo alias `cgd` do zsh.
+Há um único *package*: `config`. Ele espelha `$HOME`, então
+`stow -t ~ config` linka `~/.config/*` e os dotfiles de topo (`.zshrc`,
+`.zshenv`, `.bashrc`, `.curlrc`). O `.stowrc` na raiz já fixa
+`--target=$HOME`, o que permite rodar de dentro do repositório.
 
 O `.stow-local-ignore` na raiz é a blacklist lida pelo stow — o que está
 listado nunca é linkado:
@@ -56,24 +58,18 @@ listado nunca é linkado:
 | `nixos`     | config do sistema, gerada pelo `nixos-rebuild`      |
 | `scripts`   | ferramentas do repositório                          |
 | `etc`       | vai para `/etc` (`sudo stow -t /etc etc`)           |
+| `apps`      | quadlets do podman, aplicados por `systemctl`       |
 | `zsh.old`   | resto do layout antigo                              |
 | `wiki`      | documentação, não é um dotfile                      |
 | `TODO.md`   | a lista de tarefas, pelo mesmo motivo               |
 
-O stow só lê esse arquivo na raiz do package, então `scripts/stow/stow.sh`
-passa a mesma blacklist para o stow e exige os packages na mão:
-
 ```bash
 # mostra o que seria linkado, sem mexer em nada
-./scripts/stow/stow.sh --dry-run neovim
+stow --simulate -v config
 
 # linka o package em ~
-./scripts/stow/stow.sh nvim
-./scripts/stow/stow.sh bash   # fallback: ~/.bashrc com o alias cgd
+stow config
 
 # /etc precisa de root
 sudo stow -t /etc etc
-
-# stow puro passa a respeitar a blacklist também
-./scripts/stow/stow.sh --global-ignore
 ```
