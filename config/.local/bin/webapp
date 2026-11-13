@@ -1,0 +1,62 @@
+#!/bin/sh
+# webapp URL - open URL as a chromeless window in a Chromium-based browser.
+#
+# The binds should not name a browser: this picks the first one installed, so
+# swapping Brave for Ungoogled Chromium (or anything else) is a package change,
+# not a config change.
+#
+# Detection order: native binaries first, then user/system flatpaks.
+# Force a specific one for a single call:
+#
+#   WEBAPP_BROWSER="ungoogled-chromium" webapp https://photos.google.com
+#   WEBAPP_BROWSER="flatpak run --user com.brave.Browser" webapp https://...
+#
+# The override is a command line on purpose, so it may carry its own flags.
+set -eu
+
+URL=${1:?usage: webapp URL}
+
+launch() {
+	exec "$@" --app="$URL"
+}
+
+if [ -n "${WEBAPP_BROWSER:-}" ]; then
+	# shellcheck disable=SC2086
+	launch $WEBAPP_BROWSER
+fi
+
+for browser in \
+	ungoogled-chromium \
+	brave \
+	brave-browser \
+	chromium \
+	google-chrome-stable \
+	microsoft-edge-stable \
+	vivaldi \
+	opera; do
+	if command -v "$browser" >/dev/null 2>&1; then
+		launch "$browser"
+	fi
+done
+
+if command -v flatpak >/dev/null 2>&1; then
+	installed=$(flatpak list --app --columns=application 2>/dev/null || true)
+	for id in \
+		io.github.ungoogled_software.ungoogled_chromium \
+		com.brave.Browser \
+		org.chromium.Chromium \
+		com.google.Chrome \
+		com.microsoft.Edge \
+		com.vivaldi.Vivaldi \
+		com.opera.Opera; do
+		printf '%s\n' "$installed" | grep -Fqx "$id" || continue
+		if [ "$id" = com.brave.Browser ]; then
+			launch flatpak run --user --command=brave "$id"
+		else
+			launch flatpak run --user "$id"
+		fi
+	done
+fi
+
+printf 'webapp: no Chromium-based browser found\n' >&2
+exit 1
