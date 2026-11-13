@@ -20,5 +20,6 @@ binds {
     Mod+Alt+y hotkey-overlay-title="YouTube (Web App): brave --app=youtube.com"  { spawn "flatpak" "run" "--user" "--command=brave" "com.brave.Browser" "--app=https://www.youtube.com"; }
     Mod+Alt+w hotkey-overlay-title="WhatsApp (Web App): brave --app=web.whatsapp.com" { spawn "flatpak" "run" "--user" "--command=brave" "com.brave.Browser" "--app=https://web.whatsapp.com"; }
     Mod+Alt+a hotkey-overlay-title="ChatGPT (Web App): brave --app=chatgpt.com"  { spawn "flatpak" "run" "--user" "--command=brave" "com.brave.Browser" "--app=https://chatgpt.com"; }
+    Mod+Alt+z hotkey-overlay-title="Google Calendar (Web App): brave --app=https://calendar.google.com"  { spawn "flatpak" "run" "--user" "--command=brave" "com.brave.Browser" "--app=https://calendar.google.com"; }
 
 }
