@@ -26,7 +26,10 @@ binds {
     Mod+Alt+y hotkey-overlay-title="YouTube (Web App)"  { spawn-sh "$HOME/.local/bin/webapp 'https://www.youtube.com'"; }
     Mod+Alt+w hotkey-overlay-title="WhatsApp (Web App)" { spawn-sh "$HOME/.local/bin/webapp 'https://web.whatsapp.com'"; }
     Mod+Alt+a hotkey-overlay-title="ChatGPT (Web App)"  { spawn-sh "$HOME/.local/bin/webapp 'https://chatgpt.com'"; }
+
+    // Google stuff
     Mod+Alt+z hotkey-overlay-title="Google Calendar (Web App)" { spawn-sh "$HOME/.local/bin/webapp 'https://calendar.google.com'"; }
     Mod+Alt+p hotkey-overlay-title="Google Photos (Web App)"   { spawn-sh "$HOME/.local/bin/webapp 'https://photos.google.com'"; }
+    Mod+Alt+m hotkey-overlay-title="Google Mail (Web App)"   { spawn-sh "$HOME/.local/bin/webapp 'https://mail.google.com'"; }
 
 }
