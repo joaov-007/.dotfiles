@@ -1,44 +1,27 @@
-#!/usr/bin/env bash
-
+#!/bin/sh
 # Bootstrap git configuration when Home Manager is not available yet.
+set -eu
 
-set -Eeuo pipefail
+SCOPE=--global
+DRY_RUN=0
+VERBOSE=0
 
-CONFIG_SCOPE_ARGS=(--global)
-DRY_RUN=false
-VERBOSE=false
-
-git_options=(
-branch.autosetuprebase always
-fetch.prune true
-pull.default current
-pull.rebase true
-push.autoSetupRemote true
-push.default current
-rebase.autoSquash true
-rebase.autoStash true
-rebase.stat true
-rerere.autoUpdate true
-rerere.enabled true
-diff.submodule log
-)
-
-if [[ -t 1 ]]; then
-readonly RED=$'\033[0;31m'
-readonly GREEN=$'\033[0;32m'
-readonly YELLOW=$'\033[0;33m'
-readonly BLUE=$'\033[0;34m'
-readonly RESET=$'\033[0m'
+if [ -t 1 ]; then
+    RED=$(printf '\033[0;31m')
+    GREEN=$(printf '\033[0;32m')
+    YELLOW=$(printf '\033[0;33m')
+    BLUE=$(printf '\033[0;34m')
+    RESET=$(printf '\033[0m')
 else
-readonly RED=""
-readonly GREEN=""
-readonly YELLOW=""
-readonly BLUE=""
-readonly RESET=""
+    RED=
+    GREEN=
+    YELLOW=
+    BLUE=
+    RESET=
 fi
 
 show_help() {
-cat <<EOF
+    cat <<EOF
 Usage: $0 [OPTIONS]
 
 Options:
@@ -58,99 +41,96 @@ EOF
 }
 
 log() {
-printf '%b\n' "$*"
+    printf '%b\n' "$*"
 }
 
 debug() {
-[[ "$VERBOSE" == true ]] || return 0
-printf '%b\n' "${BLUE}[debug]${RESET} $*"
+    [ "$VERBOSE" -eq 1 ] || return 0
+    printf '%b\n' "${BLUE}[debug]${RESET} $*"
 }
 
 require_command() {
-command -v "$1" >/dev/null 2>&1 || {
-log "${RED}Error:${RESET} required command not found: $1"
-exit 1
-}
+    command -v "$1" >/dev/null 2>&1 || {
+        log "${RED}Error:${RESET} required command not found: $1"
+        exit 1
+    }
 }
 
-while [[ $# -gt 0 ]]; do
-case "$1" in
---global)
-CONFIG_SCOPE_ARGS=(--global)
-;;
---local)
-CONFIG_SCOPE_ARGS=(--local)
-;;
---system)
-CONFIG_SCOPE_ARGS=(--system)
-;;
--n|--dry-run)
-DRY_RUN=true
-;;
--v|--verbose)
-VERBOSE=true
-;;
--h|--help)
-show_help
-exit 0
-;;
-*)
-log "${RED}Unknown option:${RESET} $1"
-exit 1
-;;
-esac
-shift
+while [ "$#" -gt 0 ]; do
+    case $1 in
+    --global) SCOPE=--global ;;
+    --local) SCOPE=--local ;;
+    --system) SCOPE=--system ;;
+    -n | --dry-run) DRY_RUN=1 ;;
+    -v | --verbose) VERBOSE=1 ;;
+    -h | --help)
+        show_help
+        exit 0
+        ;;
+    *)
+        log "${RED}Unknown option:${RESET} $1"
+        exit 1
+        ;;
+    esac
+    shift
 done
 
 require_command git
 
-debug "scope     = ${CONFIG_SCOPE_ARGS[*]}"
+debug "scope     = $SCOPE"
 debug "dry-run   = $DRY_RUN"
 debug "verbose   = $VERBOSE"
 
 set_kv() {
-local key="$1"
-local value="$2"
+    kv_key=$1
+    kv_value=$2
 
-[[ -n "$key" ]] || return 0
+    [ -n "$kv_key" ] || return 0
 
-debug "processing: $key=$value"
+    debug "processing: $kv_key=$kv_value"
 
-if [[ "$DRY_RUN" == true ]]; then
-    log "${BLUE}[dry-run]${RESET} $key = ${GREEN}$value${RESET}"
-    return 0
-fi
-
-if [[ "$value" =~ ^(unset|null)$ ]]; then
-    if git config "${CONFIG_SCOPE_ARGS[@]}" --get "$key" >/dev/null 2>&1; then
-        git config "${CONFIG_SCOPE_ARGS[@]}" --unset "$key"
-        log "${YELLOW}Unset:${RESET} $key"
-    else
-        debug "$key already absent"
+    if [ "$DRY_RUN" -eq 1 ]; then
+        log "${BLUE}[dry-run]${RESET} $kv_key = ${GREEN}$kv_value${RESET}"
+        return 0
     fi
-    return 0
-fi
 
-git config "${CONFIG_SCOPE_ARGS[@]}" "$key" "$value"
-log "${GREEN}Set:${RESET} $key = $value"
+    case $kv_value in
+    unset | null)
+        if git config "$SCOPE" --get "$kv_key" >/dev/null 2>&1; then
+            git config "$SCOPE" --unset "$kv_key"
+            log "${YELLOW}Unset:${RESET} $kv_key"
+        else
+            debug "$kv_key already absent"
+        fi
+        return 0
+        ;;
+    esac
 
+    git config "$SCOPE" "$kv_key" "$kv_value"
+    log "${GREEN}Set:${RESET} $kv_key = $kv_value"
 }
 
 apply_collection() {
-local arr=("$@")
-
-(( ${#arr[@]} % 2 == 0 )) || {
-    log "${RED}Error:${RESET} key/value pairs required"
-    return 1
+    while IFS= read -r line; do
+        [ -n "$line" ] || continue
+        key=${line%%=*}
+        value=${line#*=}
+        [ "$key" = "$line" ] && continue
+        set_kv "$key" "$value"
+    done
 }
 
-local i
-
-for ((i=0; i<${#arr[@]}; i+=2)); do
-    set_kv "${arr[i]}" "${arr[i+1]}"
-done
-
-}
-
-apply_collection "${git_options[@]}"
-
+apply_collection <<'EOF'
+branch.autosetuprebase=always
+fetch.prune=true
+pull.default=current
+pull.rebase=true
+push.autoSetupRemote=true
+push.default=current
+rebase.autoSquash=true
+rebase.autoStash=true
+rebase.stat=true
+rerere.autoUpdate=true
+rerere.enabled=true
+diff.submodule=log
+EOF
