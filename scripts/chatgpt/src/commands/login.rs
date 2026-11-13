@@ -2,7 +2,8 @@
 
 use std::io::{IsTerminal, Read};
 
-use crate::auth::{build_cookie, open_session, save_cookie};
+use crate::auth::{Saved, build_cookie, open_session, remember, save_cookie};
+use crate::browser;
 use crate::cli::LoginArgs;
 use crate::config::Paths;
 use crate::error::{Error, Result};
@@ -10,7 +11,7 @@ use crate::http::validate_url;
 use crate::live;
 
 /// Read the cookie from a flag, a file, or stdin, prove it works, then store it
-/// with mode 0600. Browser keyring harvesting is deliberately not here yet.
+/// in the OS keyring (falling back to a 0600 file on headless machines).
 pub fn run(paths: &Paths, args: &LoginArgs) -> Result<()> {
     let base = args.auth.base_url.trim_end_matches('/').to_owned();
     validate_url(&base)?;
@@ -25,6 +26,9 @@ pub fn run(paths: &Paths, args: &LoginArgs) -> Result<()> {
             ))
         })?;
         (file.to_string_lossy().into_owned(), build_cookie(&raw)?)
+    } else if args.browser || args.store.is_some() {
+        let harvest = browser::harvest(paths, args.store.as_deref())?;
+        (harvest.describe(), build_cookie(&harvest.cookie)?)
     } else {
         ("stdin".to_owned(), read_stdin()?)
     };
@@ -32,8 +36,12 @@ pub fn run(paths: &Paths, args: &LoginArgs) -> Result<()> {
     let mut client = live::client(1.0, live::RETRIES);
     let session = open_session(&mut client, &base, &cookie)?;
 
-    let target = args.save.clone().unwrap_or_else(|| paths.session.clone());
-    save_cookie(&cookie, &target)?;
+    let saved = if let Some(target) = &args.save {
+        save_cookie(&cookie, target)?;
+        Saved::File(target.clone())
+    } else {
+        remember(&cookie, &args.auth, paths)?
+    };
 
     let chunks = cookie.matches("__Secure-next-auth.session-token.").count();
     let values = cookie.matches('=').count();
@@ -45,8 +53,8 @@ pub fn run(paths: &Paths, args: &LoginArgs) -> Result<()> {
     println!("conta   : {}", session.email.as_deref().unwrap_or("?"));
     println!("plano   : {}", session.plan.as_deref().unwrap_or("?"));
     println!("expira  : {}", session.expires.as_deref().unwrap_or("?"));
-    println!("salvo   : {} (600)", target.display());
-    println!("\npronto — os comandos online usam esse arquivo sozinhos.");
+    println!("salvo   : {}", saved.describe());
+    println!("\npronto — os comandos online usam essa sessão sozinhos.");
     Ok(())
 }
 

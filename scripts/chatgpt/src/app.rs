@@ -24,6 +24,7 @@ pub fn run(cli: Cli) -> Result<i32> {
         Command::Status => commands::status::run(&paths).map(|()| 0),
         Command::Login(args) => commands::login::run(&paths, &args).map(|()| 0),
         Command::Auth(args) => commands::auth::run(&paths, &args).map(|()| 0),
+        Command::Logout(args) => commands::logout::run(&paths, &args).map(|()| 0),
         Command::Sync(args) => commands::sync::run(&paths, &args),
         Command::Projects(args) => commands::projects::run(&paths, &args).map(|()| 0),
         Command::Organize(args) => commands::organize::run(&paths, &args),
@@ -31,6 +32,10 @@ pub fn run(cli: Cli) -> Result<i32> {
         Command::Move(args) => commands::move_batch::run(&paths, &args),
         Command::Archive(args) => commands::archive::run(&paths, &args),
         Command::Unarchive(args) => commands::unarchive::run(&paths, &args),
-        Command::Daemon(args) => daemon::run_daemon(&args).map(|code| code as i32),
+        Command::Daemon(args) => daemon::run_daemon(&args),
+        Command::Export(args) => commands::export::run(&paths, &args),
+        Command::Log(args) => commands::log::run(&paths, &args),
+        Command::Completions(args) => commands::completions::run(&args),
+        Command::Services(args) => commands::services::run(&args),
     }
 }

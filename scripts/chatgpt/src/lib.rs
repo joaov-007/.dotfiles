@@ -14,12 +14,14 @@
 pub mod api;
 pub mod app;
 pub mod auth;
+pub mod browser;
 pub mod classify;
 pub mod classify_data;
 pub mod cli;
 pub mod commands;
 pub mod config;
-pub mod daemon;  // NEW
+pub mod conv_cache;
+pub mod daemon;
 pub mod error;
 pub mod export;
 pub mod http;
@@ -27,9 +29,12 @@ pub mod journal;
 pub mod live;
 pub mod lock;
 pub mod model;
+pub mod note;
 pub mod plan;
 pub mod projects;
 pub mod report;
+pub mod secret;
+pub mod services;
 pub mod store;
 pub mod text;
 

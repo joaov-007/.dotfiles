@@ -1,0 +1,97 @@
+set shell := ["bash", "-euo", "pipefail", "-c"]
+
+# Default gate: format check, lints, and tests.
+default: check
+
+# Format sources with rustfmt.
+[group('quality')]
+fmt:
+    cargo fmt --all
+
+# Check formatting without writing.
+[group('quality')]
+fmt-check:
+    cargo fmt --all -- --check
+
+# Clippy over every target; warnings are errors.
+[group('quality')]
+lint:
+    cargo clippy --all-targets --all-features -- -D warnings
+
+# Unit and integration tests, debug build.
+[group('quality')]
+test:
+    cargo test --all-features
+
+# Same tests with optimizations, so release-only bugs show up.
+[group('quality')]
+test-release:
+    cargo test --all-features --release
+
+# Arithmetic and slice bounds with debug assertions in an optimized build.
+[group('quality')]
+overflow:
+    RUSTFLAGS="-C overflow-checks=yes -C debug-assertions=yes" cargo test --all-features
+
+# Undefined behaviour checks for the pure-Rust paths (needs nightly + miri).
+[group('quality')]
+miri:
+    command -v cargo-miri >/dev/null || { echo "install: rustup component add miri" >&2; exit 1; }
+    cargo +nightly miri test --all-features
+
+# Full gate: fmt, lints, debug/release tests, overflow, audit, deny.
+[group('quality')]
+qa: fmt-check lint test test-release overflow audit deny
+    @echo "qa: all green"
+
+# Format check, lints, and tests only.
+[group('quality')]
+qa-quick: fmt-check lint test
+    @echo "qa-quick: all green"
+
+# Known advisories in the dependency tree.
+[group('quality')]
+audit:
+    command -v cargo-audit >/dev/null || { echo "install: cargo install cargo-audit" >&2; exit 1; }
+    cargo audit
+
+# Licenses, advisories, sources, and duplicate crates.
+[group('quality')]
+deny:
+    command -v cargo-deny >/dev/null || { echo "install: cargo install cargo-deny" >&2; exit 1; }
+    cargo deny check
+
+# Fast local gate: format check, lints, tests.
+[group('quality')]
+check: fmt-check lint test
+    @echo "all green"
+
+# CI gate: quality checks plus audit and deny.
+[group('quality')]
+ci: fmt-check lint test audit deny
+    @echo "all green"
+
+# BIN_DIR lands on PATH; override for /usr/local/bin or a staging dir.
+bin_dir := env("BIN_DIR", env("HOME") + "/.local/bin")
+data_dir := env("XDG_DATA_HOME", env("HOME") + "/.local/share")
+# This machine exports CARGO_TARGET_DIR=~/.local/bin, so the artifacts are
+# not under ./target. Read the variable instead of hardcoding the path.
+target_dir := env("CARGO_TARGET_DIR", justfile_directory() / "target")
+
+# Optimized binary; --locked refuses to silently update Cargo.lock.
+[group('install')]
+build:
+    cargo build --release --locked
+
+# Install the binary in ~/.local/bin and write the bash completion.
+[group('install')]
+install: build
+    install -d {{ bin_dir }} {{ data_dir }}/bash-completion/completions
+    install -m755 {{ target_dir }}/release/cg {{ bin_dir }}/cg
+    {{ bin_dir }}/cg completions bash > {{ data_dir }}/bash-completion/completions/cg
+    @echo "installed {{ bin_dir }}/cg"
+
+# Remove the installed binary and completion.
+[group('install')]
+uninstall:
+    rm -f {{ bin_dir }}/cg {{ data_dir }}/bash-completion/completions/cg

@@ -106,6 +106,9 @@ pub fn run(paths: &Paths, args: &SyncArgs) -> Result<i32> {
                     failed += 1;
                     continue;
                 };
+                if let Err(error) = crate::conv_cache::write(paths, id, &raw) {
+                    eprintln!("aviso: não gravou o cache de {id}: {error}");
+                }
                 let Some(conversation) = parse_conversation(&raw) else {
                     gone += 1;
                     continue;

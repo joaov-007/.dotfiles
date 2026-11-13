@@ -2,7 +2,7 @@
 //!
 //! Every test drives the real command functions against an in-memory SQLite
 //! index and a fake [`Transport`] that returns canned HTTP responses. No
-//! network, no cookie, no real ChatGPT account is needed.
+//! network, no cookie, no real `ChatGPT` account is needed.
 //!
 //! These tests prove the safety rules the TODO demands:
 //!
@@ -22,9 +22,7 @@ use cg::auth::{SESSION_COOKIE, build_cookie};
 use cg::cli::AuthArgs;
 use cg::error::{Error, Result};
 use cg::http::{Clock, HttpClient, Method, Request, Response, Throttle, Transport};
-use cg::model::ConversationId;
-use cg::store::Index;
-use cg::text::fold;
+use cg::projects::project_key;
 
 // ---------------------------------------------------------------------------
 // Canned responses and fake transport
@@ -39,17 +37,20 @@ struct Queued {
 }
 
 /// Fake transport: pops the next queued response, records the request.
+///
+/// The handles are shared through `Arc`, so a clone used to inspect the
+/// recorded requests sees what the client already consumed.
 #[derive(Debug, Default)]
 struct FakeTransport {
-    queue: std::sync::Mutex<Vec<Queued>>,
-    requests: std::sync::Mutex<Vec<Request>>,
+    queue: std::sync::Arc<std::sync::Mutex<Vec<Queued>>>,
+    requests: std::sync::Arc<std::sync::Mutex<Vec<Request>>>,
 }
 
 impl Clone for FakeTransport {
     fn clone(&self) -> Self {
         Self {
-            queue: std::sync::Mutex::new(self.queue.lock().unwrap().clone()),
-            requests: std::sync::Mutex::new(self.requests.lock().unwrap().clone()),
+            queue: std::sync::Arc::clone(&self.queue),
+            requests: std::sync::Arc::clone(&self.requests),
         }
     }
 }
@@ -57,25 +58,13 @@ impl Clone for FakeTransport {
 impl FakeTransport {
     fn with(answers: Vec<Queued>) -> Self {
         Self {
-            queue: std::sync::Mutex::new(answers),
-            requests: std::sync::Mutex::new(Vec::new()),
+            queue: std::sync::Arc::new(std::sync::Mutex::new(answers)),
+            requests: std::sync::Arc::new(std::sync::Mutex::new(Vec::new())),
         }
-    }
-
-    fn push_429(&self, retry_after: f64) {
-        self.queue.lock().expect("queue").push(Queued {
-            status: 429,
-            body: String::new(),
-            retry_after: Some(retry_after),
-        });
     }
 
     fn seen(&self) -> Vec<Request> {
         self.requests.lock().expect("requests").clone()
-    }
-
-    fn remaining(&self) -> usize {
-        self.queue.lock().expect("queue").len()
     }
 }
 
@@ -125,62 +114,6 @@ impl Clock for FakeClock {
 }
 
 // ---------------------------------------------------------------------------
-// Sandbox helpers
-// ---------------------------------------------------------------------------
-
-/// Build a throwaway state directory with an index containing the given rows.
-fn sandbox_with_conversations(
-    rows: &[(&str, &str, Option<&str>, bool)],
-) -> (cg::config::Paths, cg::store::Index) {
-    let dir = tempfile::tempdir().expect("tempdir");
-    let root = dir.path().to_path_buf();
-    let paths = cg::config::Paths::rooted(&root);
-    paths.ensure_state().expect("state dirs");
-
-    let index = cg::store::Index::open(&paths.db).expect("open index");
-    let now = "2026-10-30T12:00:00";
-
-    for (id, title, project_id, archived) in rows {
-        let conv = cg::model::Conversation {
-            id: cg::model::ConversationId::parse(id).expect("id"),
-            title: title.to_string(),
-            created: None,
-            archived: *archived,
-            project_id: project_id.map(|p| p.to_string()),
-            turns: vec![
-                cg::model::Turn {
-                    role: cg::model::Role::User,
-                    text: "hello".to_owned(),
-                },
-                cg::model::Turn {
-                    role: cg::model::Role::Assistant,
-                    text: "hi".to_owned(),
-                },
-            ],
-        };
-        let _ = index
-            .record(&conv, "test", now, Some(true))
-            .expect("record");
-    }
-    (paths, index)
-}
-
-/// A session that always validates, for commands that call `authenticate`.
-fn session_queue() -> Vec<Queued> {
-    vec![ok_response(
-        json!({"accessToken": "tok-123", "user": {"email": "me@example.com"}}).to_string(),
-    )]
-}
-
-fn auth_args() -> AuthArgs {
-    AuthArgs {
-        cookie: None,
-        cookie_file: None,
-        base_url: "https://chatgpt.com".to_owned(),
-    }
-}
-
-// ---------------------------------------------------------------------------
 // Cookie normalisation tests
 // ---------------------------------------------------------------------------
 
@@ -193,7 +126,8 @@ fn bare_chunk_gets_the_session_cookie_name() {
 
 #[test]
 fn mixed_named_and_bare_lines_are_rejected() {
-    let raw = format!("{SESSION_COOKIE}=.0\n.bare-chunk");
+    // A bare value first cannot be a wrapped continuation of a later line.
+    let raw = format!("bare-chunk\n{SESSION_COOKIE}=.0");
     let error = build_cookie(&raw).unwrap_err();
     assert!(matches!(error, Error::Usage(_)));
 }
@@ -215,9 +149,9 @@ fn half_nextauth_token_is_rejected_with_explanation() {
 
 #[test]
 fn fold_is_deterministic_for_project_keys() {
-    assert_eq!(fold("Linux & Arch"), "linux arch");
-    assert_eq!(fold("Música-Dev 2"), "música dev 2");
-    assert_eq!(fold("  multiple   spaces  "), "multiple spaces");
+    assert_eq!(project_key("Linux & Arch"), "linux arch");
+    assert_eq!(project_key("Música-Dev 2"), "musica dev 2");
+    assert_eq!(project_key("  multiple   spaces  "), "multiple spaces");
 }
 
 // ---------------------------------------------------------------------------
@@ -397,11 +331,17 @@ fn set_archived_patches_is_archived() {
 
 #[test]
 fn a_429_is_reported_as_rate_limited() {
-    let transport = FakeTransport::with(vec![Queued {
-        status: 429,
-        body: String::new(),
-        retry_after: Some(30.0),
-    }]);
+    // The client retries a 429 up to its budget, then hands the last response
+    // back; the API layer turns that status into the typed error.
+    let transport = FakeTransport::with(
+        (0..=4)
+            .map(|_| Queued {
+                status: 429,
+                body: String::new(),
+                retry_after: Some(30.0),
+            })
+            .collect(),
+    );
     let client = HttpClient::new(
         Box::new(transport),
         Throttle::with_clock(0.0, Box::new(FakeClock)),
@@ -409,7 +349,8 @@ fn a_429_is_reported_as_rate_limited() {
     );
     let mut client = client;
     let request = Request::new(Method::Get, "https://chatgpt.com/api/auth/session");
-    let error = client.send(&request).unwrap_err();
+    let response = client.send(&request).expect("last response");
+    let error = cg::live::abort_for(response.status).expect("rate limited");
     assert!(matches!(error, Error::RateLimited(_)));
 }
 
@@ -467,6 +408,7 @@ fn auth_args_effective_cookie_prefers_flag_over_env() {
     let args = AuthArgs {
         cookie: Some("flag=cookie".to_owned()),
         cookie_file: None,
+        no_keyring: true,
         base_url: "https://chatgpt.com".to_owned(),
     };
     assert_eq!(args.effective_cookie().as_deref(), Some("flag=cookie"));
@@ -477,6 +419,7 @@ fn auth_args_effective_cookie_trims_and_rejects_empty() {
     let args = AuthArgs {
         cookie: Some("   ".to_owned()),
         cookie_file: None,
+        no_keyring: true,
         base_url: "https://chatgpt.com".to_owned(),
     };
     assert!(args.effective_cookie().is_none());

@@ -283,3 +283,160 @@ fn status_works_on_a_fresh_install() {
     assert!(text.contains("banco  :"), "{text}");
     assert!(text.contains("log    :"), "{text}");
 }
+
+// ---------------------------------------------------------------------------
+// Completions and systemd units
+// ---------------------------------------------------------------------------
+
+#[test]
+fn completions_emit_a_script_for_each_shell() {
+    let sandbox = Sandbox::new();
+    for shell in ["bash", "zsh", "fish"] {
+        let output = sandbox.run(&["completions", shell]);
+        assert_success(&output);
+        let text = stdout(&output);
+        assert!(!text.is_empty(), "{shell}: empty completion script");
+        assert!(text.contains("cg"), "{shell}: script does not name cg");
+    }
+}
+
+#[test]
+fn services_show_renders_a_timer_pair_without_writing() {
+    let sandbox = Sandbox::new();
+    let units = sandbox.root().join("units");
+    let units_arg = units.to_str().expect("utf-8 path");
+
+    let output = sandbox.run(&[
+        "services",
+        "--unit-dir",
+        units_arg,
+        "--cg-bin",
+        "/usr/bin/cg",
+        "show",
+    ]);
+    assert_success(&output);
+    let text = stdout(&output);
+    assert!(
+        text.contains("ExecStart=/usr/bin/cg daemon --once"),
+        "{text}"
+    );
+    assert!(text.contains("OnUnitActiveSec=1h"), "{text}");
+    assert!(text.contains("Unit=cg.service"), "{text}");
+    assert!(!units.exists(), "show must not touch the filesystem");
+}
+
+#[test]
+fn services_register_dry_run_writes_nothing() {
+    let sandbox = Sandbox::new();
+    let units = sandbox.root().join("units");
+    let units_arg = units.to_str().expect("utf-8 path");
+
+    let output = sandbox.run(&[
+        "services",
+        "--unit-dir",
+        units_arg,
+        "--cg-bin",
+        "/usr/bin/cg",
+        "--dry-run",
+        "register",
+        "--no-start",
+    ]);
+    assert_success(&output);
+    assert!(
+        stdout(&output).contains("daemon --once"),
+        "{}",
+        stdout(&output)
+    );
+    assert!(!units.exists(), "dry-run must not write units");
+}
+
+#[test]
+fn services_discovers_existing_units_without_writing() {
+    let sandbox = Sandbox::new();
+    let units = sandbox.root().join("units");
+    std::fs::create_dir_all(&units).expect("units dir");
+    let unit = units.join("cg.service");
+    let original = "[Unit]\nDescription=hand written\n";
+    std::fs::write(&unit, original).expect("seed");
+
+    // No action means discover: report what exists and change nothing.
+    let output = sandbox.run(&["services", "--unit-dir", units.to_str().expect("path")]);
+    assert_success(&output);
+    let text = stdout(&output);
+    assert!(text.contains("cg.service"), "{text}");
+    assert!(text.contains("estranha"), "{text}");
+    assert!(text.contains("nada foi alterado"), "{text}");
+    assert_eq!(std::fs::read_to_string(&unit).expect("read"), original);
+}
+
+#[test]
+fn services_register_leaves_foreign_units_alone() {
+    let sandbox = Sandbox::new();
+    let units = sandbox.root().join("units");
+    std::fs::create_dir_all(&units).expect("units dir");
+    let unit = units.join("cg.service");
+    let original = "[Unit]\nDescription=hand written\n";
+    std::fs::write(&unit, original).expect("seed");
+
+    let output = sandbox.run(&[
+        "services",
+        "--unit-dir",
+        units.to_str().expect("path"),
+        "register",
+        "--no-start",
+    ]);
+    assert_success(&output);
+    let text = stdout(&output);
+    assert!(text.contains("não foram criadas pelo cg"), "{text}");
+    assert!(text.contains("nada foi alterado"), "{text}");
+    assert_eq!(std::fs::read_to_string(&unit).expect("read"), original);
+    assert!(
+        !units.join("cg.timer").exists(),
+        "timer must not be created"
+    );
+}
+
+#[test]
+fn daemon_rejects_an_inverted_sleep_window() {
+    let sandbox = Sandbox::new();
+    let output = sandbox.run(&["daemon", "--min-sleep", "60", "--max-sleep", "10"]);
+    assert_eq!(output.status.code(), Some(2));
+    assert!(stderr(&output).contains("--max-sleep"));
+}
+
+// ---------------------------------------------------------------------------
+// Session storage tests
+// ---------------------------------------------------------------------------
+
+#[test]
+fn logout_is_harmless_when_nothing_was_saved() {
+    let sandbox = Sandbox::new();
+    let output = sandbox.run(&["logout", "--no-keyring"]);
+    assert_success(&output);
+    let text = stdout(&output);
+    assert!(text.contains("nada para remover"), "{text}");
+}
+
+#[test]
+fn logout_removes_the_fallback_file() {
+    let sandbox = Sandbox::new();
+    std::fs::create_dir_all(sandbox.state()).expect("state");
+    let session = sandbox.state().join("session");
+    std::fs::write(&session, "__Secure-next-auth.session-token=old\n").expect("write");
+
+    let output = sandbox.run(&["logout", "--no-keyring"]);
+    assert_success(&output);
+    assert!(!session.exists());
+    let text = stdout(&output);
+    assert!(text.contains("apagado"), "{text}");
+}
+
+#[test]
+fn the_help_tells_users_where_the_session_lives() {
+    let sandbox = Sandbox::new();
+    let output = sandbox.run(&["--help"]);
+    assert_success(&output);
+    let text = stdout(&output);
+    assert!(text.contains("chaveiro do SO"), "{text}");
+    assert!(text.contains("cg logout"), "{text}");
+}

@@ -3,7 +3,10 @@
 Small phases, each one shippable and testable. A box is only checked when the
 code, the tests, and the docs agree.
 
-Reference implementation: `../cg.py` (read-only until parity is proven).
+Reference implementation: the removed Python client, still readable via
+`git log -- scripts/chatgpt/cg-py`.
+
+Security hardening and sandboxing are tracked separately in `SECURITY_TODO.md`.
 
 ## Rules
 
@@ -53,6 +56,8 @@ Reference implementation: `../cg.py` (read-only until parity is proven).
       `Retry-After` (seconds and HTTP date), no POST retry on 5xx.
 - [ ] Cookie normalization: whole header, named lines, wrapped lines, bare
       chunks; 0600 session file; clear errors for half-copied tokens.
+- [x] Session cookie in the OS keyring (Secret Service, Windows Credential
+      Manager, macOS Keychain), 0600 file fallback, and `cg logout`.
 - [ ] Reentrant run lock (`fs2`) around every write command.
 - [ ] `auth`, `login` (paste/file; browser keyring import is phase 4),
       `sync` (list + resumable deep), `projects`.
@@ -65,13 +70,13 @@ Reference implementation: `../cg.py` (read-only until parity is proven).
 
 ## 3. Automation
 
-- [ ] `export` to Markdown, folder per project, never overwrite hand-edited
+- [x] `export` to Markdown, folder per project, never overwrite hand-edited
       notes without `--overwrite`.
-- [ ] `services` unit renderer + `systemctl --user` seam (timer and daemon).
-- [ ] `daemon --once/--cycles`: sync then organize, bounded, journaled, signal
+- [x] `services` unit renderer + `systemctl --user` seam (timer and daemon).
+- [x] `daemon --once/--cycles`: sync then organize, bounded, journaled, signal
       aware, lock-aware.
-- [ ] `completions` for bash/zsh/fish via `clap_complete`.
-- [ ] `log` command over the local log file.
+- [x] `completions` for bash/zsh/fish via `clap_complete`.
+- [x] `log` command over the local log file.
 
 ## 4. Parity and cleanup
 
@@ -80,16 +85,12 @@ Reference implementation: `../cg.py` (read-only until parity is proven).
       counts against the Python report.
 - [ ] Browser cookie harvest (Chromium/Firefox + libsecret) behind a feature or
       a separate small module; keep it optional.
-- [ ] Decide whether `cg.py`/`cg_services.py` stay as reference or are removed.
+- [x] Removed the Python client (`cg.py`/`cg_services.py`); git history keeps it.
 - [ ] Packaging: install binary name `cg`, shell completion, migration note.
 
-## Audit commands
+## 5. The Ultimate vibe coder
 
-```sh
-just fmt        # cargo fmt
-just lint       # clippy, all targets, warnings are errors
-just test       # unit + integration
-just audit      # cargo-audit (installed)
-just deny       # cargo-deny licenses/advisories/sources
-just check      # fmt + lint + test
-```
+- [ ] Build A flatpak app for have sandboxing
+- [ ] Search How I get feedback for make this app more secure
+- [ ] Try connect with claude web too
+- [ ] Need make more simpler version for get the job done

@@ -20,6 +20,8 @@ path = "src/main.rs"
 #   * system SQLite (Arch ships it with the headers);
 #   * dev tests use std::process, not a CLI assertion framework.
 [dependencies]
+aes = "0.9"
+cbc = "0.2"
 chrono = { version = "0.4", default-features = false, features = ["clock", "serde", "std"] }
 clap = { version = "4.5", default-features = false, features = [
   "derive",
@@ -33,10 +35,15 @@ clap = { version = "4.5", default-features = false, features = [
 clap_complete = { version = "4.5", default-features = false }
 fastrand = "2"
 fs2 = "0.4"
+# Default `v1` feature: Keychain on macOS, Credential Manager on Windows and
+# Secret Service (GNOME Keyring, KWallet, KeePassXC) on *nix.
+keyring = "4"
 log = "0.4"
 rusqlite = "0.32"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+sha1 = "0.10"
+signal-hook = "0.3"
 sha2 = "0.10"
 thiserror = "2"
 unicode-normalization = "0.1"

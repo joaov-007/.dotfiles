@@ -180,5 +180,11 @@ mod tests {
         let mut recovered = STATE.lock().unwrap_or_else(PoisonError::into_inner);
         recovered.depth = 0;
         recovered.file = None;
+        drop(recovered);
+        STATE.clear_poison();
+        assert!(
+            STATE.lock().is_ok(),
+            "the static mutex must be reusable after recovery"
+        );
     }
 }

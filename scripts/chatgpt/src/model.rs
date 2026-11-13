@@ -188,6 +188,12 @@ impl Conversation {
             .sum()
     }
 
+    /// Public link for this conversation.
+    #[must_use]
+    pub fn link(&self) -> String {
+        format!("https://chatgpt.com/c/{}", self.id)
+    }
+
     /// Hash of the visible transcript, ignoring whitespace differences.
     #[must_use]
     pub fn body_sha(&self) -> String {

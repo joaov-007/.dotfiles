@@ -21,10 +21,20 @@ use clap::{Args, Parser, Subcommand};
                   ~/.local/state/cg/reports\n  \
                   cg status                   mostra o índice e os caminhos\n\n\
                   fluxo online\n  \
-                  cg login                    salva a sessão do navegador\n  \
+                  cg login                    guarda a sessão no chaveiro do SO\n  \
+                  cg login --browser          lê o cookie do navegador logado\n  \
+                  cg auth                     testa a sessão guardada\n  \
+                  cg logout                   apaga a sessão do chaveiro e do disco\n  \
                   cg sync [--deep]            baixa a conta pela API da web\n  \
                   cg organize --yes           move para Projects\n \
                   cg archive --yes            arquiva o que não presta\n\n\
+                  exportar e manter\n  \
+                  cg export                   uma nota Markdown por conversa\n  \
+                  cg services register        timer systemd --user do daemon\n  \
+                  cg completions bash         script de autocompletar\n  \
+                  cg log                      últimas linhas do log local\n\n\
+                  chaveiro: GNOME Keyring, KWallet, KeePassXC, Credential Manager,\n  \
+                  Keychain. Sem chaveiro, cai para ~/.local/state/cg/session (600).\n  \
                   log de depuração: cg --debug <comando>"
 )]
 pub struct Cli {
@@ -46,6 +56,10 @@ pub struct AuthArgs {
     /// Arquivo 600 com o cookie (padrão: ~/.local/state/cg/session)
     #[arg(long)]
     pub cookie_file: Option<PathBuf>,
+
+    /// Não usar o chaveiro do sistema (só o arquivo 600)
+    #[arg(long)]
+    pub no_keyring: bool,
 
     /// URL base (só para testes)
     #[arg(long, default_value = "https://chatgpt.com")]
@@ -73,6 +87,179 @@ pub struct LoginArgs {
     /// Onde salvar (padrão: ~/.local/state/cg/session)
     #[arg(long)]
     pub save: Option<PathBuf>,
+
+    /// Ler o cookie do perfil do navegador (Chromium/Firefox + libsecret)
+    #[arg(long)]
+    pub browser: bool,
+
+    /// Banco de cookies do navegador (implica --browser)
+    #[arg(long, value_name = "PATH")]
+    pub store: Option<PathBuf>,
+}
+
+/// `cg export`: one Markdown note per conversation, grouped by project.
+#[derive(Debug, Args)]
+#[allow(clippy::struct_excessive_bools)]
+pub struct ExportArgs {
+    /// Pasta de destino (padrão: ~/Documents/ChatGPT)
+    #[arg(long)]
+    pub outdir: Option<PathBuf>,
+
+    /// Exportar apenas um projeto/categoria
+    #[arg(long)]
+    pub only_project: Option<String>,
+
+    /// Exportar apenas um veredito (keep, archive, delete, review)
+    #[arg(long)]
+    pub verdict: Option<String>,
+
+    /// Apenas conversas arquivadas
+    #[arg(long, conflicts_with = "not_archived")]
+    pub archived_only: bool,
+
+    /// Apenas conversas não arquivadas
+    #[arg(long)]
+    pub not_archived: bool,
+
+    /// Pular conversas sem corpo indexado
+    #[arg(long)]
+    pub skip_empty: bool,
+
+    /// Substituir notas editadas à mão
+    #[arg(long)]
+    pub overwrite: bool,
+}
+
+/// `cg log`: tail the local debug log.
+#[derive(Debug, Args)]
+pub struct LogArgs {
+    /// Quantas linhas mostrar
+    #[arg(short = 'n', long, default_value_t = 60)]
+    pub lines: usize,
+
+    /// Imprimir só o caminho do arquivo
+    #[arg(long)]
+    pub path: bool,
+}
+
+/// `cg services`: systemd --user units for `cg daemon`.
+#[derive(Debug, Args)]
+pub struct ServicesArgs {
+    #[command(flatten)]
+    pub spec: ServiceOptions,
+
+    #[command(subcommand)]
+    pub action: Option<ServicesAction>,
+}
+
+/// Options shared by every `cg services` action.
+#[derive(Debug, Clone, Args)]
+pub struct ServiceOptions {
+    /// Nome das unidades
+    #[arg(long, global = true, default_value = "cg")]
+    pub name: String,
+
+    /// `timer` (oneshot periódico) ou `daemon` (processo longo)
+    #[arg(long, global = true, default_value = "timer")]
+    pub mode: String,
+
+    /// Com timer: intervalo entre ciclos (30m, 1h, 2d)
+    #[arg(long, global = true, default_value = "1h")]
+    pub every: String,
+
+    /// Com daemon: pausa mínima entre ciclos (segundos)
+    #[arg(long, global = true)]
+    pub wait_min: Option<u64>,
+
+    /// Com daemon: pausa máxima entre ciclos (segundos)
+    #[arg(long, global = true)]
+    pub wait_max: Option<u64>,
+
+    /// Aplicar o organize de verdade (`daemon --yes`)
+    #[arg(long, global = true)]
+    pub yes: bool,
+
+    /// Pasta das unidades (padrão: ~/.config/systemd/user)
+    #[arg(long, global = true)]
+    pub unit_dir: Option<PathBuf>,
+
+    /// Binário `cg` que a unidade executa
+    #[arg(long, global = true, value_name = "PATH")]
+    pub cg_bin: Option<PathBuf>,
+
+    /// Substituir unidades que não foram criadas pelo cg
+    #[arg(long, global = true)]
+    pub force: bool,
+
+    /// Mostrar os comandos sem executar
+    #[arg(long, global = true)]
+    pub dry_run: bool,
+}
+
+/// `cg services` actions. `discover` is the default and never writes.
+#[derive(Debug, Subcommand)]
+pub enum ServicesAction {
+    /// Descobrir unidades cg já instaladas e relatar; não altera nada
+    Discover,
+
+    /// Imprimir as unidades que seriam geradas
+    Show,
+
+    /// Gravar e ativar as unidades
+    Register {
+        /// Gravar sem ativar
+        #[arg(long)]
+        no_start: bool,
+    },
+
+    /// Parar e remover as unidades
+    Unregister,
+
+    /// Estado das unidades e próximo disparo
+    Status,
+
+    /// Iniciar as unidades
+    Start,
+
+    /// Parar as unidades
+    Stop,
+
+    /// Reiniciar as unidades
+    Restart,
+
+    /// Habilitar (com --now para iniciar já)
+    Enable {
+        #[arg(long)]
+        now: bool,
+    },
+
+    /// Desabilitar (com --now para parar já)
+    Disable {
+        #[arg(long)]
+        now: bool,
+    },
+
+    /// Rodar um ciclo agora
+    Run,
+
+    /// journalctl da unidade de serviço
+    Logs {
+        #[arg(short = 'n', long, default_value_t = 60)]
+        lines: usize,
+
+        #[arg(short = 'f', long)]
+        follow: bool,
+    },
+
+    /// Listar unidades cg registradas
+    List,
+}
+
+/// `cg completions`: emit a shell completion script.
+#[derive(Debug, Args)]
+pub struct CompletionsArgs {
+    /// bash, zsh ou fish
+    pub shell: clap_complete::Shell,
 }
 
 /// `cg sync`: index the account through the sidebar endpoints.
@@ -269,6 +456,7 @@ pub struct UnarchiveArgs {
 
 /// `cg daemon`: periodic sync + plan + organize loop.
 #[derive(Debug, Args)]
+#[allow(clippy::struct_excessive_bools)]
 pub struct DaemonArgs {
     /// Apenas uma iteração (usado por cron/systemd timer). Após o ciclo, o processo
     /// sai com código 0. Não dorme após o ciclo.
@@ -279,11 +467,11 @@ pub struct DaemonArgs {
     #[arg(long, default_value_t = 0)]
     pub cycles: usize,
 
-    /// Pausa mínima entre ciclos, em segundos. Sono aleatório entre min e min*2.
+    /// Pausa mínima entre ciclos, em segundos. O sono é sorteado em [min, max].
     #[arg(long, default_value_t = 300)]
     pub min_sleep: u64,
 
-    /// Pausa máxima entre ciclos, em segundos. Sono aleatório entre min e min*2.
+    /// Pausa máxima entre ciclos, em segundos. O sono é sorteado em [min, max].
     #[arg(long, default_value_t = 600)]
     pub max_sleep: u64,
 
@@ -291,9 +479,25 @@ pub struct DaemonArgs {
     #[arg(long, default_value_t = 50)]
     pub sync_limit: usize,
 
+    /// Só atualizar a lista; não baixar o corpo das conversas
+    #[arg(long, default_value_t = false)]
+    pub no_deep: bool,
+
+    /// Não sincronizar neste daemon
+    #[arg(long, default_value_t = false)]
+    pub no_sync: bool,
+
+    /// Não organizar neste daemon
+    #[arg(long, default_value_t = false)]
+    pub no_organize: bool,
+
     /// Aplicar organizações de verdade (sem isso é apenas planejamento dry-run)
     #[arg(long, default_value_t = false)]
     pub yes: bool,
+
+    /// Espera após um HTTP 429, em segundos
+    #[arg(long, default_value_t = 1800)]
+    pub backoff: u64,
 
     /// Pausa entre chamadas de API (segundos)
     #[arg(long, default_value_t = 1.0)]
@@ -319,11 +523,14 @@ pub enum Command {
     /// O que já está indexado e onde ficam os arquivos
     Status,
 
-    /// Salvar a sessão para os comandos online (modo 600)
+    /// Salvar a sessão no chaveiro do sistema (ou em arquivo 600)
     Login(LoginArgs),
 
-    /// Testar se a sessão salva ainda vale
+    /// Testar se a sessão guardada ainda vale
     Auth(AuthArgs),
+
+    /// Apagar a sessão do chaveiro do sistema e do disco
+    Logout(AuthArgs),
 
     /// Baixar a conta pela API da web (lista e, com --deep, o conteúdo)
     Sync(SyncArgs),
@@ -348,10 +555,24 @@ pub enum Command {
 
     /// Loop periódico de sincronização, classificação e organização.
     Daemon(DaemonArgs),
+
+    /// Exportar uma nota Markdown por conversa, agrupada por Project
+    Export(ExportArgs),
+
+    /// Últimas linhas do log local
+    Log(LogArgs),
+
+    /// Gerar autocompletar para bash, zsh ou fish
+    Completions(CompletionsArgs),
+
+    /// Gerar e controlar unidades systemd --user do daemon
+    Services(ServicesArgs),
 }
 
 #[cfg(test)]
 mod tests {
+    use std::path::Path;
+
     use clap::Parser;
 
     use super::*;
@@ -397,6 +618,35 @@ mod tests {
                 assert_eq!(args.auth.base_url, "http://localhost:1234");
                 assert!(args.deep);
                 assert_eq!(args.limit, 200);
+                assert!(!args.auth.no_keyring);
+            }
+            other => panic!("unexpected command: {other:?}"),
+        }
+    }
+
+    #[test]
+    fn no_keyring_is_available_on_every_live_command() {
+        let cli = Cli::try_parse_from(["cg", "auth", "--no-keyring"]).expect("parse");
+        match cli.command {
+            Command::Auth(args) => assert!(args.no_keyring),
+            other => panic!("unexpected command: {other:?}"),
+        }
+    }
+
+    #[test]
+    fn logout_takes_the_shared_auth_flags() {
+        let cli = Cli::try_parse_from([
+            "cg",
+            "logout",
+            "--no-keyring",
+            "--cookie-file",
+            "/tmp/session",
+        ])
+        .expect("parse");
+        match cli.command {
+            Command::Logout(args) => {
+                assert!(args.no_keyring);
+                assert_eq!(args.cookie_file.as_deref(), Some(Path::new("/tmp/session")));
             }
             other => panic!("unexpected command: {other:?}"),
         }
@@ -431,6 +681,32 @@ mod tests {
             Command::Archive(args) => {
                 assert!(args.action.is_none());
                 assert!(!args.run.yes);
+            }
+            other => panic!("unexpected command: {other:?}"),
+        }
+    }
+
+    #[test]
+    fn service_options_are_global() {
+        let cli = Cli::try_parse_from([
+            "cg",
+            "services",
+            "register",
+            "--no-start",
+            "--unit-dir",
+            "/tmp/units",
+            "--mode",
+            "daemon",
+        ])
+        .expect("parse");
+        match cli.command {
+            Command::Services(args) => {
+                assert_eq!(args.spec.unit_dir.as_deref(), Some(Path::new("/tmp/units")));
+                assert_eq!(args.spec.mode, "daemon");
+                assert!(matches!(
+                    args.action,
+                    Some(ServicesAction::Register { no_start: true })
+                ));
             }
             other => panic!("unexpected command: {other:?}"),
         }
