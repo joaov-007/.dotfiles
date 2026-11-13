@@ -34,12 +34,12 @@ export DT_OS
 # and every app resolves it against its own cwd, mkdir -p'ing state there.
 # Anything not starting with / is dropped and the default wins.
 for _dt_name in XDG_CONFIG_HOME XDG_DATA_HOME XDG_CACHE_HOME XDG_STATE_HOME; do
-  eval "_dt_value=\${$_dt_name:-}"
-  # shellcheck disable=SC2154  # assigned by the eval above
-  case $_dt_value in
-    ''|/*) ;;
+    eval "_dt_value=\${$_dt_name:-}"
+    # shellcheck disable=SC2154  # assigned by the eval above
+    case $_dt_value in
+    '' | /*) ;;
     *) unset "$_dt_name" ;;
-  esac
+    esac
 done
 unset _dt_name _dt_value
 
@@ -90,16 +90,37 @@ if [ "$DT_OS" = macos ]; then
     path_prepend /opt/homebrew/bin
 fi
 
-# SSH agent socket. systemd user socket on Linux only; macOS gets
+# SSH agent socket. systemd user sockets on Linux only; macOS gets
 # SSH_AUTH_SOCK from launchd and Windows from its own agent.
-if [ -z "${SSH_AUTH_SOCK:-}" ] && [ "$DT_OS" = linux ]; then
-    # shellcheck disable=SC3028  # UID is a bash/zsh convenience, id(1) is the fallback
-    _dt_sock=${XDG_RUNTIME_DIR:-/run/user/${UID:-$(id -u)}}/ssh-agent.socket
-    if [ -S "$_dt_sock" ]; then
-        SSH_AUTH_SOCK=$_dt_sock
-        export SSH_AUTH_SOCK
+#
+# Order of preference, first socket that actually exists wins:
+#
+#   gcr/ssh            gcr-ssh-agent, the GNOME Keyring SSH helper. The ssh
+#                      component was moved out of gnome-keyring-daemon into
+#                      gcr-4 in gnome-keyring 1:46, so this is the keyring
+#                      agent on a current Arch box.
+#   keyring/ssh        gnome-keyring-daemon's own ssh component, for older
+#                      stacks or anyone who still starts it by hand.
+#   ssh-agent.socket   plain OpenSSH agent, the fallback.
+#
+# An inherited SSH_AUTH_SOCK (herdr, ssh-agent -a, a forwarded socket) is
+# kept as long as it is a live socket; a stale path is replaced instead of
+# poisoning every ssh call with "connection refused".
+if [ "$DT_OS" = linux ]; then
+    _dt_agent=${SSH_AUTH_SOCK:-}
+    if [ -z "$_dt_agent" ] || [ ! -S "$_dt_agent" ]; then
+        # shellcheck disable=SC3028  # UID is a bash/zsh convenience, id(1) is the fallback
+        _dt_run=${XDG_RUNTIME_DIR:-/run/user/${UID:-$(id -u)}}
+        for _dt_sock in "$_dt_run/gcr/ssh" "$_dt_run/keyring/ssh" "$_dt_run/ssh-agent.socket"; do
+            if [ -S "$_dt_sock" ]; then
+                SSH_AUTH_SOCK=$_dt_sock
+                export SSH_AUTH_SOCK
+                break
+            fi
+        done
+        unset _dt_sock _dt_run
     fi
-    unset _dt_sock
+    unset _dt_agent
 fi
 
 # ── Editors and pagers ─────────────────────────────────────
