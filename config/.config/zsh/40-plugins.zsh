@@ -1,8 +1,8 @@
 # 40-plugins.zsh — integrations with system tools
 #
 # zinit (35-zinit.zsh) handles the zsh plugins. This file wires up the
-# binaries that come from pacman. Nothing here installs anything: every
-# block is a no-op when its package is missing.
+# binaries that come from the system package manager. Nothing here
+# installs anything: every block is a no-op when its package is missing.
 
 # ── fzf shell integration ───────────────────────────────────
 # Ctrl-R history, Ctrl-T files, Alt-C directory jump.

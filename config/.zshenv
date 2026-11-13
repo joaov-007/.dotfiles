@@ -5,35 +5,20 @@
 # already has. Setting it later is too late, because by then zsh has
 # already decided to read ~/.zshrc.
 #
-# .zshenv runs for non-interactive shells too, so keep it to plain
-# variable assignments — no aliases, no prompts, no output.
+# .zshenv runs for non-interactive shells too, so keep it to variable
+# assignments and the one source below — no aliases, no prompts, no output.
 
-# Guard: discard non-absolute XDG_* values before anything can use them.
-# Silent, and it is a control structure rather than a bare assignment, but
-# the cost of skipping it is a silently corrupted environment.
-#
-# A compositor, .desktop file or launcher can export XDG_CONFIG_HOME as the
-# literal string "$HOME/.config". Those are not shell-expanded, so the value
-# arrives with no leading "/" — making it a *relative* path. Every app then
-# resolves it against its own CWD and mkdir -p's state there, which is how
-# four literal '$HOME' directory trees accumulated under the home directory
-# and split opencode's database in two. Anything not starting with "/" is
-# treated as broken and dropped, so the spec defaults below win.
-#
-# This must stay ABOVE the defaults: `:=` only fills in what is unset, so
-# if a broken value survived this far the defaults would never correct it.
-for _xdg in XDG_CONFIG_HOME XDG_DATA_HOME XDG_CACHE_HOME XDG_STATE_HOME \
-            XDG_BIN_HOME XDG_DESKTOP_DIR XDG_DOCUMENTS_DIR \
-            XDG_DOWNLOAD_DIR XDG_MUSIC_DIR XDG_PICTURES_DIR \
-            XDG_PUBLICSHARE_DIR XDG_TEMPLATES_DIR XDG_VIDEOS_DIR; do
-  [[ ${(P)_xdg} == /* ]] || unset "$_xdg"
-done
-unset _xdg
+# Find the shared environment without trusting a relative XDG_CONFIG_HOME.
+# A launcher can export the literal string "$HOME/.config", which resolves
+# against the caller's cwd; see the comment in env.sh.
+_dt_cfg=${XDG_CONFIG_HOME:-$HOME/.config}
+case $_dt_cfg in /*) ;; *) _dt_cfg=$HOME/.config ;; esac
 
-: ${XDG_CONFIG_HOME:=$HOME/.config}
-: ${XDG_DATA_HOME:=$HOME/.local/share}
-: ${XDG_CACHE_HOME:=$HOME/.cache}
-: ${XDG_STATE_HOME:=$HOME/.local/state}
+if [ -r "$_dt_cfg/shell/env.sh" ]; then
+  . "$_dt_cfg/shell/env.sh"
+fi
+unset _dt_cfg
 
-export XDG_CONFIG_HOME XDG_DATA_HOME XDG_CACHE_HOME XDG_STATE_HOME
-export ZDOTDIR="$XDG_CONFIG_HOME/zsh"
+# Set by env.sh; the fallback here only covers a missing checkout.
+: "${ZDOTDIR:=${XDG_CONFIG_HOME:-$HOME/.config}/zsh}"
+export ZDOTDIR

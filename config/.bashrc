@@ -1,15 +1,26 @@
-# ~/.bashrc — managed by the dotfiles repo (`config` package).
+# ~/.bashrc — interactive bash, on Linux, macOS and Git Bash.
 #
-#   stow -t ~ config
+# The real environment lives in ~/.config/shell and is shared with zsh, so
+# PATH, editor and aliases only ever need to be changed in one place:
 #
-# Bash is the fallback shell here; the interactive setup is zsh.
+#   ~/.config/shell/env.sh      variables and PATH
+#   ~/.config/shell/aliases.sh  aliases and helpers
+#
+# zsh is the interactive shell on the Linux desktop; bash is what macOS,
+# Git Bash and a rescue tty give you.
 
-[[ $- != *i* ]] && return
+case $- in
+  *i*) ;;
+  *) return 0 ;;
+esac
 
-alias ls='ls --color=auto'
-alias grep='grep --color=auto'
+# Find the shared files without trusting a relative XDG_CONFIG_HOME.
+_dt_cfg=${XDG_CONFIG_HOME:-$HOME/.config}
+case $_dt_cfg in /*) ;; *) _dt_cfg=$HOME/.config ;; esac
 
-# cgd: ChatGPT organizer daemon applying moves. Plain `cg daemon` is the
-# dry run, and extra flags pass through: cgd --once, cgd --cycles 3.
+if [ -r "$_dt_cfg/shell/env.sh" ]; then
+  . "$_dt_cfg/shell/env.sh"
+  . "$_dt_cfg/shell/aliases.sh"
+fi
 
-PS1='[\u@\h \W]\$ '
+unset _dt_cfg

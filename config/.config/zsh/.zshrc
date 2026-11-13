@@ -9,6 +9,15 @@
 : ${XDG_CACHE_HOME:=$HOME/.cache}
 : ${XDG_DATA_HOME:=$HOME/.local/share}
 
+# Aliases and helpers shared with bash. env.sh (PATH, EDITOR, platform)
+# already ran from ~/.zshenv, which is also where a non-interactive zsh
+# picks it up.
+for _zsh_shared in env.sh aliases.sh; do
+  _zsh_file="${XDG_CONFIG_HOME:-$HOME/.config}/shell/$_zsh_shared"
+  [[ -r $_zsh_file ]] && source "$_zsh_file"
+done
+unset _zsh_shared _zsh_file
+
 # Source every NN-*.zsh here in name order. The NN- prefixes define load
 # order, which matters: options before history (they interact), completion
 # before the plugins (fzf-tab and zoxide both hook into it), and the prompt

@@ -1,7 +1,7 @@
 # 35-zinit.zsh — plugin manager
 #
 # zinit manages zsh plugins and nothing else. Every program it could
-# install (fzf, zoxide, atuin, bat, eza, delta) is a pacman package —
+# install (fzf, zoxide, atuin, bat, eza, delta) is a system package —
 # zinit is never used as a package manager.
 #
 # zinit itself lives in $XDG_DATA_HOME so it stays inside $HOME and
