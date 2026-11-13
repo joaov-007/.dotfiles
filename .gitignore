@@ -29,7 +29,7 @@ config/.config/niri/noctalia.kdl
 ## Ignore my data app
 **/*data*/*
 
-# Generated Quadlet units and temp dirs (scripts/app/bin/gen-quadlets.sh)
+# Generated Quadlet units and temp dirs (scripts/apps/bin/gen-quadlets.sh)
 /apps/*/*/*.container
 /apps/*/*/*.volume
 /apps/*/*/*.network

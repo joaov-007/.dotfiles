@@ -4,7 +4,7 @@ set -eu
 
 SYSTEM=${1:-x86_64-linux}
 SCRIPT_DIR=$(CDPATH='' cd -P -- "$(dirname -- "$0")" && pwd -P)
-FLAKE_DIR=$(CDPATH='' cd -P -- "$SCRIPT_DIR/../../nixos" && pwd -P)
+FLAKE_DIR=$(CDPATH='' cd -P -- "$SCRIPT_DIR/../../../nixos" && pwd -P)
 
 TESTS="aide-integrity apparmor-active apparmor-not-aggressive
 boot-health boot-time clamav-scanner

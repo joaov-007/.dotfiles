@@ -40,16 +40,16 @@ the same place, under one root. It works from any repo; nothing is tied to
 
 ## Source and symlink
 
-- Script: `~/.dotfiles/scripts/git/worktree.sh`
+- Script: `~/.dotfiles/scripts/worktree/bin/worktree.sh`
 - Command: `~/.local/bin/wt` (symlink into the dotfiles checkout)
 
 On a fresh machine:
 
 ```bash
-ln -sfn ~/.dotfiles/scripts/git/worktree.sh ~/.local/bin/wt
+ln -sfn ~/.dotfiles/scripts/worktree/bin/worktree.sh ~/.local/bin/wt
 ```
 
-`~/.local/bin` is already on `PATH` via `zsh/.config/zsh/00-paths.zsh`.
+`~/.local/bin` is already on `PATH` via `config/.config/shell/env.sh`.
 
 ## Layout
 

@@ -83,7 +83,7 @@ Options:
 
 Environment:
   APPS_ROOT             Local apps root          (default: <repo>/apps)
-  APPS_ALLOWLIST        Allowlist file          (default: scripts/app/config/remote-hosts.allow)
+  APPS_ALLOWLIST        Allowlist file          (default: scripts/apps/config/remote-hosts.allow)
   APPS_REMOTE_APPS_REL  Remote path, relative to the remote home
                                                 (default: apps)
   APPS_SSH_TIMEOUT      SSH ConnectTimeout      (default: 10)

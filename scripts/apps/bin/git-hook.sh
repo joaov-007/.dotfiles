@@ -91,11 +91,11 @@ hooks_path_override() {
 hook_block() {
     cat <<'BLOCK'
 # >>> sync-apps pre-push >>>
-# Managed by scripts/app/bin/git-hook.sh; edit the generator, not this block.
+# Managed by scripts/apps/bin/git-hook.sh; edit the generator, not this block.
 # Validates apps/ compose files before pushing commits that touch apps/.
 if command -v git >/dev/null 2>&1; then
   __sync_apps_root=$(git rev-parse --show-toplevel 2>/dev/null) || __sync_apps_root=
-  __sync_apps_runner=${__sync_apps_root}/scripts/app/bin/sync-apps.sh
+  __sync_apps_runner=${__sync_apps_root}/scripts/apps/bin/sync-apps.sh
 
   if [ -n "$__sync_apps_root" ] && [ -d "$__sync_apps_root/apps" ] && [ -x "$__sync_apps_runner" ]; then
     __sync_apps_changed=1

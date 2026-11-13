@@ -31,16 +31,16 @@ Agents use external tools like tree, eza --tree <more opts>, try not goo too muc
 │   └── README.md
 ├── README.md
 ├── scripts
+│   ├── apps
+│   │   ├── bin
+│   │   └── config
 │   ├── chatgpt
 │   │       └── TODO.md
-│   ├── git
-│   │   ├── set-collections-git.sh
-│   │   └── worktree.sh
-│   ├── install-packages.sh
-│   ├── nixos
-│   │   └── test-all.sh
-│   └── unbound
-│       └── executable_get_unbound_adblock.sh
+│   ├── nixos/bin
+│   ├── set-collections-git/bin
+│   ├── stack/bin
+│   ├── unbound/bin
+│   └── worktree/bin
 ├── stylua.toml
 ├── TODO.md
     └── templates
