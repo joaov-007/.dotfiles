@@ -1,0 +1,26 @@
+# Remote hosts allowed to receive folders from this repository.
+#
+# One entry per line:
+#
+#   <host> <folder> [folder...]
+#
+# Blank lines and text after '#' are ignored. The host is validated against
+# [A-Za-z0-9][A-Za-z0-9._-]* and must also be a configured SSH alias or DNS
+# name. Folders are top-level directories of this repository; anything with a
+# slash, a leading dot or '..' is rejected before a command runs.
+#
+# A folder only leaves this machine when the selected host is listed here and
+# the folder is named on that host's line. Adding a folder to a host is the
+# only way to let the script send it.
+#
+# Destination layout on the remote (relative to the remote login home):
+#
+#   apps     -> ~/apps/<host>/   only apps/<host>/ from this repo
+#   scripts  -> ~/scripts/       the whole scripts/ tree
+#
+# Accounts are deliberately split: apps stacks live in the unprivileged 'app'
+# account, scripts go to the 'admin' account only.
+#
+# Raspberry Pi over Tailscale, see ~/.ssh/config.
+app.duck    apps
+admin.duck  scripts
