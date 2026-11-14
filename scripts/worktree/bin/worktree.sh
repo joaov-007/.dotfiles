@@ -77,6 +77,29 @@ expand_tilde() {
     esac
 }
 
+validate_branch_arg() {
+    branch=$1
+    [ -n "$branch" ] || die "branch name required (see '$PROG help')"
+    case $branch in
+    -* | . | ..)
+        die "invalid branch name: $branch"
+        ;;
+    esac
+    case $branch in
+    *"$(
+        printf '\n'
+    )"* | *"$(
+        printf '\r'
+    )"* | *"$(
+        printf '\t'
+    )"*)
+        die "invalid branch name: $branch"
+        ;;
+    esac
+    git check-ref-format "refs/heads/$branch" >/dev/null 2>&1 ||
+        die "invalid branch name: $branch"
+}
+
 worktree_root() {
     root=
     if [ -n "$ROOT_OVERRIDE" ]; then
@@ -96,9 +119,21 @@ worktree_root() {
 }
 
 worktree_dir() {
+    validate_branch_arg "$1"
     root=$(worktree_root)
     repo=$(basename "$(repo_root)")
-    printf '%s/%s/%s\n' "$root" "$repo" "$(printf '%s' "$1" | tr '/' '-')"
+    leaf=$(printf '%s' "$1" | tr '/' '-')
+    case $leaf in
+    '' | . | ..)
+        die "invalid worktree directory name derived from branch: $1"
+        ;;
+    esac
+    dir=$root/$repo/$leaf
+    case $dir in
+    "$root/$repo"/*) ;;
+    *) die "refusing worktree path outside repository bucket: $dir" ;;
+    esac
+    printf '%s\n' "$dir"
 }
 
 cmd_new() {
@@ -107,9 +142,8 @@ cmd_new() {
 
     branch=$1
     base=${2:-}
+    validate_branch_arg "$branch"
     repo=$(repo_root)
-    git check-ref-format "refs/heads/$branch" >/dev/null 2>&1 ||
-        die "invalid branch name: $branch"
 
     dir=$(worktree_dir "$branch")
     if [ -e "$dir" ]; then
@@ -158,6 +192,7 @@ cmd_merge() {
         shift
     done
 
+    validate_branch_arg "$branch"
     repo=$(repo_root)
     current=$(git -C "$repo" symbolic-ref --quiet --short HEAD) ||
         die "detached HEAD: check out a branch before merging"
@@ -217,6 +252,7 @@ cmd_remove() {
         shift
     done
 
+    validate_branch_arg "$branch"
     repo=$(repo_root)
     dir=$(worktree_dir "$branch")
     [ -d "$dir" ] || die "no worktree directory at $dir"
