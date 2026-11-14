@@ -32,3 +32,6 @@ Notes about programming, tooling, and developer workflows.
 
 ## Git
 - [[git-worktree-helper|Git Worktree Helper]]
+
+## Dotfiles
+- [[smart-dotfiles|Smart Dotfiles Manager]] — layered installer: shared base + OS/host overlays

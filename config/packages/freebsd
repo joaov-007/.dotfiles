@@ -1,0 +1,7 @@
+# freebsd-specific packages
+fish
+tmux
+neovim
+git
+curl
+sudo

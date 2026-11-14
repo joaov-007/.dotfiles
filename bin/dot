@@ -1,0 +1,145 @@
+#!/bin/sh
+# dot — layered dotfile installer + per-OS package declarations.
+# Layers (broad → specific): shared -> env/common -> env/$OS -> env/$HOST.
+# Later layers override earlier ones.
+#
+# Usage:
+#   ./bin/dot            # install/update dotfile symlinks
+#   ./bin/dot pkgs       # install missing programs declared for this OS
+#   ./bin/dot remove     # remove dotfile symlinks, restore backups
+
+set -eu
+
+DOTFILES="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
+CONFIG="$DOTFILES/config"
+PKGS="$CONFIG/packages"
+OS="$(uname -s | tr '[:upper:]' '[:lower:]')"
+HOST="$(hostname | sed 's/\..*//' | tr '[:upper:]' '[:lower:]')"
+TARGET="${DOTFILES_TARGET:-$HOME}"
+
+LAYERS="shared env/common env/$OS env/$HOST"
+
+command -v realpath >/dev/null 2>&1 || { echo "realpath required"; exit 1; }
+
+# ── dotfiles ──────────────────────────────────────────────────────────────
+
+install_pkg() {
+    pkg="$1"
+    srcs=""
+    for layer in $LAYERS; do
+        [ -d "$CONFIG/$layer/$pkg" ] && srcs="$srcs $CONFIG/$layer/$pkg"
+    done
+    [ -z "$srcs" ] && return 0
+
+    echo "==> $pkg"
+    for src in $srcs; do
+        find "$src" -type f | while read -r file; do
+            rel="${file#$src/}"
+            tgt="$TARGET/$rel"
+            abs="$(realpath "$file")"
+            mkdir -p "$(dirname "$tgt")"
+
+            if [ -e "$tgt" ] || [ -L "$tgt" ]; then
+                if [ -L "$tgt" ] && [ "$(readlink "$tgt")" = "$abs" ]; then
+                    continue
+                fi
+                if [ -L "$tgt" ]; then
+                    rm -f "$tgt"
+                elif [ -f "$tgt" ] || [ -d "$tgt" ]; then
+                    mv "$tgt" "$tgt.dotfiles.bak"
+                    echo "   backed up $tgt -> $tgt.dotfiles.bak"
+                fi
+            fi
+            ln -s "$abs" "$tgt"
+        done
+    done
+}
+
+dotfiles() {
+    pkgs=""
+    for layer in $LAYERS; do
+        [ -d "$CONFIG/$layer" ] && pkgs="$pkgs $(ls "$CONFIG/$layer" 2>/dev/null)"
+    done
+    pkgs="$(printf '%s' "$pkgs" | tr ' ' '\n' | sort -u | tr '\n' ' ')"
+
+    for pkg in $pkgs; do
+        install_pkg "$pkg"
+    done
+}
+
+remove_dotfiles() {
+    find "$TARGET" -type l 2>/dev/null | while read -r link; do
+        target="$(readlink "$link")"
+        case "$target" in
+            "$DOTFILES"/*)
+                rm -f "$link"
+                if [ -e "$link.dotfiles.bak" ]; then
+                    mv "$link.dotfiles.bak" "$link"
+                    echo "restored $link"
+                else
+                    echo "removed $link"
+                fi
+                ;;
+        esac
+    done
+}
+
+# ── packages ──────────────────────────────────────────────────────────────
+
+has_cmd() { command -v "$1" >/dev/null 2>&1; }
+
+pkg_installed() {
+    # $1 = package name
+    case "$PKG_MGR" in
+        pacman)  pacman -Q "$1" >/dev/null 2>&1 ;;
+        apt)     dpkg -s "$1" >/dev/null 2>&1 ;;
+        pkg_add) pkg_info -e "$1" >/dev/null 2>&1 ;;
+        pkg)     pkg info -e "$1" >/dev/null 2>&1 ;;
+        *)       return 1 ;;
+    esac
+}
+
+detect_pkg_mgr() {
+    if has_cmd pacman; then PKG_MGR=pacman; PKG_INSTALL="sudo pacman -S --needed --noconfirm"
+    elif has_cmd apt; then PKG_MGR=apt; PKG_INSTALL="sudo apt-get install -y"
+    elif has_cmd pkg_add; then PKG_MGR=pkg_add; PKG_INSTALL="doas pkg_add"
+    elif has_cmd pkg; then PKG_MGR=pkg; PKG_INSTALL="sudo pkg install -y"
+    else
+        echo "no supported package manager found (pacman, apt, pkg_add, pkg)"
+        return 1
+    fi
+}
+
+install_packages() {
+    detect_pkg_mgr || return 1
+
+    want=""
+    [ -f "$PKGS/common" ] && want="$want $(cat "$PKGS/common")"
+    [ -f "$PKGS/$OS" ] && want="$want $(cat "$PKGS/$OS")"
+    want="$(printf '%s' "$want" | tr ' ' '\n' | sort -u | tr '\n' ' ')"
+
+    missing=""
+    for p in $want; do
+        if ! pkg_installed "$p"; then
+            missing="$missing $p"
+        fi
+    done
+
+    if [ -z "$missing" ]; then
+        echo "all packages already installed"
+        return 0
+    fi
+
+    echo "installing:$missing"
+    # shellcheck disable=SC2086
+    $PKG_INSTALL $missing
+}
+
+# ── main ──────────────────────────────────────────────────────────────────
+
+case "${1:-dotfiles}" in
+    dotfiles|install) dotfiles ;;
+    pkgs|packages)    install_packages ;;
+    remove|uninstall) remove_dotfiles ;;
+    *) echo "usage: $0 {dotfiles|pkgs|remove}"; exit 1 ;;
+esac

@@ -1,0 +1,10 @@
+# openbsd-specific packages
+sway
+waybar
+foot
+tmux
+neovim
+git
+curl
+sudo
+doas

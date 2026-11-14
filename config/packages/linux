@@ -1,0 +1,12 @@
+# linux-specific packages (pacman on Arch)
+sway
+waybar
+kitty
+foot
+fzf
+ripgrep
+fd
+bat
+eza
+zip
+unzip

@@ -1,0 +1,7 @@
+# packages needed on every OS
+git
+neovim
+tmux
+starship
+curl
+wget
