@@ -19,8 +19,7 @@
 
 password/
 
-# theme output of noctalia, rewritten on every theme change
-config/.config/niri/noctalia.kdl
+config/shared/.config/opencode/
 
 # Obsidian workspace/state (per-device, noisy)
 **/.obsidian/*
