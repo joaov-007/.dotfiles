@@ -1,125 +1,398 @@
 #!/bin/sh
-# dot — layered dotfile installer.
+# dot — layered dotfile linker (stow-like, POSIX sh).
 # Layers (broad → specific): shared -> env/common -> env/$OS -> env/$HOST.
 # Later layers override earlier ones.
-#
-# Usage:
-#   ./bin/dot        # install/update dotfile symlinks
-#   ./bin/dot pkgs   # install missing programs declared for this OS
-#   ./bin/dot remove # remove dotfile symlinks, restore backups
 
 set -eu
 
-# shellcheck disable=SC1007
-DOTFILES="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
-CONFIG="$DOTFILES/config"
-PKGS="$CONFIG/packages"
-OS="$(uname -s | tr '[:upper:]' '[:lower:]')"
-HOST="$(hostname | sed 's/\..*//' | tr '[:upper:]' '[:lower:]')"
-TARGET="${DOTFILES_TARGET:-$HOME}"
+# ── globals ────────────────────────────────────────────────────────────────
 
-LAYERS="shared env/common env/$OS env/$HOST"
+DOTFILES=
+CONFIG=
+OS=
+HOST=
+TARGET=
+LAYERS=
+DRYRUN=0
+ACTION=
+_HAVE_READLINK=0install
 
-command -v realpath >/dev/null 2>&1 || { echo "realpath required"; exit 1; }
+# ── output / helpers ───────────────────────────────────────────────────────
 
-# ── dotfiles ──────────────────────────────────────────────────────────────
+die() {
+    printf '%s\n' "dot: $*" >&2
+    exit 1
+}
 
-dotfiles() {
-    for layer in $LAYERS; do
-        [ -d "$CONFIG/$layer" ] || continue
-        echo "==> layer: $layer"
-        find "$CONFIG/$layer" -type f | while read -r file; do
-            rel="${file#"$CONFIG"/"$layer"/}"
-            tgt="$TARGET/$rel"
-            abs="$(realpath "$file")"
-            mkdir -p "$(dirname "$tgt")"
+log() {
+    printf '%s\n' "$*"
+}
 
-            if [ -L "$tgt" ] && [ "$(readlink "$tgt")" = "$abs" ]; then
-                continue
+warn() {
+    printf '%s\n' "dot: warning: $*" >&2
+}
+
+run() {
+    if [ "$DRYRUN" -eq 1 ]; then
+        printf 'dry-run:'
+        for _arg in "$@"; do
+            printf ' %s' "$_arg"
+        done
+        printf '\n'
+        return 0
+    fi
+    "$@"
+}
+
+need_cmd() {
+    command -v "$1" >/dev/null 2>&1 || die "required command not found: $1"
+}
+
+have_cmd() {
+    command -v "$1" >/dev/null 2>&1
+}
+
+usage() {
+    cat <<'EOF'
+usage: dot [-n] [install|remove]
+
+  install, dotfiles   link files from config layers into target (default)
+  remove, uninstall   remove managed symlinks and restore backups
+  -n, --dry-run       show actions without changing anything
+  -h, --help          show this help
+
+env:
+  DOTFILES_TARGET     target root (default: $HOME)
+
+Safety notes:
+  - Links regular files only (file-level linking, no directory folding).
+  - Refuses to operate through symlinked path components under TARGET.
+  - Remove only considers targets implied by configured layers.
+EOF
+}
+
+# ── path helpers ───────────────────────────────────────────────────────────
+
+# Resolve a path to an absolute, physical path without requiring realpath(1).
+resolve_path() {
+    _p=$1
+    case $_p in
+        /*) ;;
+        *) _p=$(pwd -P)/$_p ;;
+    esac
+
+    _dir=$(dirname -- "$_p")
+    _base=$(basename -- "$_p")
+
+    if [ -d "$_p" ] && [ ! -L "$_p" ]; then
+        (cd -P -- "$_p" && pwd -P)
+        return 0
+    fi
+    if [ -d "$_dir" ]; then
+        (cd -P -- "$_dir" && printf '%s/%s\n' "$(pwd -P)" "$_base")
+        return 0
+    fi
+    printf '%s\n' "$_p"
+}
+
+# Read a symlink target. Prefers readlink(1) when available.
+read_link() {
+    if [ "$_HAVE_READLINK" -eq 1 ]; then
+        readlink -- "$1" 2>/dev/null && return 0
+    fi
+    # Fallback for systems without readlink(1): parse ls -ld output.
+    # This is a best-effort fallback and may misbehave on unusual filenames.
+    _ls=$(LC_ALL=C ls -ld -- "$1" 2>/dev/null) || return 1
+    case $_ls in
+        *' -> '*)
+            printf '%s\n' "${_ls#* -> }"
+            return 0
+            ;;
+    esac
+    return 1
+}
+
+# Ensure no existing path component under TARGET for a relative path is a symlink.
+# This prevents writing through symlinks to locations outside TARGET.
+check_safe_target_path() {
+    _rel=$1
+    _p=$TARGET
+    _rest=$_rel
+
+    while :; do
+        case $_rest in
+            */*)
+                _part=${_rest%%/*}
+                _rest=${_rest#*/}
+                ;;
+            *)
+                _part=$_rest
+                _rest=
+                ;;
+        esac
+
+        [ -n "$_part" ] || {
+            [ -n "$_rest" ] || break
+            continue
+        }
+
+        _p=$_p/$_part
+
+        # For intermediate components, refuse symlinks (including symlink-to-dir).
+        if [ -n "$_rest" ]; then
+            if [ -L "$_p" ]; then
+                die "refusing to traverse symlink path component: $_p"
             fi
-            if [ -L "$tgt" ]; then
-                rm -f "$tgt"
-            elif [ -e "$tgt" ]; then
-                mv "$tgt" "$tgt.dotfiles.bak"
-                echo "   backed up $tgt -> $tgt.dotfiles.bak"
-            fi
-            ln -s "$abs" "$tgt"
+        fi
+
+        [ -n "$_rest" ] || break
+    done
+}
+
+# Return a unique backup path: <path>.dotfiles.bak or <path>.dotfiles.bak.N
+backup_path() {
+    _bp=$1.dotfiles.bak
+    _i=0
+    while :; do
+        if [ "$_i" -eq 0 ]; then
+            _cand=$_bp
+        else
+            _cand=$_bp.$_i
+        fi
+        if [ ! -e "$_cand" ] && [ ! -L "$_cand" ]; then
+            printf '%s\n' "$_cand"
+            return 0
+        fi
+        _i=$((_i + 1))
+    done
+}
+
+# Return newest backup for a path, if any.
+latest_backup() {
+    _path=$1
+    _best=
+    _misses=0
+    _cand=$_path.dotfiles.bak
+    if [ -e "$_cand" ] || [ -L "$_cand" ]; then
+        _best=$_cand
+    fi
+
+    _i=1
+    while [ "$_misses" -lt 20 ]; do
+        _cand=$_path.dotfiles.bak.$_i
+        if [ -e "$_cand" ] || [ -L "$_cand" ]; then
+            _best=$_cand
+            _misses=0
+        else
+            _misses=$((_misses + 1))
+        fi
+        _i=$((_i + 1))
+    done
+
+    [ -n "$_best" ] || return 1
+    printf '%s\n' "$_best"
+}
+
+# Derive relative path from a layer file path. Prints nothing if not under layer.
+layer_relpath() {
+    _layer=$1
+    _file=$2
+    _prefix=$CONFIG/$_layer/
+    case $_file in
+        "$_prefix"*)
+            _rel=${_file#"$_prefix"}
+            case $_rel in
+                ''|*/) return 1 ;;
+            esac
+            printf '%s\n' "$_rel"
+            return 0
+            ;;
+    esac
+    return 1
+}
+
+# ── install ────────────────────────────────────────────────────────────────
+
+link_file() {
+    _layer=$1
+    _file=$2
+    _rel=$(layer_relpath "$_layer" "$_file") || return 0
+
+    case $_rel in
+        /*|*/../*|../*|*/..|..|'')
+            die "refusing unsafe relative path from layer $_layer: $_rel"
+            ;;
+    esac
+
+    check_safe_target_path "$_rel"
+
+    _src=$(resolve_path "$_file")
+    _tgt=$TARGET/$_rel
+    _dir=$(dirname -- "$_tgt")
+
+    # Skip if target is already the correct symlink.
+    if [ -L "$_tgt" ]; then
+        _cur=$(read_link "$_tgt" 2>/dev/null || printf '')
+        if [ "$_cur" = "$_src" ]; then
+            return 0
+        fi
+    fi
+
+    # Ensure parent directory exists as a real directory (not via symlink traversal).
+    if [ -L "$_dir" ]; then
+        die "refusing to use symlinked target directory: $_dir"
+    fi
+    if [ ! -d "$_dir" ]; then
+        if [ -e "$_dir" ] || [ -L "$_dir" ]; then
+            die "target parent exists but is not a directory: $_dir"
+        fi
+        if [ "$DRYRUN" -eq 0 ]; then
+            run mkdir -p -- "$_dir"
+        fi
+    fi
+
+    if [ -L "$_tgt" ]; then
+        run rm -f -- "$_tgt"
+    elif [ -d "$_tgt" ]; then
+        die "refusing to replace directory with file symlink: $_tgt"
+    elif [ -e "$_tgt" ]; then
+        _bak=$(backup_path "$_tgt")
+        log "   backup $_tgt -> $_bak"
+        run mv -- "$_tgt" "$_bak"
+    fi
+
+    log "   link $_tgt -> $_src"
+    run ln -s -- "$_src" "$_tgt"
+}
+
+install_dotfiles() {
+    for _layer in $LAYERS; do
+        [ -d "$CONFIG/$_layer" ] || continue
+        log "==> layer: $_layer"
+
+        # Link regular files from the layer. Symlink entries in the repo are
+        # intentionally ignored. (Newlines in paths are not supported.)
+        find "$CONFIG/$_layer" -type f | while IFS= read -r _file; do
+            [ -n "$_file" ] || continue
+            link_file "$_layer" "$_file"
         done
     done
 }
 
+# ── remove ─────────────────────────────────────────────────────────────────
+
+remove_link_for_rel() {
+    _rel=$1
+    [ -n "$_rel" ] || return 0
+    case $_rel in
+        /*|*/../*|../*|*/..|..) return 0 ;;
+    esac
+
+    _link=$TARGET/$_rel
+    [ -L "$_link" ] || return 0
+
+    _dest=$(read_link "$_link" 2>/dev/null || printf '')
+    case $_dest in
+        "$DOTFILES"/*) ;;
+        *) return 0 ;;
+    esac
+
+    run rm -f -- "$_link"
+    if _bak=$(latest_backup "$_link" 2>/dev/null); then
+        log "   restore $_link <- $_bak"
+        run mv -- "$_bak" "$_link"
+    else
+        log "   removed $_link"
+    fi
+}
+
 remove_dotfiles() {
-    find "$TARGET" -type l 2>/dev/null | while read -r link; do
-        target="$(readlink "$link")"
-        case "$target" in
-            "$DOTFILES"/*)
-                rm -f "$link"
-                if [ -e "$link.dotfiles.bak" ]; then
-                    mv "$link.dotfiles.bak" "$link"
-                    echo "restored $link"
-                else
-                    echo "removed $link"
-                fi
-                ;;
-        esac
+    [ -d "$TARGET" ] || die "target does not exist: $TARGET"
+
+    # Only consider targets implied by configured layers, so we never scan all
+    # of TARGET or remove unrelated symlinks that happen to point into DOTFILES.
+    for _layer in $LAYERS; do
+        [ -d "$CONFIG/$_layer" ] || continue
+        log "==> layer: $_layer"
+        find "$CONFIG/$_layer" -type f | while IFS= read -r _file; do
+            [ -n "$_file" ] || continue
+            _rel=$(layer_relpath "$_layer" "$_file") || continue
+            remove_link_for_rel "$_rel"
+        done
     done
 }
 
-# ── packages ──────────────────────────────────────────────────────────────
+# ── init / main ────────────────────────────────────────────────────────────
 
-has_cmd() { command -v "$1" >/dev/null 2>&1; }
+init() {
+    # shellcheck disable=SC1007
+    DOTFILES=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd -P)
+    CONFIG=$DOTFILES/config
+    OS=$(uname -s 2>/dev/null | tr '[:upper:]' '[:lower:]') || OS=unknown
+    HOST=$(uname -n 2>/dev/null | sed 's/\..*//' | tr '[:upper:]' '[:lower:]') || HOST=
+    [ -n "${HOST:-}" ] || HOST=unknown
+    [ -n "${OS:-}" ] || OS=unknown
+    TARGET=${DOTFILES_TARGET:-$HOME}
+    LAYERS="shared env/common env/$OS env/$HOST"
 
-pkg_installed() {
-    case "$PKG_MGR" in
-        pacman)  pacman -Q "$1" >/dev/null 2>&1 ;;
-        apt)     dpkg -s "$1" >/dev/null 2>&1 ;;
-        pkg_add) pkg_info -e "$1" >/dev/null 2>&1 ;;
-        pkg)     pkg info -e "$1" >/dev/null 2>&1 ;;
-        *)       return 1 ;;
+    need_cmd dirname
+    need_cmd basename
+    need_cmd find
+    if have_cmd readlink; then
+        _HAVE_READLINK=1
+    fi
+    [ -d "$CONFIG" ] || die "missing config directory: $CONFIG"
+
+    case $TARGET in
+        /*) ;;
+        *)
+            [ -d "$TARGET" ] || die "invalid DOTFILES_TARGET: $TARGET"
+            TARGET=$(cd -P -- "$TARGET" && pwd -P)
+            ;;
+    esac
+
+    [ -d "$TARGET" ] || [ "$DRYRUN" -eq 1 ] || die "target does not exist: $TARGET"
+    case $TARGET in
+        "$DOTFILES"|"$DOTFILES"/*)
+            die "refusing to use DOTFILES or its subdirectory as TARGET: $TARGET"
+            ;;
     esac
 }
 
-detect_pkg_mgr() {
-    if has_cmd pacman; then PKG_MGR=pacman; PKG_INSTALL="sudo pacman -S --needed --noconfirm"
-    elif has_cmd apt; then PKG_MGR=apt; PKG_INSTALL="sudo apt-get install -y"
-    elif has_cmd pkg_add; then PKG_MGR=pkg_add; PKG_INSTALL="doas pkg_add"
-    elif has_cmd pkg; then PKG_MGR=pkg; PKG_INSTALL="sudo pkg install -y"
-    else
-        echo "no supported package manager found (pacman, apt, pkg_add, pkg)"
-        return 1
-    fi
-}
-
-install_packages() {
-    detect_pkg_mgr || return 1
-
-    want=""
-    [ -f "$PKGS/common" ] && want="$want $(cat "$PKGS/common")"
-    [ -f "$PKGS/$OS" ] && want="$want $(cat "$PKGS/$OS")"
-    want="$(printf '%s' "$want" | tr ' ' '\n' | sort -u | tr '\n' ' ')"
-
-    missing=""
-    for p in $want; do
-        if ! pkg_installed "$p"; then
-            missing="$missing $p"
-        fi
+parse_args() {
+    while [ $# -gt 0 ]; do
+        case $1 in
+            -n|--dry-run)
+                DRYRUN=1
+                ;;
+            -h|--help)
+                usage
+                exit 0
+                ;;
+            install|dotfiles)
+                ACTION=install
+                ;;
+            remove|uninstall)
+                ACTION=remove
+                ;;
+            *)
+                usage >&2
+                exit 1
+                ;;
+        esac
+        shift
     done
-
-    if [ -z "$missing" ]; then
-        echo "all packages already installed"
-        return 0
-    fi
-
-    echo "installing:$missing"
-    # shellcheck disable=SC2086
-    $PKG_INSTALL $missing
 }
 
-# ── main ──────────────────────────────────────────────────────────────────
+main() {
+    parse_args "$@"
+    init
 
-case "${1:-dotfiles}" in
-    dotfiles|install) dotfiles ;;
-    pkgs|packages)    install_packages ;;
-    remove|uninstall) remove_dotfiles ;;
-    *) echo "usage: $0 {dotfiles|pkgs|remove}"; exit 1 ;;
-esac
+    case $ACTION in
+        install) install_dotfiles ;;
+        remove)  remove_dotfiles ;;
+        *)       usage >&2; exit 1 ;;
+    esac
+}
+
+main "$@"
