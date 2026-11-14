@@ -16,16 +16,43 @@ up | down | restart | ps | logs | pull) ;;
     ;;
 esac
 
+case $APPS_DIR in
+/*) ;;
+*)
+    printf 'Error: APPS_DIR must be an absolute path: %s\n' "$APPS_DIR" >&2
+    exit 1
+    ;;
+esac
+[ -d "$APPS_DIR" ] || {
+    printf 'Error: APPS_DIR does not exist: %s\n' "$APPS_DIR" >&2
+    exit 1
+}
+
 for app in $APPS; do
-    if [ ! -d "$APPS_DIR/$app" ]; then
-        printf '\n==> %s: skipped, no such directory: %s\n' "$app" "$APPS_DIR/$app" >&2
+    case $app in
+    '' | *[!A-Za-z0-9._-]* | . | ..)
+        printf '\n==> %s: skipped, invalid app name\n' "$app" >&2
+        continue
+        ;;
+    esac
+
+    app_dir=$APPS_DIR/$app
+    if [ ! -d "$app_dir" ]; then
+        printf '\n==> %s: skipped, no such directory: %s\n' "$app" "$app_dir" >&2
         continue
     fi
+    case $app_dir in
+    "$APPS_DIR"/*) ;;
+    *)
+        printf '\n==> %s: skipped, refuses path outside APPS_DIR\n' "$app" >&2
+        continue
+        ;;
+    esac
 
     printf '\n==> %s: %s\n' "$app" "$ACTION"
 
     (
-        cd -P "$APPS_DIR/$app"
+        cd -P "$app_dir"
 
         case $ACTION in
         up) podman compose up -d ;;
