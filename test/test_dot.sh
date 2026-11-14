@@ -331,6 +331,38 @@ else
     fail "remove does not touch unrelated symlinks outside managed targets" "unrelated symlink changed"
 fi
 
+# ── failure: disk full / no space (simulated write failure) ────────────────
+# dot has no ENOSPC-specific handling; it runs under set -eu so a failing
+# write operation aborts the run. Simulate "No space left on device" by
+# injecting a failing ln(1) after backup to verify partial-state behavior.
+new_case disk_full_simulated
+write_file "$repo/config/shared/.diskrc" "managed"
+write_file "$target/.diskrc" "original"
+mkdir -p -- "$case_dir/fakebin"
+cat >"$case_dir/fakebin/ln" <<'EOF'
+#!/bin/sh
+printf '%s\n' "ln: cannot create symbolic link: No space left on device" >&2
+exit 1
+EOF
+chmod +x "$case_dir/fakebin/ln"
+
+if PATH="$case_dir/fakebin:$PATH" DOTFILES_TARGET="$target" "$repo/bin/dot" install >/dev/null 2>&1; then
+    fail "install aborts on disk-full write failure (simulated)" "command unexpectedly succeeded"
+else
+    pass "install aborts on disk-full write failure (simulated)"
+fi
+if [ -f "$target/.diskrc.dotfiles.bak" ] || [ -L "$target/.diskrc.dotfiles.bak" ]; then
+    pass "backup remains when link creation fails due to no space"
+else
+    fail "backup remains when link creation fails due to no space" "backup not found"
+fi
+if [ ! -e "$target/.diskrc" ] && [ ! -L "$target/.diskrc" ]; then
+    pass "target may be absent after backup+failed link (partial state)"
+else
+    # If implementation changes, document actual state rather than hide it.
+    fail "target may be absent after backup+failed link (partial state)" "target still present"
+fi
+
 # ── bug tracker / known limitations (non-failing) ───────────────────────────
 # Track known portability/behavior limitations without failing the suite.
 # - Symlink targets are stored as resolved absolute paths (stable, but verbose).
