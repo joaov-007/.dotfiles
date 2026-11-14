@@ -1,13 +1,12 @@
 #!/bin/sh
-# dot — layered dotfile installer + per-OS package declarations.
+# dot — layered dotfile installer.
 # Layers (broad → specific): shared -> env/common -> env/$OS -> env/$HOST.
 # Later layers override earlier ones.
 #
 # Usage:
-#   ./bin/dot            # install/update dotfile symlinks
-#   ./bin/dot pkgs       # install missing programs declared for this OS
-#   ./bin/dot adopt <path>...   # adopt existing $HOME files into the repo
-#   ./bin/dot remove     # remove dotfile symlinks, restore backups
+#   ./bin/dot        # install/update dotfile symlinks
+#   ./bin/dot pkgs   # install missing programs declared for this OS
+#   ./bin/dot remove # remove dotfile symlinks, restore backups
 
 set -eu
 
@@ -33,60 +32,19 @@ dotfiles() {
             rel="${file#"$CONFIG"/"$layer"/}"
             tgt="$TARGET/$rel"
             abs="$(realpath "$file")"
-            dir="$(dirname "$tgt")"
-            if [ -L "$dir" ]; then
-                rm -f "$dir"
-            fi
-            mkdir -p "$dir"
+            mkdir -p "$(dirname "$tgt")"
 
+            if [ -L "$tgt" ] && [ "$(readlink "$tgt")" = "$abs" ]; then
+                continue
+            fi
             if [ -L "$tgt" ]; then
-                if [ "$(readlink "$tgt")" = "$abs" ]; then
-                    continue
-                fi
                 rm -f "$tgt"
             elif [ -e "$tgt" ]; then
-                if [ -e "$abs" ]; then
-                    if cmp -s "$tgt" "$abs" 2>/dev/null; then
-                        # identical — replace real file with symlink, no data loss
-                        rm -f "$tgt"
-                        echo "   linked $tgt (identical to repo)"
-                    else
-                        # differs — back up user's file, link to repo
-                        mv "$tgt" "$tgt.dotfiles.bak"
-                        echo "   backed up $tgt -> $tgt.dotfiles.bak"
-                    fi
-                else
-                    # no repo version — adopt user's file as canonical source
-                    mkdir -p "$(dirname "$abs")"
-                    mv "$tgt" "$abs"
-                    echo "   adopted $tgt -> $abs"
-                fi
+                mv "$tgt" "$tgt.dotfiles.bak"
+                echo "   backed up $tgt -> $tgt.dotfiles.bak"
             fi
             ln -s "$abs" "$tgt"
         done
-    done
-}
-
-adopt() {
-    for path in "$@"; do
-        tgt="$TARGET/$path"
-        abs="$CONFIG/shared/$path"
-        if [ ! -e "$tgt" ] && [ ! -L "$tgt" ]; then
-            echo "   skip: $tgt does not exist"
-            continue
-        fi
-        if [ -e "$abs" ] || [ -L "$abs" ]; then
-            echo "   conflict: $abs already exists in repo"
-            continue
-        fi
-        if [ -L "$tgt" ]; then
-            echo "   skip: $tgt is already a symlink"
-            continue
-        fi
-        mkdir -p "$(dirname "$abs")"
-        mv "$tgt" "$abs"
-        echo "   adopted $tgt -> $abs"
-        ln -s "$abs" "$tgt"
     done
 }
 
@@ -112,7 +70,6 @@ remove_dotfiles() {
 has_cmd() { command -v "$1" >/dev/null 2>&1; }
 
 pkg_installed() {
-    # $1 = package name
     case "$PKG_MGR" in
         pacman)  pacman -Q "$1" >/dev/null 2>&1 ;;
         apt)     dpkg -s "$1" >/dev/null 2>&1 ;;
@@ -163,7 +120,6 @@ install_packages() {
 case "${1:-dotfiles}" in
     dotfiles|install) dotfiles ;;
     pkgs|packages)    install_packages ;;
-    adopt)            shift; adopt "$@" ;;
     remove|uninstall) remove_dotfiles ;;
-    *) echo "usage: $0 {dotfiles|pkgs|adopt <path>...|remove}"; exit 1 ;;
+    *) echo "usage: $0 {dotfiles|pkgs|remove}"; exit 1 ;;
 esac
