@@ -23,18 +23,12 @@ command -v realpath >/dev/null 2>&1 || { echo "realpath required"; exit 1; }
 
 # ── dotfiles ──────────────────────────────────────────────────────────────
 
-install_pkg() {
-    pkg="$1"
-    srcs=""
+dotfiles() {
     for layer in $LAYERS; do
-        [ -d "$CONFIG/$layer/$pkg" ] && srcs="$srcs $CONFIG/$layer/$pkg"
-    done
-    [ -z "$srcs" ] && return 0
-
-    echo "==> $pkg"
-    for src in $srcs; do
-        find "$src" -type f | while read -r file; do
-            rel="${file#$src/}"
+        [ -d "$CONFIG/$layer" ] || continue
+        echo "==> layer: $layer"
+        find "$CONFIG/$layer" -type f | while read -r file; do
+            rel="${file#$CONFIG/$layer/}"
             tgt="$TARGET/$rel"
             abs="$(realpath "$file")"
             mkdir -p "$(dirname "$tgt")"
@@ -52,18 +46,6 @@ install_pkg() {
             fi
             ln -s "$abs" "$tgt"
         done
-    done
-}
-
-dotfiles() {
-    pkgs=""
-    for layer in $LAYERS; do
-        [ -d "$CONFIG/$layer" ] && pkgs="$pkgs $(ls "$CONFIG/$layer" 2>/dev/null)"
-    done
-    pkgs="$(printf '%s' "$pkgs" | tr ' ' '\n' | sort -u | tr '\n' ' ')"
-
-    for pkg in $pkgs; do
-        install_pkg "$pkg"
     done
 }
 

@@ -54,16 +54,25 @@ Stow isn't the problem — your **model** is. You're packaging per-OS instead of
 ```
 dotfiles/
 ├── config/
-│   ├── shared/            # identical everywhere: git, nvim, starship, tmux
-│   │   ├── git/
-│   │   ├── nvim/
-│   │   └── starship/
+│   ├── shared/            # mirrors $HOME: .bashrc, .config/nvim/, .local/bin/
+│   │   ├── .bashrc
+│   │   ├── .config/
+│   │   │   ├── git/
+│   │   │   ├── nvim/
+│   │   │   └── ...
+│   │   └── .local/
+│   │       └── bin/
 │   ├── env/
-│   │   ├── common/        # shell aliases, editor vars shared on all OSes
+│   │   ├── common/        # only files that differ from shared, all OSes
 │   │   ├── linux/         # only files that differ on linux
 │   │   ├── openbsd/
 │   │   ├── freebsd/
 │   │   └── <hostname>/    # machine-specific tweaks
+│   ├── packages/          # programs to install per OS
+│   │   ├── common
+│   │   ├── linux
+│   │   ├── openbsd
+│   │   └── freebsd
 │   └── system/            # /etc files (root target, separate run)
 ├── bin/dot                # the smart installer (one script)
 └── LINKS                  # optional manual override list
@@ -71,18 +80,19 @@ dotfiles/
 
 Rules:
 
-- A program's **full** config lives once under `config/shared/<pkg>`.
-- `env/<os>/<pkg>` contains **only** the files that differ on that OS.
-- Overlays are applied **on top** of shared. If `shared/nvim/init.lua` and `env/linux/nvim/init.lua` both exist, the linux one wins.
+- `config/shared/` mirrors `$HOME`: `.bashrc` → `~/.bashrc`, `.config/nvim/init.lua` → `~/.config/nvim/init.lua`
+- A program's **full** config lives once under `config/shared/`.
+- `env/<os>/<pkg>` contains **only** the files that differ on that OS, using the same relative path as in shared.
+- Overlays are applied **on top** of shared. If `shared/.config/nvim/init.lua` and `env/linux/.config/nvim/init.lua` both exist, the linux one wins.
 - New OS? Add `env/<newos>/` with only the delta. No redoing shared configs.
 
 ## The installer
 
-`bin/dot` is POSIX `sh` (~40 lines). It walks every package in every layer, symlinks each file into `$TARGET` (default `$HOME`), and backs up any real file already there to `<name>.dotfiles.bak` instead of clobbering it. Later layers replace earlier symlinks.
+`bin/dot` walks every file in each layer (broad → specific) and symlinks it into `$TARGET`. Later layers replace earlier symlinks. Real files already in `$HOME` get backed up to `.dotfiles.bak` instead of being clobbered.
 
 ```sh
 #!/bin/sh
-# dot — layered dotfile installer.
+# dot — layered dotfile installer + per-OS package declarations.
 # Layers (broad → specific): shared -> env/common -> env/$OS -> env/$HOST.
 # Later layers override earlier ones.
 
@@ -90,6 +100,7 @@ set -eu
 
 DOTFILES="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
 CONFIG="$DOTFILES/config"
+PKGS="$CONFIG/packages"
 OS="$(uname -s | tr '[:upper:]' '[:lower:]')"
 HOST="$(hostname | sed 's/\..*//' | tr '[:upper:]' '[:lower:]')"
 TARGET="${DOTFILES_TARGET:-$HOME}"
@@ -98,18 +109,12 @@ LAYERS="shared env/common env/$OS env/$HOST"
 
 command -v realpath >/dev/null 2>&1 || { echo "realpath required"; exit 1; }
 
-install_pkg() {
-    pkg="$1"
-    srcs=""
+dotfiles() {
     for layer in $LAYERS; do
-        [ -d "$CONFIG/$layer/$pkg" ] && srcs="$srcs $CONFIG/$layer/$pkg"
-    done
-    [ -z "$srcs" ] && return 0
-
-    echo "==> $pkg"
-    for src in $srcs; do
-        find "$src" -type f | while read -r file; do
-            rel="${file#$src/}"
+        [ -d "$CONFIG/$layer" ] || continue
+        echo "==> layer: $layer"
+        find "$CONFIG/$layer" -type f | while read -r file; do
+            rel="${file#$CONFIG/$layer/}"
             tgt="$TARGET/$rel"
             abs="$(realpath "$file")"
             mkdir -p "$(dirname "$tgt")"
@@ -130,15 +135,77 @@ install_pkg() {
     done
 }
 
-pkgs=""
-for layer in $LAYERS; do
-    [ -d "$CONFIG/$layer" ] && pkgs="$pkgs $(ls "$CONFIG/$layer" 2>/dev/null)"
-done
-pkgs="$(printf '%s' "$pkgs" | tr ' ' '\n' | sort -u | tr '\n' ' ')"
+remove_dotfiles() {
+    find "$TARGET" -type l 2>/dev/null | while read -r link; do
+        target="$(readlink "$link")"
+        case "$target" in
+            "$DOTFILES"/*)
+                rm -f "$link"
+                if [ -e "$link.dotfiles.bak" ]; then
+                    mv "$link.dotfiles.bak" "$link"
+                    echo "restored $link"
+                else
+                    echo "removed $link"
+                fi
+                ;;
+        esac
+    done
+}
 
-for pkg in $pkgs; do
-    install_pkg "$pkg"
-done
+has_cmd() { command -v "$1" >/dev/null 2>&1; }
+
+pkg_installed() {
+    case "$PKG_MGR" in
+        pacman)  pacman -Q "$1" >/dev/null 2>&1 ;;
+        apt)     dpkg -s "$1" >/dev/null 2>&1 ;;
+        pkg_add) pkg_info -e "$1" >/dev/null 2>&1 ;;
+        pkg)     pkg info -e "$1" >/dev/null 2>&1 ;;
+        *)       return 1 ;;
+    esac
+}
+
+detect_pkg_mgr() {
+    if has_cmd pacman; then PKG_MGR=pacman; PKG_INSTALL="sudo pacman -S --needed --noconfirm"
+    elif has_cmd apt; then PKG_MGR=apt; PKG_INSTALL="sudo apt-get install -y"
+    elif has_cmd pkg_add; then PKG_MGR=pkg_add; PKG_INSTALL="doas pkg_add"
+    elif has_cmd pkg; then PKG_MGR=pkg; PKG_INSTALL="sudo pkg install -y"
+    else
+        echo "no supported package manager found (pacman, apt, pkg_add, pkg)"
+        return 1
+    fi
+}
+
+install_packages() {
+    detect_pkg_mgr || return 1
+
+    want=""
+    [ -f "$PKGS/common" ] && want="$want $(cat "$PKGS/common")"
+    [ -f "$PKGS/$OS" ] && want="$want $(cat "$PKGS/$OS")"
+    want="$(printf '%s' "$want" | tr ' ' '\n' | sort -u | tr '\n' ' ')"
+
+    missing=""
+    for p in $want; do
+        if ! pkg_installed "$p"; then
+            missing="$missing $p"
+        fi
+    done
+
+    if [ -z "$missing" ]; then
+        echo "all packages already installed"
+        return 0
+    fi
+
+    echo "installing:$missing"
+    # shellcheck disable=SC2086
+    $PKG_INSTALL $missing
+}
+
+case "${1:-dotfiles}" in
+    dotfiles|install) dotfiles ;;
+    pkgs|packages)    install_packages ;;
+    remove|uninstall) remove_dotfiles ;;
+    *) echo "usage: $0 {dotfiles|pkgs|remove}"; exit 1 ;;
+esac
 ```
 
 Install:
@@ -225,17 +292,7 @@ Before touching anything, print what would change:
 DOTFILES_TARGET=/tmp/dry-run ./bin/dot
 ```
 
-### 2. Skip packages by command availability
-
-If a package only makes sense when a tool is installed, guard it inside `install_pkg`:
-
-```sh
-case "$pkg" in
-    waybar) command -v waybar >/dev/null 2>&1 || return 0 ;;
-esac
-```
-
-### 3. Exclude list (`LINKS`)
+### 2. Exclude list (`LINKS`)
 
 Create `LINKS` with one glob per line to skip:
 
@@ -245,17 +302,19 @@ Create `LINKS` with one glob per line to skip:
 secrets/*
 ```
 
-Then filter inside `install_pkg`:
+Then filter inside `dotfiles()`:
 
 ```sh
 if [ -f "$DOTFILES/LINKS" ]; then
     while read -r pat; do
         case "$rel" in
-            $pat) continue 2 ;;
+            $pat) continue ;;
         esac
     done < "$DOTFILES/LINKS"
 fi
 ```
+
+Place the check right after `rel="${file#$CONFIG/$layer/}"` so matching files are skipped.
 
 ### 4. Host-specific overrides
 
@@ -299,11 +358,14 @@ After running `./bin/dot`:
 
 ```sh
 # confirm a shared file is linked everywhere
+readlink ~/.bashrc
+# → /home/joaov/.dotfiles/config/shared/.bashrc
+
 readlink ~/.config/nvim/init.lua
-# → /home/joaov/.dotfiles/config/shared/nvim/init.lua
+# → /home/joaov/.dotfiles/config/shared/.config/nvim/init.lua
 
 # confirm a linux override won
-readlink ~/.config/nvim/init.lua   # on linux shows env/linux/nvim/init.lua
+readlink ~/.bashrc   # on linux shows env/linux/.bashrc
 
 # list all dot-managed symlinks
 find ~ -type l -lname "$DOTFILES/*"
