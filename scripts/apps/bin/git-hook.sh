@@ -76,6 +76,7 @@ die() {
 
 hook_path() {
     dir=$(git -C "$REPO_ROOT" rev-parse --path-format=absolute --git-path hooks 2>/dev/null) ||
+        dir=$(git -C "$REPO_ROOT" rev-parse --git-path hooks 2>/dev/null) ||
         dir="$REPO_ROOT/.git/hooks"
     case $dir in
     /*) ;;
