@@ -14,8 +14,8 @@ HOST=
 TARGET=
 LAYERS=
 DRYRUN=0
-ACTION=
-_HAVE_READLINK=0install
+ACTION=install
+_HAVE_READLINK=0
 
 # ── output / helpers ───────────────────────────────────────────────────────
 
@@ -309,17 +309,28 @@ remove_link_for_rel() {
 remove_dotfiles() {
     [ -d "$TARGET" ] || die "target does not exist: $TARGET"
 
+    _seen_file=$(mktemp "${TMPDIR:-/tmp}/dot-remove.XXXXXX") || die "cannot create temp file"
+    trap 'rm -f -- "$_seen_file"' EXIT INT TERM
+
     # Only consider targets implied by configured layers, so we never scan all
     # of TARGET or remove unrelated symlinks that happen to point into DOTFILES.
+    # Deduplicate relpaths across layers to avoid repeated work/noisy output.
     for _layer in $LAYERS; do
         [ -d "$CONFIG/$_layer" ] || continue
         log "==> layer: $_layer"
         find "$CONFIG/$_layer" -type f | while IFS= read -r _file; do
             [ -n "$_file" ] || continue
             _rel=$(layer_relpath "$_layer" "$_file") || continue
+            if grep -Fqx "$_rel" "$_seen_file" 2>/dev/null; then
+                continue
+            fi
+            printf '%s\n' "$_rel" >>"$_seen_file"
             remove_link_for_rel "$_rel"
         done
     done
+
+    rm -f -- "$_seen_file"
+    trap - EXIT INT TERM
 }
 
 # ── init / main ────────────────────────────────────────────────────────────
