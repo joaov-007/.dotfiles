@@ -10,6 +10,7 @@
 
 set -eu
 
+# shellcheck disable=SC1007
 DOTFILES="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
 CONFIG="$DOTFILES/config"
 PKGS="$CONFIG/packages"
@@ -28,7 +29,7 @@ dotfiles() {
         [ -d "$CONFIG/$layer" ] || continue
         echo "==> layer: $layer"
         find "$CONFIG/$layer" -type f | while read -r file; do
-            rel="${file#$CONFIG/$layer/}"
+            rel="${file#"$CONFIG"/"$layer"/}"
             tgt="$TARGET/$rel"
             abs="$(realpath "$file")"
             mkdir -p "$(dirname "$tgt")"
