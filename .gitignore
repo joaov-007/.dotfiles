@@ -19,7 +19,15 @@
 
 password/
 
-config/shared/.config/opencode/
+# ingnore my apps stack
+apps
+wiki/inbox/apps-for-me.md
+
+# Keep in opencode the thing I kare
+config/shared/.config/opencode/memory/*
+config/shared/.config/opencode/skills/*
+# The themes is autogen by noctalia
+config/shared/.config/opencode/themes/*
 
 # Obsidian workspace/state (per-device, noisy)
 **/.obsidian/*
