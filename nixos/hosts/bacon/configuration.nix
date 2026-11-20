@@ -25,7 +25,7 @@
     ...
   }: {
     imports = [
-      # inputs.chaotic.nixosModules.default
+      inputs.home-manager.nixosModules.home-manager
     ];
 
     networking.hostName = "bacon";
@@ -66,5 +66,15 @@
     networking.firewall.allowedUDPPorts = [];
 
     system.copySystemConfiguration = lib.mkForce false;
+
+    home-manager = {
+      useGlobalPkgs = true;
+      backupFileExtension = "backup";
+      extraSpecialArgs = {inherit self inputs;};
+      sharedModules = [
+        self.homeModules.default
+      ];
+      users.joaov = self.homeModules.joaov;
+    };
   };
 }
