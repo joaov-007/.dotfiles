@@ -10,7 +10,7 @@
       stylix
       niri
       flatpak
-      kdeconnect
+      # kdeconnect
     ];
   in {
     imports = modules;

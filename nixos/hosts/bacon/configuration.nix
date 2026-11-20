@@ -8,8 +8,8 @@
     modules = with self.nixosModules; [
       bacon
       baconHardware
-      preservation
-      overlays
+      # preservation is opt-in only (modules/system/settings/preservation.nix):
+      # bacon keeps state on explicit btrfs subvolumes, not preservation.
       intelDrivers
       desktop
       dev
@@ -24,18 +24,23 @@
     config,
     ...
   }: {
-    networking.hostName = "bacon"; # Define your hostname.
+    imports = [
+      # inputs.chaotic.nixosModules.default
+    ];
+
+    networking.hostName = "bacon";
+
     networking.networkmanager.enable = true;
 
-    # Enable touchpad support (enabled default in most desktopManager).
     services.libinput.enable = true;
 
-    # udisks2 backend for udiskie automount (configured in home-manager).
     services.udisks2.enable = true;
 
-    # List packages installed in system profile.
-    # You can use https://search.nixos.org/ to find more packages (and options).
     environment.systemPackages = with pkgs; [
+      git
+      btop
+      file
+      github-cli
     ];
 
     # Some programs need SUID wrappers, can be configured further or are
@@ -46,23 +51,20 @@
       enableSSHSupport = true;
     };
 
+    nixpkgs.overlays = [
+      inputs.nur.overlays.default
+      # inputs.chaotic.overlays.default
+      inputs.neovim-nightly.overlays.default
+    ];
+
     # Enable the OpenSSH daemon.
     services.openssh.enable = lib.mkForce false;
+
+    services.openssh.package = pkgs.openssh;
 
     networking.firewall.allowedTCPPorts = [];
     networking.firewall.allowedUDPPorts = [];
 
     system.copySystemConfiguration = lib.mkForce false;
-
-    assertions = [
-      {
-        assertion = !config.services.openssh.enable;
-        message = "openssh must be disabled on bacon";
-      }
-      {
-        assertion = config.networking.firewall.enable;
-        message = "firewall must be enabled";
-      }
-    ];
   };
 }

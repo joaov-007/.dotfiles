@@ -10,21 +10,21 @@
   flake.homeModules.global = {
     imports = with self.homeModules; [
       common
-      shell
-      git
-      xdg
-      nvim
-      yazi
+      # shell
+      # git
+      # xdg
+      # nvim
+      # yazi
     ];
   };
 
   # Desktop: GUI apps, window manager, display
   flake.homeModules.desktop = {
     imports = with self.homeModules; [
-      niri
-      noctalia
-      flatpak
-      kdeconnect
+      # niri
+      # noctalia
+      # flatpak
+      # kdeconnect
     ];
   };
 
