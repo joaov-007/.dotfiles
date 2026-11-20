@@ -6,7 +6,10 @@
   }: {
     config = {
       boot = {
-        kernelPackages = pkgs.linuxPackages_cachyos-lto or pkgs.linuxPackages_latest;
+        kernelPackages = pkgs.linuxPackages_latest;
+        # Root is already tmpfs on bacon; keep /tmp explicitly clean on boot
+        # (adds systemd-tmpfiles rule "D! /tmp 1777 root root").
+        tmp.cleanOnBoot = true;
         loader = {
           timeout = 3;
           systemd-boot.enable = true;
@@ -51,9 +54,6 @@
           "rds"
           "tipc"
 
-          # USB storage (unplug attack vector — remove if you need USB drives)
-          "usb-storage"
-
           # Old or rare or insufficiently audited filesystems
           "adfs"
           "affs"
@@ -91,7 +91,6 @@
           themePackages = with pkgs; [];
         };
       };
-      services.scx.enable = true;
     };
   };
 }
