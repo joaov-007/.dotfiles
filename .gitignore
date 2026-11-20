@@ -4,7 +4,6 @@
 *.jpeg
 *.7z
 
-# Python caches (scripts/chatgpt)
 *__pycache__*
 *.py[cod]
 **/.pytest_cache/
@@ -13,33 +12,25 @@
 
 **/node_modules*
 
-# syncthing
 *stfolder*
 *.stignore*
 
 password/
 
-# ingnore my apps stack
 apps
 wiki/inbox/apps-for-me.md
 
-# Keep in opencode the thing I kare
 config/shared/.config/opencode/memory/*
 config/shared/.config/opencode/skills/*
-# The themes is autogen by noctalia
 config/shared/.config/opencode/themes/*
 
-# Obsidian workspace/state (per-device, noisy)
 **/.obsidian/*
 !/.obsidian/core-plugins.json
 
-## Ignore my data app
-**/*data*/*
+**/data/*
 
-# zsh completion cache
-.zcompdump*
+*zcompdump*
 
-# Generated Quadlet units and temp dirs (scripts/apps/bin/gen-quadlets.sh)
 /apps/*/*/*.container
 /apps/*/*/*.volume
 /apps/*/*/*.network
