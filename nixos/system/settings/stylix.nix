@@ -8,13 +8,6 @@
       inputs.stylix.nixosModules.stylix
     ];
 
-    assertions = [
-      {
-        assertion = config.stylix.polarity == "dark";
-        message = "stylix polarity must be dark";
-      }
-    ];
-
     stylix = {
       enable = true;
       base16Scheme = "${pkgs.base16-schemes}/share/themes/tokyo-night-dark.yaml";
