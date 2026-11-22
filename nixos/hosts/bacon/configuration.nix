@@ -7,13 +7,12 @@
     specialArgs = {inherit self inputs;};
     modules = with self.nixosModules; [
       bacon
-      baconHardware
       # preservation is opt-in only (modules/system/settings/preservation.nix):
       # bacon keeps state on explicit btrfs subvolumes, not preservation.
       intelDrivers
       desktop
       dev
-      homeManager
+      # homeManager
       nixIndexDatabase
       doas
     ];
@@ -26,6 +25,7 @@
   }: {
     imports = [
       inputs.home-manager.nixosModules.home-manager
+      ./_hardware.nix
     ];
 
     networking.hostName = "bacon";
