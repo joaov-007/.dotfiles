@@ -7,15 +7,16 @@
     config = {
       boot = {
         kernelPackages = pkgs.linuxPackages_latest;
-        # Root is already tmpfs on bacon; keep /tmp explicitly clean on boot
-        # (adds systemd-tmpfiles rule "D! /tmp 1777 root root").
+
         tmp.cleanOnBoot = true;
+
         loader = {
           timeout = 3;
           systemd-boot.enable = true;
           efi.canTouchEfiVariables = true;
           systemd-boot.configurationLimit = 32;
         };
+
         kernel.sysctl = {
           "vm.swappiness" = 40;
 
