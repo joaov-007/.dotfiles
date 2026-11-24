@@ -12,7 +12,7 @@
       boot
       locale
       audio
-      settings
+      # settings
       user
       nix-ld
       security
