@@ -23,7 +23,7 @@
     ...
   }: {
     imports = [
-      ./_hardware.nix
+      ./_hardware-configuration.nix
     ];
 
     networking.hostName = "bacon";
@@ -55,9 +55,7 @@
       inputs.neovim-nightly.overlays.default
     ];
 
-    # Enable the OpenSSH daemon.
     services.openssh.enable = lib.mkForce false;
-
     services.openssh.package = pkgs.openssh;
 
     networking.firewall.allowedTCPPorts = [];
