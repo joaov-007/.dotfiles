@@ -7,6 +7,7 @@ This file tracks tasks and features for the NixOS configuration following the de
 - [ ] Convert home-manager configuration to features pattern
 - [ ] Organize configuration into modules/attrs and modules/features structure
 - [ ] Ensure all features are properly exported and can be enabled per system
+- [ ] Make use of flake.modules.nixos or home for more reproducible approach
 
 ## Medium-term Tasks
 - [ ] Add more feature modules following the dendritic pattern
