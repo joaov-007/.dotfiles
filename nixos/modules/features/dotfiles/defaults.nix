@@ -14,51 +14,24 @@
       ".local"
     ];
 
-    files = [
-    ];
-
-    recursive = true;
-
-    # Create an out-of-store symlink.
     link = path:
       mkOutOfStoreSymlink "${root}/${path}";
 
-    # Discover directory contents.
-    discover = source: destination: let
-      contents = builtins.readDir "${root}/${source}";
-      names = builtins.attrNames contents;
+    discover = folder: let
+      contents = builtins.readDir "${root}/${folder}";
     in
-      lib.foldl' (
-        acc: name: let
-          type = contents.${name};
-          src = "${source}/${name}";
-          dst = "${destination}/${name}";
-        in
-          if type == "directory" && recursive
-          then acc // discover src dst
-          else
-            acc
-            // {
-              ${dst} = {
-                source = link src;
-              };
-            }
-      ) {}
-      names;
-
-    # Map configured folders.
-    folderEntries =
-      lib.foldl' (
-        acc: folder:
-          acc // discover folder folder
-      ) {}
-      folders;
-
-    # Map explicitly configured files.
-    fileEntries = lib.genAttrs files (name: {
-      source = link name;
-    });
+      lib.mapAttrs' (
+        name: type:
+          lib.nameValuePair "${folder}/${name}" {
+            source = link "${folder}/${name}";
+          }
+      ) (
+        lib.filterAttrs (_: type: type == "directory") contents
+      );
   in {
-    home.file = folderEntries // fileEntries;
+    home.file =
+      lib.foldl' (acc: folder:
+        acc // discover folder
+      ) {} folders;
   };
 }
