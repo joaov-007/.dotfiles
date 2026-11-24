@@ -3,7 +3,7 @@
   self,
   ...
 }: {
-  flake.yaziSettings = {
+  flake.modules.yaziSettings = {
     yazi = {
       mgr = {
         show_hidden = true;
@@ -35,19 +35,5 @@
       };
     };
     keymap = {};
-  };
-
-  perSystem = {
-    system,
-    pkgs,
-    ...
-  }: {
-    packages.yazi =
-      (inputs.wrappers-modules.lib.wrapModule {
-        imports = [inputs.wrappers-modules.wrapperModules.yazi];
-        inherit pkgs;
-        package = pkgs.yazi;
-        settings = self.yaziSettings;
-      }).wrapper;
   };
 }
