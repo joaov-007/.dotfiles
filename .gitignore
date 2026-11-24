@@ -29,6 +29,8 @@ config/shared/.config/opencode/themes/*
 
 **/data/*
 
+_*hardware*.nix
+
 *zcompdump*
 
 /apps/*/*/*.container
