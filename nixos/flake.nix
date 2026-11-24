@@ -15,7 +15,11 @@
     import-tree.url = "github:denful/import-tree";
 
     wrappers.url = "github:Lassulus/wrappers";
-    wrappers-modules.url = "github:BirdeeHub/nix-wrapper-modules";
+
+    wrappers-modules = {
+      url = "github:BirdeeHub/nix-wrapper-modules";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
 
     nixos-hardware.url = "github:NixOS/nixos-hardware/master";
 
