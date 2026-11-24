@@ -6,7 +6,7 @@
   flake.nixosModules.desktop = moduleWithSystem ({...}: let
     modules = with self.nixosModules; [
       core
-      settings
+      # settings
       stylix
       niri
       flatpak

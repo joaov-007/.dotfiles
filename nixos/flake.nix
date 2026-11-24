@@ -57,5 +57,5 @@
 
   outputs = inputs:
     inputs.flake-parts.lib.mkFlake {inherit inputs;}
-    (inputs.import-tree ./nixos);
+    (inputs.import-tree ./modules);
 }
