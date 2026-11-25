@@ -3,7 +3,6 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
 
-    nixos-unstable.url = "github:NixOS/nixpkgs/nixos-unstable";
     nixos-stable.url = "github:NixOS/nixpkgs/nixos-26.05";
 
     # chaotic.url = "github:chaotic-cx/nyx/nyxpkgs-unstable";
@@ -14,7 +13,10 @@
 
     import-tree.url = "github:denful/import-tree";
 
-    wrappers.url = "github:Lassulus/wrappers";
+    wrappers = {
+      url = "github:Lassulus/wrappers";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
 
     wrappers-modules = {
       url = "github:BirdeeHub/nix-wrapper-modules";
@@ -30,7 +32,8 @@
     nixos-anywhere.url = "github:nix-community/nixos-anywhere";
 
     noctalia = {
-      url = "github:noctalia-dev/noctalia/cachix";
+      url = "github:noctalia-dev/noctalia";
+      inputs.nixpkgs.follows = "nixpkgs";
     };
 
     stylix = {

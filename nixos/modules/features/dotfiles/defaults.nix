@@ -29,9 +29,10 @@
         lib.filterAttrs (_: type: type == "directory") contents
       );
   in {
-    home.file =
-      lib.foldl' (acc: folder:
+    home.file = lib.foldl' (
+      acc: folder:
         acc // discover folder
-      ) {} folders;
+    ) {}
+    folders;
   };
 }
