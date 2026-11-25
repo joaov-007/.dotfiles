@@ -19,8 +19,9 @@
   boot.extraModulePackages = [];
 
   fileSystems."/" = {
-    device = "tmpfs";
-    fsType = "tmpfs";
+    device = "/dev/mapper/crypt0";
+    fsType = "btrfs";
+    options = ["subvol=root"];
   };
 
   fileSystems."/nix" = {
