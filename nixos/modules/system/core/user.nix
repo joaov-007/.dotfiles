@@ -3,7 +3,7 @@
   inputs,
   ...
 }: {
-  flake.nixosModules.user = {
+  flake.modules.nixos.user = {
     config,
     pkgs,
     lib,
@@ -11,11 +11,10 @@
   }: {
     users.mutableUsers = false;
 
-
-    users.users.root.hashedPassword = "$y$j9T$wlXYjqg/QqlcSvrY9yByV/$72cAizf8yT0Pw6NPLvt/kaQ8BpXQoZ0VEVAA/fXCsU5";
+    users.users.root.hashedPassword = "$y$j9T$Bl5EmI6hWVsFAMJ3CTMK1/$wLwMLfvak8ytE5SLvgMELaF6YEeNvjJs//5whbgFzb6";
     users.users.joaov = {
       isNormalUser = true;
-      hashedPassword = "$y$j9T$wlXYjqg/QqlcSvrY9yByV/$72cAizf8yT0Pw6NPLvt/kaQ8BpXQoZ0VEVAA/fXCsU5";
+      hashedPassword = "$y$j9T$Bl5EmI6hWVsFAMJ3CTMK1/$wLwMLfvak8ytE5SLvgMELaF6YEeNvjJs//5whbgFzb6";
       extraGroups = ["wheel" "networkmanager" "render" "input" "adm" "audio" "video" "dialout" "plugdev" "i2c" "fuse" "dialout" "gpio" "spi" "netdev" "games" "cdrom"];
       subUidRanges = [
         {

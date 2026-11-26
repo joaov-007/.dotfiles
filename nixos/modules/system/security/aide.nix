@@ -1,5 +1,5 @@
 {pkgs, ...}: {
-  flake.nixosModules.aide = {pkgs, ...}: {
+  flake.modules.nixos.aide = {pkgs, ...}: {
     # AIDE (Advanced Intrusion Detection Environment) — file integrity monitoring.
     # No NixOS module exists upstream; package + own systemd timer (Discourse consensus).
     # Monitor the mutable attack surface only: /nix/store is content-addressed and

@@ -3,7 +3,7 @@
   inputs,
   ...
 }: {
-  flake.nixosModules.locale = {
+  flake.modules.nixos.locale = {
     config,
     pkgs,
     lib,

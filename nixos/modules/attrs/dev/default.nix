@@ -3,21 +3,17 @@
   moduleWithSystem,
   ...
 }: {
-  flake.nixosModules.dev = moduleWithSystem ({...}: let
-    modules = with self.nixosModules; [
+  flake.modules.nixos.development = moduleWithSystem ({...}: {
+    imports = with self.modules.nixos; [
       podman
+      developmentTools
     ];
-  in {
-    imports = modules;
   });
 
-  flake.homeModules.dev = let
-    modules = with self.homeModules; [
-      git
-      nvim
+  flake.modules.homeManager.development = moduleWithSystem ({...}: {
+    imports = with self.modules.homeManager; [
+      developmentTools
       shell
     ];
-  in {
-    imports = modules;
-  };
+  });
 }

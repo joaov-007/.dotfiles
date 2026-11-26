@@ -1,18 +1,22 @@
 {inputs, ...}: {
-  flake.nixosModules.boot = {
+  flake.modules.nixos.boot = {
     config,
     pkgs,
     ...
   }: {
     config = {
       boot = {
-        kernelPackages = pkgs.linuxPackages_cachyos-lto or pkgs.linuxPackages_latest;
+        kernelPackages = pkgs.linuxPackages_latest;
+
+        tmp.cleanOnBoot = true;
+
         loader = {
           timeout = 3;
           systemd-boot.enable = true;
           efi.canTouchEfiVariables = true;
           systemd-boot.configurationLimit = 32;
         };
+
         kernel.sysctl = {
           "vm.swappiness" = 40;
 
@@ -51,9 +55,6 @@
           "rds"
           "tipc"
 
-          # USB storage (unplug attack vector — remove if you need USB drives)
-          "usb-storage"
-
           # Old or rare or insufficiently audited filesystems
           "adfs"
           "affs"
@@ -91,7 +92,6 @@
           themePackages = with pkgs; [];
         };
       };
-      services.scx.enable = true;
     };
   };
 }

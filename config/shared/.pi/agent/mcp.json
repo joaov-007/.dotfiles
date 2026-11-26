@@ -1,0 +1,33 @@
+{
+  "mcpServers": {
+    "deepwiki": {
+      "url": "https://mcp.deepwiki.com/mcp",
+      "description": "Free documentation and Q&A for public GitHub repositories; no authentication required."
+    },
+    "context7": {
+      "url": "https://mcp.context7.com/mcp",
+      "headers": {
+        "Authorization": "Bearer ${CONTEXT7_API_KEY}"
+      },
+      "description": "Up-to-date, version-specific library documentation and code examples."
+    },
+    "exa": {
+      "url": "https://mcp.exa.ai/mcp",
+      "description": "Web search, content fetching, and multi-step research via Exa."
+    },
+    "tavily": {
+      "url": "https://mcp.tavily.com/mcp",
+      "headers": {
+        "Authorization": "Bearer ${TAVILY_API_KEY}"
+      },
+      "description": "Web search, extraction, mapping, and crawling via Tavily."
+    },
+    "perplexity": {
+      "url": "https://api.perplexity.ai/mcp",
+      "headers": {
+        "Authorization": "Bearer ${PERPLEXITY_API_KEY}"
+      },
+      "description": "Web search and research via Perplexity."
+    }
+  }
+}

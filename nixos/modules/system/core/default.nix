@@ -3,16 +3,16 @@
   inputs,
   ...
 }: {
-  flake.nixosModules.core = {
+  flake.modules.nixos.core = {
     pkgs,
     lib,
     ...
   }: let
-    modules = with self.nixosModules; [
+    modules = with self.modules.nixos; [
       boot
       locale
       audio
-      settings
+      # settings
       user
       nix-ld
       security

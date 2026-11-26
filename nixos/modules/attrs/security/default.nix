@@ -3,8 +3,8 @@
   moduleWithSystem,
   ...
 }: {
-  flake.nixosModules.security = moduleWithSystem ({...}: let
-    modules = with self.nixosModules; [
+  flake.modules.nixos.security = moduleWithSystem ({...}: let
+    modules = with self.modules.nixos; [
       securityBase
       aide
       clamav

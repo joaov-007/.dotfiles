@@ -1,0 +1,10 @@
+{
+  "$schema": "https://pi.dev/schemas/settings.schema.json",
+  "defaultProvider": "opencode-go",
+  "defaultModel": "kimi-k3.1-pro",
+  "theme": "stylix",
+  "packages": [
+    "npm:pi-web-access@0.48.0",
+    "npm:@upstash/context7-pi@0.2.0"
+  ]
+}
