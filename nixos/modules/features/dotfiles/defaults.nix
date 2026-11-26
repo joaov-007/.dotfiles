@@ -1,5 +1,6 @@
-{input, ...}: {
-  flake.homeModules.dotfiles = {
+
+{...}: {
+  flake.modules.home.dotfiles = {
     config,
     lib,
     symlinkRoot,
@@ -9,30 +10,16 @@
 
     root = "${symlinkRoot}/config/shared";
 
-    folders = [
-      ".config"
-      ".local"
-    ];
+    entries = builtins.readDir root;
 
-    link = path:
-      mkOutOfStoreSymlink "${root}/${path}";
-
-    discover = folder: let
-      contents = builtins.readDir "${root}/${folder}";
-    in
-      lib.mapAttrs' (
-        name: type:
-          lib.nameValuePair "${folder}/${name}" {
-            source = link "${folder}/${name}";
-          }
-      ) (
-        lib.filterAttrs (_: type: type == "directory") contents
-      );
+    links = lib.mapAttrs' (name: _: {
+      name = name;
+      value = {
+        source = mkOutOfStoreSymlink "${root}/${name}";
+        recursive = true;
+      };
+    }) entries;
   in {
-    home.file = lib.foldl' (
-      acc: folder:
-        acc // discover folder
-    ) {}
-    folders;
+    home.file = links;
   };
 }
