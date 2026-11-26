@@ -1,0 +1,9 @@
+{
+  "$schema": "https://pi.dev/schemas/settings.schema.json",
+  "defaultProvider": "opencode-go",
+  "defaultModel": "kimi-k3.1-pro",
+  "theme": "stylix",
+  "packages": [
+    "npm:@ff-labs/pi-fff@0.11.0"
+  ]
+}
