@@ -20,12 +20,6 @@
         package: (package.pname or "") == "nwg-look"
       )
       bacon.environment.systemPackages;
-    deviconsInstalled =
-      builtins.any (
-        plugin: (plugin.plugin.pname or "") == "nvim-web-devicons"
-      )
-      home.programs.neovim.plugins;
-
     configuration = assert lib.asserts.assertMsg bacon.stylix.enable
     "Stylix must be enabled in the Bacon configuration";
     assert lib.asserts.assertMsg
@@ -42,8 +36,8 @@
     "nwg-look must be installed in the Bacon system profile";
     assert lib.asserts.assertMsg (home.gtk.iconTheme.name == "Papirus-Dark")
     "The dark Papirus icon theme must be applied to Joaov's GTK configuration";
-    assert lib.asserts.assertMsg deviconsInstalled
-    "nvim-web-devicons must be enabled in Joaov's Neovim configuration";
+    assert lib.asserts.assertMsg (home.home.file.".config/nvim".source != null)
+    "Joaov's editable Neovim configuration must be linked by Home Manager";
     assert lib.asserts.assertMsg self.yaziSettings.yazi.mgr.show_hidden
     "The shared Yazi settings must be present";
     assert lib.asserts.assertMsg (niriSettings.layout.gaps == 8)
@@ -56,7 +50,7 @@
         Joaov Home Manager evaluation: OK
         Stylix fonts and cursor: OK
         Desktop icons and nwg-look: OK
-        Neovim devicons: OK
+        Editable Neovim configuration: OK
         Shared Niri and Yazi settings: OK
       '';
   in {
