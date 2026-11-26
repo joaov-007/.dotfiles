@@ -4,6 +4,7 @@
   "defaultModel": "kimi-k3.1-pro",
   "theme": "stylix",
   "packages": [
-    "npm:@ff-labs/pi-fff@0.11.0"
+    "npm:pi-web-access@0.48.0",
+    "npm:@upstash/context7-pi@0.2.0"
   ]
 }
