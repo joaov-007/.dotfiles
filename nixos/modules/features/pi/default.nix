@@ -6,6 +6,7 @@
   }: {
     config,
     lib,
+    symlinkRoot,
     ...
   }: let
     colors = config.lib.stylix.colors;
@@ -106,6 +107,10 @@
     '';
 
     fffExtension = "${self'.packages.pi-fff}/lib/node_modules/@ff-labs/pi-fff/src/index.ts";
+
+    portableSettings = builtins.fromJSON (
+      builtins.readFile ../../../../config/shared/.pi/agent/settings.json
+    );
   in {
     options.programs.pi.trustedSkillSources = lib.mkOption {
       type = lib.types.listOf lib.types.str;
@@ -119,19 +124,25 @@
     config = {
       home.packages = [pkgs.pi-coding-agent];
 
-      home.file.".pi/agent/settings.json".text = builtins.toJSON {
-        defaultProvider = "opencode-go";
-        defaultModel = "kimi-k3.1-pro";
-        theme = "stylix";
-        extensions = [
-          fffExtension
-          "${trustedSkillLoader}"
-        ];
-      };
+      # Reuse the portable defaults, but load plugins from the Nix store rather
+      # than asking Pi to download npm packages into its mutable agent directory.
+      home.file.".pi/agent/settings.json".text = builtins.toJSON (
+        (builtins.removeAttrs portableSettings ["packages"])
+        // {
+          extensions = [
+            fffExtension
+            "${trustedSkillLoader}"
+          ];
+        }
+      );
 
-      home.file.".pi/agent/pi-fff.json".text = builtins.toJSON {
-        mode = "tools-and-ui";
-      };
+      home.file.".pi/agent/pi-fff.json".source =
+        config.lib.file.mkOutOfStoreSymlink
+        "${symlinkRoot}/config/shared/.pi/agent/pi-fff.json";
+
+      home.file.".pi/agent/extensions/stylix-theme-sync.ts".source =
+        config.lib.file.mkOutOfStoreSymlink
+        "${symlinkRoot}/config/shared/.pi/agent/extensions/stylix-theme-sync.ts";
 
       home.file.".pi/agent/themes/stylix.json".text = builtins.toJSON theme;
     };
