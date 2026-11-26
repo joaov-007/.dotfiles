@@ -3,23 +3,17 @@
   moduleWithSystem,
   ...
 }: {
-  flake.modules.nixos.development = moduleWithSystem ({pkgs, ...}: let
-    modules = with self.modules.nixos; [
+  flake.modules.nixos.development = moduleWithSystem ({...}: {
+    imports = with self.modules.nixos; [
       podman
-    ];
-  in {
-    imports = modules;
-    environment.systemPackages = with pkgs; [
-      opencode
-      devenv
+      developmentTools
     ];
   });
 
-  flake.modules.homeManager.development = {...}: {
+  flake.modules.homeManager.development = moduleWithSystem ({...}: {
     imports = with self.modules.homeManager; [
-      git
-      pi
+      developmentTools
       shell
     ];
-  };
+  });
 }
