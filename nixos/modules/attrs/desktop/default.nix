@@ -13,4 +13,13 @@
   in {
     imports = modules;
   });
+
+  flake.modules.homeManager.desktop = {...}: {
+    imports = with self.modules.homeManager; [
+      niri
+      noctalia
+      udiskie
+      xdg
+    ];
+  };
 }

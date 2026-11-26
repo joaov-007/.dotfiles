@@ -1,5 +1,9 @@
-{...}: {
-  flake.homeModules.joaov = {
-    # ponytail: username/homeDirectory derived from NixOS user, nothing else needed here
+{self, ...}: {
+  flake.modules.homeManager.joaov = {...}: {
+    imports = with self.modules.homeManager; [
+      common
+      desktop
+      development
+    ];
   };
 }

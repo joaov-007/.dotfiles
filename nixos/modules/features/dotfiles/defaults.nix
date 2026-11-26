@@ -1,6 +1,5 @@
-
 {...}: {
-  flake.modules.home.dotfiles = {
+  flake.modules.homeManager.dotfiles = {
     config,
     lib,
     symlinkRoot,
@@ -12,13 +11,15 @@
 
     entries = builtins.readDir root;
 
-    links = lib.mapAttrs' (name: _: {
-      name = name;
-      value = {
-        source = mkOutOfStoreSymlink "${root}/${name}";
-        recursive = true;
-      };
-    }) entries;
+    links =
+      lib.mapAttrs' (name: _: {
+        name = name;
+        value = {
+          source = mkOutOfStoreSymlink "${root}/${name}";
+          recursive = true;
+        };
+      })
+      entries;
   in {
     home.file = links;
   };
