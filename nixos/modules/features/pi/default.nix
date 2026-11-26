@@ -111,6 +111,9 @@
     portableSettings = builtins.fromJSON (
       builtins.readFile ../../../../config/shared/.pi/agent/settings.json
     );
+
+    portablePackages = portableSettings.packages or [ ];
+    nixPackages = builtins.filter (pkg: pkg != "npm:@ff-labs/pi-fff@0.11.0") portablePackages;
   in {
     options.programs.pi.trustedSkillSources = lib.mkOption {
       type = lib.types.listOf lib.types.str;
@@ -122,19 +125,24 @@
     };
 
     config = {
-      home.packages = [pkgs.pi-coding-agent];
+      home.packages = [pkgs.pi-coding-agent pkgs.nodejs];
 
       # Reuse the portable defaults, but load plugins from the Nix store rather
       # than asking Pi to download npm packages into its mutable agent directory.
       home.file.".pi/agent/settings.json".text = builtins.toJSON (
         (builtins.removeAttrs portableSettings ["packages"])
         // {
+          packages = nixPackages;
           extensions = [
             fffExtension
             "${trustedSkillLoader}"
           ];
         }
       );
+
+      home.file.".pi/agent/mcp.json".source =
+        config.lib.file.mkOutOfStoreSymlink
+        "${symlinkRoot}/config/shared/.pi/agent/mcp.json";
 
       home.file.".pi/agent/pi-fff.json".source =
         config.lib.file.mkOutOfStoreSymlink
