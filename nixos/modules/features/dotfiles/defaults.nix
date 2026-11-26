@@ -9,7 +9,9 @@
 
     root = "${symlinkRoot}/config/shared";
 
-    entries = builtins.readDir root;
+    # Pi mixes portable files with Nix-generated settings and themes, so its
+    # module links the individual files instead of linking the whole directory.
+    entries = builtins.removeAttrs (builtins.readDir root) [".pi"];
 
     links =
       lib.mapAttrs' (name: _: {
