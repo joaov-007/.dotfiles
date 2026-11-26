@@ -3,7 +3,7 @@
   inputs,
   ...
 }: {
-  flake.nixosModules.audio = {
+  flake.modules.nixos.audio = {
     config,
     pkgs,
     lib,

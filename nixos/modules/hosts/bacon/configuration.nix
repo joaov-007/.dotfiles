@@ -3,20 +3,7 @@
   self,
   ...
 }: {
-  flake.nixosConfigurations.bacon = inputs.nixpkgs.lib.nixosSystem {
-    specialArgs = {inherit self inputs;};
-    modules = with self.nixosModules; [
-      bacon
-
-      intelDrivers
-      desktop
-      # dev
-      # home
-      nixIndexDatabase
-      doas
-    ];
-  };
-  flake.nixosModules.bacon = {
+  flake.modules.nixos.bacon = {
     pkgs,
     lib,
     config,
@@ -24,6 +11,8 @@
   }: {
     imports = [
       ./_hardware-configuration.nix
+      inputs.self.modules.nixos.nix
+      inputs.self.modules.nixos.intelDrivers
     ];
 
     networking.hostName = "bacon";

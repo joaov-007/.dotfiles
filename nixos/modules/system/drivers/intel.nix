@@ -3,7 +3,7 @@
   inputs,
   ...
 }: {
-  flake.nixosModules.intelDrivers = {
+  flake.modules.nixos.intelDrivers = {
     pkgs,
     lib,
     config,

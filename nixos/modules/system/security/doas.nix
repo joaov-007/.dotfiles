@@ -3,7 +3,7 @@
   inputs,
   ...
 }: {
-  flake.nixosModules.doas = {
+  flake.modules.nixos.doas = {
     pkgs,
     lib,
     config,

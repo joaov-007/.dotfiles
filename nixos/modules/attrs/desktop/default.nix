@@ -3,14 +3,12 @@
   moduleWithSystem,
   ...
 }: {
-  flake.nixosModules.desktop = moduleWithSystem ({...}: let
-    modules = with self.nixosModules; [
+  flake.modules.nixos.desktop = moduleWithSystem ({...}: let
+    modules = with self.modules.nixos; [
       core
-      # settings
       stylix
       niri
       flatpak
-      # kdeconnect
     ];
   in {
     imports = modules;

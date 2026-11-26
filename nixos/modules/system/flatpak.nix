@@ -3,7 +3,7 @@
   inputs,
   ...
 }: {
-  flake.nixosModules.flatpak = {
+  flake.modules.nixos.flatpak = {
     pkgs,
     lib,
     config,

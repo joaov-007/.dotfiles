@@ -1,5 +1,5 @@
 {inputs, ...}: {
-  flake.nixosModules.boot = {
+  flake.modules.nixos.boot = {
     config,
     pkgs,
     ...

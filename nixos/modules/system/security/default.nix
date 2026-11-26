@@ -3,7 +3,7 @@
   inputs,
   ...
 }: {
-  flake.nixosModules.securityBase = {
+  flake.modules.nixos.securityBase = {
     pkgs,
     lib,
     config,
