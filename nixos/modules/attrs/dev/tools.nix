@@ -20,7 +20,6 @@
     programs.lazygit = {
       enable = true;
       enableBashIntegration = true;
-      settings.gui.nerdFontsVersion = "3";
     };
     programs.devenv = {
       enable = true;
