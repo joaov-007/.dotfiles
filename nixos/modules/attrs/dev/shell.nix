@@ -1,9 +1,5 @@
-{...}: {
-  flake.modules.homeManager.shell = {
-    pkgs,
-    config,
-    ...
-  }: {
+{moduleWithSystem, ...}: {
+  flake.modules.homeManager.shell = moduleWithSystem ({pkgs, ...}: {
     home.packages = with pkgs; [
       yt-dlp
       blesh
@@ -37,19 +33,9 @@
       initExtra = "source ${pkgs.blesh}/share/blesh/ble.sh";
     };
     services.ssh-agent.enable = true;
-    programs.lazygit = {
-      enable = true;
-      enableBashIntegration = true;
-      settings.gui.nerdFontsVersion = "3";
-    };
-    programs.devenv = {
-      enable = true;
-      enableBashIntegration = true;
-    };
-    programs.herdr.enable = true;
     programs.atuin = {
       enable = true;
       enableBashIntegration = true;
     };
-  };
+  });
 }
