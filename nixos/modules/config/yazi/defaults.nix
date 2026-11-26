@@ -3,7 +3,7 @@
   self,
   ...
 }: {
-  flake.modules.yaziSettings = {
+  flake.modules.config.yaziSettings = {
     yazi = {
       mgr = {
         show_hidden = true;
