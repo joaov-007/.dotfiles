@@ -1,5 +1,5 @@
 {self, ...}: {
-  flake.nixosModules.power = {
+  flake.modules.nixos.power = {
     lib,
     # Power management configuration for laptop energy efficiency
     config,

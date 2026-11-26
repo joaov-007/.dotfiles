@@ -195,7 +195,7 @@
     // wsBinds
     // mediaBinds;
 in {
-  flake.nixosModules.niri = {
+  flake.modules.nixos.niri = {
     pkgs,
     lib,
     ...

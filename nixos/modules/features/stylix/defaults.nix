@@ -1,5 +1,5 @@
 {inputs, ...}: {
-  flake.nixosModules.stylix = {
+  flake.modules.nixos.stylix = {
     config,
     pkgs,
     ...

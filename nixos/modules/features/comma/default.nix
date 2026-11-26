@@ -1,5 +1,5 @@
 {inputs, ...}: {
-  flake.nixosModules.nixIndexDatabase = {config, ...}: {
+  flake.modules.nixos.nixIndexDatabase = {config, ...}: {
     imports = [
       inputs.nix-index-database.nixosModules.default
     ];

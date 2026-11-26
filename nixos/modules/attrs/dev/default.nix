@@ -3,8 +3,8 @@
   moduleWithSystem,
   ...
 }: {
-  flake.nixosModules.development = moduleWithSystem ({pkgs, ...}: let
-    modules = with self.nixosModules; [
+  flake.modules.nixos.development = moduleWithSystem ({pkgs, ...}: let
+    modules = with self.modules.nixos; [
       podman
     ];
   in {

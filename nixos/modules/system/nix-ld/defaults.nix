@@ -1,5 +1,5 @@
 {moduleWithSystem, ...}: {
-  flake.nixosModules.nix-ld = moduleWithSystem ({pkgs, ...}: {
+  flake.modules.nixos.nix-ld = moduleWithSystem ({pkgs, ...}: {
     programs = {
       nix-ld = {
         enable = true;
