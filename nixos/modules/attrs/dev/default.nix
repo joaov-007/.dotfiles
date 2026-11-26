@@ -18,6 +18,7 @@
   flake.modules.homeManager.development = {...}: {
     imports = with self.modules.homeManager; [
       git
+      pi
       shell
     ];
   };
