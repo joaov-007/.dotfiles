@@ -24,6 +24,15 @@ config/shared/.config/opencode/memory/*
 config/shared/.config/opencode/skills/*
 config/shared/.config/opencode/themes/*
 
+# Pi credentials and generated state must never enter the portable config.
+config/shared/.pi/agent/auth.json
+config/shared/.pi/agent/models-store.json
+config/shared/.pi/agent/settings.json.backup
+config/shared/.pi/agent/sessions/
+config/shared/.pi/agent/tmp/
+config/shared/.pi/agent/npm/
+config/shared/.pi/agent/git/
+
 **/.obsidian/*
 !/.obsidian/core-plugins.json
 
