@@ -9,7 +9,7 @@
         imports = [inputs.wrappers-modules.wrapperModules.yazi];
         inherit pkgs;
         package = pkgs.yazi;
-        settings = inputs.self.modules.config.yaziSettings;
+        settings = inputs.self.yaziSettings;
       }).wrapper;
   };
 }
