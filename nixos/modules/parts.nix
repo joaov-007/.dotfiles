@@ -1,4 +1,14 @@
-{inputs, ...}: {
+{
+  inputs,
+  lib,
+  ...
+}: {
+  options.flake.yaziSettings = lib.mkOption {
+    type = lib.types.attrs;
+    default = {};
+    description = "Shared settings for the wrapped Yazi package.";
+  };
+
   imports = [
     inputs.flake-parts.flakeModules.modules
   ];
