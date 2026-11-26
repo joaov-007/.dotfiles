@@ -12,6 +12,7 @@
       bacon
       intelDrivers
       desktop
+      home
       nixIndexDatabase
       doas
     ];
