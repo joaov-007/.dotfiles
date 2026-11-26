@@ -10,7 +10,7 @@
     ];
   });
 
-  flake.modules.homeManager.developmentTools = moduleWithSystem ({...}: {
+  flake.modules.homeManager.developmentTools = moduleWithSystem ({pkgs, ...}: {
     imports = with self.modules.homeManager; [
       git
       pi
@@ -26,5 +26,16 @@
       enableBashIntegration = true;
     };
     programs.herdr.enable = true;
+
+    programs.neovim = {
+      enable = true;
+      plugins = [
+        {
+          plugin = pkgs.vimPlugins.nvim-web-devicons;
+          type = "lua";
+          config = ''require("nvim-web-devicons").setup {}'';
+        }
+      ];
+    };
   });
 }
