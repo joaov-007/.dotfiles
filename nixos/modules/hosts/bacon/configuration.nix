@@ -39,6 +39,7 @@
       btop
       file
       github-cli
+      foot
     ];
 
     # Some programs need SUID wrappers, can be configured further or are
@@ -51,7 +52,6 @@
 
     nixpkgs.overlays = [
       inputs.nur.overlays.default
-      # inputs.chaotic.overlays.default
       inputs.neovim-nightly.overlays.default
     ];
 
