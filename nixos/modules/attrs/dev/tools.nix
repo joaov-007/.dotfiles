@@ -13,6 +13,7 @@
   flake.modules.homeManager.developmentTools = moduleWithSystem ({...}: {
     imports = with self.modules.homeManager; [
       git
+      nvim
       pi
     ];
 
