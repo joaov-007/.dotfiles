@@ -14,6 +14,7 @@
       audio
       # settings
       user
+      nix
       nix-ld
       security
       fonts
