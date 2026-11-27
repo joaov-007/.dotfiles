@@ -1,0 +1,464 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+WT_BASE="${WT_BASE:-${HOME}/.cache/git}"
+
+usage() {
+  cat <<'EOF'
+wt - git worktree shortcut wrapper
+
+Usage:
+  wt add [-b] <branch> [<start-point>]   Add worktree for branch (idempotent if exists)
+  wt list [--status]                     List worktrees (--status: local dirty/locked/prunable)
+  wt remove [-f] <branch>                Remove worktree for branch
+  wt prune [-f]                          Prune stale worktree metadata (-f: expire now)
+  wt path <branch>                       Print worktree path for branch
+  wt cd <branch>                         Alias for path
+  wt init-shell <bash|zsh|fish>          Print shell auto-cd wrapper
+  wt help                                Show this help
+
+Environment:
+  WT_BASE   Base directory for worktrees (default: ~/.cache/git)
+
+Worktree path:
+  $WT_BASE/<project-name>/<sanitized-branch>
+
+Notes:
+  - stdout: machine-usable paths/list output. stderr: hints/errors.
+  - add/cd auto-cd needs shell integration: eval "$(wt init-shell bash)"
+EOF
+}
+
+die() {
+  printf 'wt: %s\n' "$*" >&2
+  exit 1
+}
+
+hint() {
+  printf 'wt: hint: %s\n' "$*" >&2
+}
+
+require_git_repo() {
+  git rev-parse --is-inside-work-tree >/dev/null 2>&1 || die "not inside a git repository (run this from a git repo)"
+}
+
+repo_root() {
+  git rev-parse --show-toplevel
+}
+
+project_name() {
+  basename "$(repo_root)"
+}
+
+sanitize_branch_path() {
+  # Keep branch readable but safe as a single directory name under project.
+  printf '%s' "$1" | sed 's/[\/\\]/-/g; s/[^A-Za-z0-9._-]/-/g'
+}
+
+validate_branch() {
+  local branch="$1"
+  [[ -n "$branch" ]] || die "missing branch name. Try: wt help"
+  [[ "$branch" != "." && "$branch" != ".." ]] || die "invalid branch name: '$branch'"
+  [[ "$branch" != *$'\n'* && "$branch" != *$'\r'* && "$branch" != *$'\t'* ]] || die "invalid branch name (contains control whitespace): '$branch'"
+  [[ "$branch" != " "* && "$branch" != *" " ]] || true
+  if [[ "$branch" =~ [[:space:]] ]]; then
+    die "invalid branch name (contains whitespace): '$branch'"
+  fi
+  if [[ "$branch" == -* ]]; then
+    die "invalid branch name (starts with '-'): '$branch'"
+  fi
+  if ! git check-ref-format --branch "$branch" >/dev/null 2>&1; then
+    die "invalid branch name: '$branch'. Use a valid git branch name."
+  fi
+}
+
+wt_path_for() {
+  local branch="$1"
+  local proj
+  proj="$(project_name)"
+  printf '%s/%s/%s\n' "$WT_BASE" "$proj" "$(sanitize_branch_path "$branch")"
+}
+
+# Print worktree path for branch from git metadata; empty if not found.
+# Uses porcelain format and reads full path after "worktree ".
+porcelain_path_for_branch() {
+  local branch="$1"
+  git worktree list --porcelain | awk -v b="refs/heads/$branch" '
+    $1=="worktree" { wt=substr($0,10) }
+    $1=="branch" && $2==b { print wt; exit }
+  '
+}
+
+# Print branch ref for a worktree path from porcelain; empty if not found.
+porcelain_branch_for_path() {
+  local target="$1"
+  git worktree list --porcelain | awk -v target="$target" '
+    $1=="worktree" { wt=substr($0,10); br="" }
+    $1=="branch" { br=$2 }
+    /^$/ {
+      if (wt==target && br!="") { found=br }
+      wt=""; br=""
+    }
+    END {
+      if (found=="" && wt==target && br!="") { found=br }
+      if (found != "") {
+        sub(/^refs\/heads\//,"",found)
+        print found
+      }
+    }
+  '
+}
+
+main_worktree_path() {
+  git worktree list --porcelain | awk '$1=="worktree"{print substr($0,10); exit}'
+}
+
+current_worktree_path() {
+  git rev-parse --show-toplevel
+}
+
+default_branch() {
+  local b=""
+  b="$(git symbolic-ref --quiet --short refs/remotes/origin/HEAD 2>/dev/null | sed 's@^origin/@@')" || true
+  if [[ -z "$b" ]]; then
+    b="$(git config --get init.defaultBranch 2>/dev/null || true)"
+  fi
+  if [[ -z "$b" ]]; then
+    if git show-ref --verify --quiet refs/heads/main; then b="main"
+    elif git show-ref --verify --quiet refs/heads/master; then b="master"
+    fi
+  fi
+  printf '%s' "$b"
+}
+
+check_sanitized_collision() {
+  local branch="$1" path="$2"
+  local existing_branch=""
+  existing_branch="$(porcelain_branch_for_path "$path")"
+  if [[ -n "$existing_branch" && "$existing_branch" != "$branch" ]]; then
+    die "path collision: '$branch' maps to '$path', but that worktree belongs to branch '$existing_branch'. Choose a different branch name."
+  fi
+  # Also check directory exists without git metadata known to us (stale/manual).
+  if [[ -e "$path" && -z "$existing_branch" ]]; then
+    return 0
+  fi
+}
+
+branch_exists() {
+  git show-ref --verify --quiet "refs/heads/$1"
+}
+
+cmd_add() {
+  local create=0
+  local branch="" start=""
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      -b) create=1; shift ;;
+      -h|--help) usage; exit 0 ;;
+      -*) die "unknown option: $1. Try: wt add [-b] <branch> [<start-point>]" ;;
+      *)
+        if [[ -z "$branch" ]]; then branch="$1"
+        elif [[ -z "$start" ]]; then start="$1"
+        else die "too many arguments. Try: wt add [-b] <branch> [<start-point>]"
+        fi
+        shift ;;
+    esac
+  done
+  [[ -n "$branch" ]] || die "missing branch name. Try: wt add [-b] <branch> [<start-point>]"
+  require_git_repo
+  validate_branch "$branch"
+
+  local path
+  path="$(wt_path_for "$branch")"
+  check_sanitized_collision "$branch" "$path"
+
+  if [[ -e "$path" ]]; then
+    local owner
+    owner="$(porcelain_branch_for_path "$path")"
+    if [[ -n "$owner" && "$owner" != "$branch" ]]; then
+      die "path collision: '$branch' maps to '$path', but that worktree belongs to '$owner'. Choose a different branch name."
+    fi
+    if [[ -z "$owner" ]]; then
+      die "path already exists but is not a registered worktree: '$path'. Remove or move it, then retry: wt add $branch"
+    fi
+    if [[ "${BASH_SOURCE[0]}" != "${0}" ]]; then
+      cd "$path" || die "failed to cd into worktree: $path"
+    else
+      echo "$path"
+      hint "worktree already exists for '$branch' at '$path'. Use: wt cd $branch"
+    fi
+    return 0
+  fi
+
+  if [[ $create -eq 1 ]]; then
+    if branch_exists "$branch"; then
+      die "branch '$branch' already exists. Use: wt add $branch (without -b)"
+    fi
+  else
+    if ! branch_exists "$branch"; then
+      die "branch '$branch' does not exist. Create it with: wt add -b $branch [<start-point>]"
+    fi
+  fi
+
+  mkdir -p "$(dirname "$path")"
+  if [[ $create -eq 1 ]]; then
+    if [[ -n "$start" ]]; then
+      git worktree add -b "$branch" "$path" "$start" >&2 || die "failed to add worktree for '$branch' at '$path' (start-point '$start'). Check: git worktree list"
+    else
+      git worktree add -b "$branch" "$path" >&2 || die "failed to add worktree for '$branch' at '$path'. Check: git worktree list"
+    fi
+  else
+    if [[ -n "$start" ]]; then
+      git worktree add "$path" "$branch" "$start" >&2 || die "failed to add worktree for '$branch' at '$path' (start-point '$start'). Check: git worktree list"
+    else
+      git worktree add "$path" "$branch" >&2 || die "failed to add worktree for '$branch' at '$path'. Check: git worktree list"
+    fi
+  fi
+
+  if [[ "${BASH_SOURCE[0]}" != "${0}" ]]; then
+    cd "$path" || die "failed to cd into worktree: $path"
+  else
+    echo "$path"
+    if [[ -t 1 && $- == *i* ]]; then
+      hint "run 'cd \"$path\"' or install auto-cd: eval \"\$(wt init-shell bash)\""
+    fi
+  fi
+}
+
+cmd_list() {
+  local status=0
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --status) status=1; shift ;;
+      -h|--help) usage; exit 0 ;;
+      *) die "unknown argument: $1. Try: wt list [--status]" ;;
+    esac
+  done
+  require_git_repo
+  if [[ $status -eq 0 ]]; then
+    git worktree list
+    return 0
+  fi
+
+  local porcelain=""
+  porcelain="$(git worktree list --porcelain)"
+  local wt="" br="" locked="" prunable=""
+  while IFS= read -r line || [[ -n "$line" ]]; do
+    if [[ "$line" == worktree\ * ]]; then
+      wt="${line#worktree }"
+      br=""; locked=""; prunable=""
+    elif [[ "$line" == branch\ * ]]; then
+      br="${line#branch refs/heads/}"
+    elif [[ "$line" == locked* ]]; then
+      locked="locked"
+    elif [[ "$line" == prunable* ]]; then
+      prunable="prunable"
+    elif [[ -z "$line" ]]; then
+      if [[ -n "$wt" ]]; then
+        local state="clean"
+        if [[ -n "$prunable" ]]; then
+          state="prunable"
+        elif [[ -e "$wt" ]]; then
+          if [[ -n "$(git -C "$wt" status --porcelain -uno 2>/dev/null || true)" ]]; then
+            state="dirty"
+          fi
+        else
+          state="missing"
+        fi
+        local flags="$state"
+        [[ -n "$locked" ]] && flags="$flags,locked"
+        local label="${br:-"(detached)"}"
+        printf '%s\t%s\t%s\n' "$wt" "$label" "$flags"
+      fi
+      wt=""; br=""; locked=""; prunable=""
+    fi
+  done <<< "$porcelain"
+  # flush last record if porcelain didn't end with blank line
+  if [[ -n "$wt" ]]; then
+    local state="clean"
+    if [[ -n "$prunable" ]]; then
+      state="prunable"
+    elif [[ -e "$wt" ]]; then
+      if [[ -n "$(git -C "$wt" status --porcelain -uno 2>/dev/null || true)" ]]; then
+        state="dirty"
+      fi
+    else
+      state="missing"
+    fi
+    local flags="$state"
+    [[ -n "$locked" ]] && flags="$flags,locked"
+    local label="${br:-"(detached)"}"
+    printf '%s\t%s\t%s\n' "$wt" "$label" "$flags"
+  fi
+}
+
+cmd_remove() {
+  local force=0
+  local branch=""
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      -f|--force) force=1; shift ;;
+      -h|--help) usage; exit 0 ;;
+      -*) die "unknown option: $1. Try: wt remove [-f] <branch>" ;;
+      *)
+        [[ -z "$branch" ]] || die "too many arguments. Try: wt remove [-f] <branch>"
+        branch="$1"; shift ;;
+    esac
+  done
+  [[ -n "$branch" ]] || die "missing branch name. Try: wt remove [-f] <branch>"
+  require_git_repo
+
+  local path owner
+  if [[ "$branch" == "." ]]; then
+    path="$(current_worktree_path)"
+    owner="$(porcelain_branch_for_path "$path")"
+    if [[ -n "$owner" ]]; then
+      branch="$owner"
+    else
+      branch="(detached)"
+    fi
+  else
+    validate_branch "$branch"
+    path="$(wt_path_for "$branch")"
+    owner="$(porcelain_branch_for_path "$path")"
+    if [[ -n "$owner" && "$owner" != "$branch" ]]; then
+      die "path collision: '$branch' maps to '$path', but that worktree belongs to '$owner'. Choose a different branch name."
+    fi
+    if [[ ! -e "$path" ]]; then
+      path="$(porcelain_path_for_branch "$branch")"
+      [[ -n "$path" ]] || die "worktree not found for branch '$branch'. Try: wt list"
+    fi
+  fi
+
+  local main_wt current_wt default_b
+  main_wt="$(main_worktree_path)"
+  current_wt="$(current_worktree_path)"
+  default_b="$(default_branch)"
+
+  if [[ "$path" == "$main_wt" ]]; then
+    die "refusing to remove main worktree '$path'. Remove a linked worktree instead: wt list"
+  fi
+  if [[ "$path" == "$current_wt" ]]; then
+    die "refusing to remove current worktree '$path'. cd to another worktree first, then: wt remove $branch"
+  fi
+  if [[ -n "$default_b" && "$branch" == "$default_b" ]]; then
+    if [[ $force -eq 0 ]]; then
+      die "refusing to remove default branch worktree '$branch' without explicit intent. If you really mean it: wt remove -f $branch"
+    fi
+    hint "removing default branch worktree '$branch' because -f was provided"
+  fi
+
+  if [[ $force -eq 1 ]]; then
+    git worktree remove --force "$path" || die "failed to remove worktree '$path' for branch '$branch'. Check: git worktree list --porcelain"
+  else
+    git worktree remove "$path" || die "failed to remove worktree '$path' for branch '$branch'. If it has uncommitted/locked changes, inspect it or use: wt remove -f $branch"
+  fi
+  echo "removed: $path"
+}
+
+cmd_prune() {
+  local force=0
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      -f|--force) force=1; shift ;;
+      -h|--help) usage; exit 0 ;;
+      -*) die "unknown option: $1. Try: wt prune [-f]" ;;
+      *) die "unexpected argument: $1. Try: wt prune [-f]" ;;
+    esac
+  done
+  require_git_repo
+  if [[ $force -eq 1 ]]; then
+    git worktree prune -v --expire now || die "failed to prune worktrees. Check: git worktree list"
+  else
+    git worktree prune -v || die "failed to prune worktrees. Check: git worktree list"
+  fi
+}
+
+cmd_path() {
+  local branch="${1:-}"
+  [[ -n "$branch" ]] || die "missing branch name. Try: wt path <branch>"
+  require_git_repo
+  validate_branch "$branch"
+  local path
+  path="$(wt_path_for "$branch")"
+  local owner
+  owner="$(porcelain_branch_for_path "$path")"
+  if [[ -n "$owner" && "$owner" != "$branch" ]]; then
+    die "path collision: '$branch' maps to '$path', but that worktree belongs to '$owner'. Choose a different branch name."
+  fi
+  if [[ ! -e "$path" ]]; then
+    local found
+    found="$(porcelain_path_for_branch "$branch")"
+    if [[ -n "$found" ]]; then
+      echo "$found"
+      return 0
+    fi
+    die "worktree path not found for '$branch': $path. Create it with: wt add $branch (or wt add -b $branch), or check: wt list"
+  fi
+  echo "$path"
+}
+
+cmd_init_shell() {
+  local shell="${1:-}"
+  [[ -n "$shell" ]] || die "missing shell name. Try: wt init-shell bash|zsh|fish"
+  case "$shell" in
+    bash|zsh)
+      cat <<'EOS'
+wt() {
+  case "$1" in
+    add|cd)
+      local p
+      p="$(command wt "$@")" || return
+      if [ -d "$p" ]; then
+        cd "$p" || return
+      else
+        printf '%s\n' "$p"
+      fi
+      ;;
+    *)
+      command wt "$@"
+      ;;
+  esac
+}
+EOS
+      ;;
+    fish)
+      cat <<'EOS'
+function wt
+  switch $argv[1]
+    case add cd
+      set -l p (command wt $argv)
+      or return $status
+      if test -d "$p"
+        cd "$p"
+      else
+        printf '%s\n' $p
+      end
+    case '*'
+      command wt $argv
+  end
+end
+EOS
+      ;;
+    *)
+      die "unsupported shell '$shell'. Supported: bash, zsh, fish"
+      ;;
+  esac
+}
+
+main() {
+  local cmd="${1:-help}"
+  shift || true
+  case "$cmd" in
+    add) cmd_add "$@" ;;
+    list|ls) cmd_list "$@" ;;
+    remove|rm) cmd_remove "$@" ;;
+    prune) cmd_prune "$@" ;;
+    path|cd) cmd_path "$@" ;;
+    init-shell) cmd_init_shell "$@" ;;
+    help|-h|--help) usage ;;
+    *) die "unknown command: $cmd. Try: wt help" ;;
+  esac
+}
+
+main "$@"
