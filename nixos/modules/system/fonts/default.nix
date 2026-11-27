@@ -7,7 +7,6 @@
     fonts.packages = with pkgs; [
       # Nerd Fonts
       nerd-fonts.iosevka
-      nerd-fonts.jetbrains-mono
       nerd-fonts.meslo-lg
       nerd-fonts.fira-code
       nerd-fonts.hack
@@ -26,7 +25,6 @@
       monaspace
       maple-mono.NF
       cascadia-code
-      fira-code
       inter
       ibm-plex
       victor-mono
