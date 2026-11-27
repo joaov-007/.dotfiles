@@ -10,6 +10,7 @@ This file tracks tasks and features for the NixOS configuration following the de
 - [ ] Organize configuration into modules/attrs and modules/features structure
 - [ ] Ensure all features are properly exported and can be enabled per system
 - [ ] Make use of flake.modules.nixos or home for more reproducible approach
+- [ ] Not use bleh for everything I want in nixos bash with nix power
 
 ## Medium-term Tasks
 
