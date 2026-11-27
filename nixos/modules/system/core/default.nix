@@ -33,6 +33,8 @@
       lsof
       gvfs
       libnotify
+      wl-clipboard
+      xclip
     ];
     environment.variables = {
       EDITOR = "nvim";
