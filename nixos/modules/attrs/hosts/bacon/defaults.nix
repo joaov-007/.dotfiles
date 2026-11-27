@@ -12,6 +12,7 @@
       bacon
       intelDrivers
       desktop
+      development
       home
       nixIndexDatabase
       litellm

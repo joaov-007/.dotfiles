@@ -1,7 +1,7 @@
 {
   "$schema": "https://pi.dev/schemas/settings.schema.json",
-  "defaultProvider": "opencode-go",
-  "defaultModel": "kimi-k3.1-pro",
+  "defaultProvider": "litellm",
+  "defaultModel": "cloud-groq",
   "theme": "stylix",
   "packages": [
     "npm:pi-web-access@0.48.0",

@@ -12,15 +12,8 @@
 - [ ] Write why chezmoi for make overkill solutions
 - [ ] Import from my pi
 - [ ] install ansible or use plain nixos?
+- [ ] try use ansible for monkey things in my raspbery
 - [ ] Create a new user for runnings apps
-- [x] DOTFILES PORTABILITY: one shell layer, OS detected at runtime - [x] `config/.config/shell/env.sh` — DT_OS (linux/macos/windows), XDG
-      guard, PATH, editors, Linux-only exports gated - [x] `config/.config/shell/aliases.sh` — POSIX aliases + helpers;
-      `ls --color` vs `ls -G` picked per OS, eza when present - [x] bash and zsh both read it; deleted `00-paths.zsh`,
-      `45-environment.zsh`, `70-aliases.zsh` (duplicates) - [x] tested with dash, bash -i and zsh -i under a faked Darwin and
-      MINGW64 `uname`; shellcheck -s sh clean - [x] `scripts/*.sh` converted to POSIX sh (no bash arrays,
-      `BASH_SOURCE`, `readlink -f`); checked with `dash -n` and
-      `shellcheck -s sh` - [ ] remaining: installing on Windows means MSYS2 (`pacman -S stow`);
-      a stow-free linker is only worth it if Git Bash becomes a real target - [ ] remaining: nixos/ stays Linux-only on purpose, ignored by stow
 
 ## Doing:
 
@@ -31,3 +24,14 @@
 
 - [x] Try mordenizate and sync my actual archlinux enviroment
 - [x] Move every apps configs to config folder
+
+## Some ai things
+
+- [x] DOTFILES PORTABILITY: one shell layer, OS detected at runtime - [x] `config/.config/shell/env.sh` — DT_OS (linux/macos/windows), XDG
+      guard, PATH, editors, Linux-only exports gated - [x] `config/.config/shell/aliases.sh` — POSIX aliases + helpers;
+      `ls --color` vs `ls -G` picked per OS, eza when present - [x] bash and zsh both read it; deleted `00-paths.zsh`,
+      `45-environment.zsh`, `70-aliases.zsh` (duplicates) - [x] tested with dash, bash -i and zsh -i under a faked Darwin and
+      MINGW64 `uname`; shellcheck -s sh clean - [x] `scripts/*.sh` converted to POSIX sh (no bash arrays,
+      `BASH_SOURCE`, `readlink -f`); checked with `dash -n` and
+      `shellcheck -s sh` - [ ] remaining: installing on Windows means MSYS2 (`pacman -S stow`);
+      a stow-free linker is only worth it if Git Bash becomes a real target - [ ] remaining: nixos/ stays Linux-only on purpose, ignored by stow
