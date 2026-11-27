@@ -5,7 +5,7 @@
       "name": "LiteLLM (local proxy)",
       "baseUrl": "http://127.0.0.1:4000/v1",
       "api": "openai-completions",
-      "apiKey": "!grep '^LITELLM_MASTER_KEY=' /etc/litellm.env | cut -d= -f2-",
+      "apiKey": "!cat /home/joaov/.config/OpenBot/agent-api-keys/.vault/LITELLM_MASTER_KEY 2>/dev/null || grep '^LITELLM_MASTER_KEY=' /etc/litellm.env | cut -d= -f2-",
       "models": [
         { "id": "local-general", "name": "Local General (qwen2.5 1.5b)", "reasoning": false, "input": ["text"], "cost": {"input":0,"output":0,"cacheRead":0,"cacheWrite":0}, "contextWindow": 32768, "maxTokens": 8192 },
         { "id": "local-code", "name": "Local Code (qwen2.5-coder 1.5b)", "reasoning": false, "input": ["text"], "cost": {"input":0,"output":0,"cacheRead":0,"cacheWrite":0}, "contextWindow": 32768, "maxTokens": 8192 },
