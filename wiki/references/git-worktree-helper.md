@@ -1,6 +1,6 @@
 ---
 title: Git Worktree Helper
-description: "wt, the repo-agnostic git worktree wrapper that keeps checkouts under one root"
+description: "wt, the repo-agnostic git worktree wrapper for creating, listing, and removing worktrees"
 tags:
   - git
   - worktrees
@@ -8,7 +8,7 @@ tags:
 type: note
 status: evergreen
 created: 2026-10-28
-updated: 2026-10-28
+updated: 2026-11-27
 language: en
 audience: maintainer
 scope: day-to-day git worktree workflow across repositories
@@ -24,101 +24,79 @@ related:
 cssclasses:
   - note
 ai-gen: true
-ai-model: "big-pickle"
-ai-provider: "opencode"
-ai-prompt: "Document the generic git worktree helper rewritten from the dotfiles-specific script"
+ai-model: "gpt-5.4"
+ai-provider: "openai"
+ai-prompt: "Update git worktree helper doc after deduplicating old worktree.sh into wt"
 ai-review: pending
-last_reviewed: 2026-10-28
-review_after: 2027-04-28
+last_reviewed: 2026-11-27
+review_after: 2027-05-27
 ---
 
 # Git Worktree Helper
 
-`wt` wraps `git worktree` so that every repository puts its extra checkouts in
-the same place, under one root. It works from any repo; nothing is tied to
-`~/.dotfiles`.
+`wt` wraps `git worktree` so that every repository keeps its extra checkouts
+under one root. It works from any repo.
 
-## Source and symlink
+## Source
 
-- Script: `~/.dotfiles/scripts/worktree/bin/worktree.sh`
-- Command: `~/.local/bin/wt` (symlink into the dotfiles checkout)
+- Canonical script: `~/.dotfiles/config/shared/.local/bin/wt`
+- Installed copy: `~/.local/bin/wt` (keep in sync with canonical script)
 
-On a fresh machine:
-
-```bash
-ln -sfn ~/.dotfiles/scripts/worktree/bin/worktree.sh ~/.local/bin/wt
-```
-
-`~/.local/bin` is already on `PATH` via `config/.config/shell/env.sh`.
+`~/.local/bin` is on `PATH` via `config/.config/shell/env.sh`.
 
 ## Layout
 
 ```text
-<root>/<repository>/<branch with / replaced by ->
+$WT_BASE/<project-name>/<sanitized-branch>
 ```
 
-```text
-~/.worktrees/myapp/feat-login
-~/.worktrees/api/hotfix-1.2
-```
-
-The root is resolved in this order:
-
-1. `--root DIR` on the command line
-2. `WORKTREE_ROOT` environment variable
-3. `git config worktree.root DIR` for the current repository
-4. `~/.worktrees`
-
-A relative root is resolved against the current directory; `~/` is expanded.
-The same root has to be used on every command for a given branch, otherwise
-`merge` and `remove` will not find the worktree.
+Default base: `~/.cache/git` (override with `WT_BASE`).
 
 ## Commands
 
 | Command | Effect |
 | --- | --- |
-| `wt new <branch> [base]` | Creates the worktree. A missing branch is created from `base` (default: current branch); an existing branch is checked out as-is. |
-| `wt list` | `git worktree list` for the current repository. |
-| `wt path <branch>` | Prints the worktree directory, for `cd "$(wt path ...)"`. |
-| `wt merge <branch>` | `--ff-only` merge into the current branch, removes the worktree, deletes the branch. `--force` discards local changes in that worktree. |
-| `wt remove <branch>` | Removes the worktree, keeps the branch. `--delete-branch` also deletes it with `git branch -d`. `--force` discards local changes. |
-| `wt prune` | Drops metadata for worktrees deleted by hand. |
+| `wt add [-b] <branch> [<start-point>]` | Add worktree for branch. Idempotent if it already exists; prints path. |
+| `wt list [--status]` | List worktrees. `--status` adds local dirty/locked/prunable info. |
+| `wt remove [-f] <branch>` | Remove worktree for branch. Refuses current/default worktree by default. |
+| `wt prune [-f]` | Prune stale worktree metadata. `-f` expires now. |
+| `wt path <branch>` | Print worktree path for branch. |
+| `wt cd <branch>` | Alias for `path`. |
+| `wt init-shell <bash\|zsh\|fish>` | Print shell wrapper for auto-cd on `wt cd`. |
 
 ## Typical flow
 
 ```bash
 cd ~/src/myapp
-wt new feat/login main
+wt add -b feat/login main
 cd "$(wt path feat/login)"
 
 # ... edit, commit ...
 
 cd ~/src/myapp
-wt merge feat/login
+wt remove feat/login
 ```
 
-Working on a branch that already exists:
+For auto-cd support, add to your shell config:
 
 ```bash
-git branch hotfix/session-expiry origin/main
-wt new hotfix/session-expiry
+eval "$(wt init-shell bash)"
 ```
 
 ## Safety behaviour
 
-- `new` refuses an existing directory and validates the branch name, so a
-  typo cannot reuse another branch's checkout.
-- `merge` is fast-forward only. A merge that needs a real merge commit stops
-  and leaves the branch in place.
-- `merge` and `remove` refuse a dirty worktree. Nothing is thrown away unless
-  `--force` is passed.
-- `remove` uses `git branch -d`, so an unmerged branch is never deleted by
-  accident.
-- `prune` is the cleanup path after deleting a worktree directory with `rm`.
+- `add` validates branch args, detects sanitized-path collisions, and gives actionable hints when a branch is missing or `-b` conflicts.
+- `remove` refuses removing the current or default/main worktree by default; `-f` is explicit force.
+- `path/cd` report missing worktrees and suggest `wt add` / `wt list`.
+- stdout is for machine-usable paths/list output; stderr is for hints/errors.
+
+## Tests
+
+```bash
+shellcheck -x -S style config/shared/.local/bin/wt scripts/worktree/test-wt.sh
+bash scripts/worktree/test-wt.sh
+```
 
 ## Related
 
-- `opencode-worktree` (installed separately in `~/.local/bin`) is an
-  interactive TUI over the same `git worktree` primitives. `wt` is the
-  scriptable terminal version.
 - [[development|Development & Tooling]]
