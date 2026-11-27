@@ -38,5 +38,6 @@ return {
   { import = "plugins.lsp" },
   { import = "plugins.mason" },
   { import = "plugins.conform" },
+  { import = "plugins.lint" },
   { import = "plugins.treesitter" },
 }
