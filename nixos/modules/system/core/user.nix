@@ -15,7 +15,7 @@
     users.users.joaov = {
       isNormalUser = true;
       hashedPassword = "$y$j9T$Bl5EmI6hWVsFAMJ3CTMK1/$wLwMLfvak8ytE5SLvgMELaF6YEeNvjJs//5whbgFzb6";
-      extraGroups = ["wheel" "networkmanager" "render" "input" "adm" "audio" "video" "dialout" "plugdev" "i2c" "fuse" "dialout" "gpio" "spi" "netdev" "games" "cdrom"];
+      extraGroups = ["wheel" "networkmanager" "render" "input" "adm" "audio" "video" "dialout" "plugdev" "i2c" "fuse" "gpio" "spi" "netdev" "games" "cdrom"];
       subUidRanges = [
         {
           startUid = 100000;
@@ -30,10 +30,6 @@
       ];
       packages = with pkgs; [
         tree
-        btop
-        neovim
-        git
-        nodejs
         python3
       ];
     };
