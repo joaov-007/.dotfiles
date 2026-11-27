@@ -27,5 +27,6 @@ return {
     -- Linters
     "flake8",
     "shellcheck",
+    "statix",
   },
 }
