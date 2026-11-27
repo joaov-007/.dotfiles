@@ -7,6 +7,9 @@
     environment.systemPackages = with pkgs; [
       devenv
 
+      # Ansible (nixpkgs exposes ansible-core as `ansible`)
+      ansible
+
       # Search & data
       ripgrep
       fd
