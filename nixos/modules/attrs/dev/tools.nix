@@ -33,6 +33,10 @@
       actionlint
       hadolint
       treefmt
+
+      # Secrets / passwords
+      bitwarden-cli
+      rbw
     ];
   });
 

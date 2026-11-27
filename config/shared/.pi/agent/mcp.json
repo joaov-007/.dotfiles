@@ -43,6 +43,11 @@
         "Authorization": "Bearer ${PERPLEXITY_API_KEY}"
       },
       "description": "Web search and research via Perplexity."
+    },
+    "bitwarden": {
+      "command": "npx",
+      "args": ["-y", "@bitwarden/mcp-server"],
+      "description": "Bitwarden vault/password access via official MCP server. Requires Bitwarden CLI auth: set BW_SESSION (from 'bw unlock --raw') or BW_CLIENTID/BW_CLIENTSECRET/BW_PASSWORD for API/self-hosted auth. Local stdio only; never expose publicly."
     }
   }
 }

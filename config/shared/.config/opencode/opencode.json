@@ -97,6 +97,14 @@
           "-y",
           "@kimtaeyoon83/mcp-server-youtube-transcript"
         ]
+      },
+      "bitwarden": {
+        "type": "local",
+        "command": [
+          "npx",
+          "-y",
+          "@bitwarden/mcp-server"
+        ]
       }
     }
   },
