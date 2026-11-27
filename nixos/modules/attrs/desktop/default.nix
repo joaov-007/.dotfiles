@@ -9,6 +9,7 @@
       stylix
       niri
       flatpak
+      seahorse
     ];
   in {
     imports = modules;
