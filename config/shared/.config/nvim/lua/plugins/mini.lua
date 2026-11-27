@@ -5,12 +5,39 @@ return {
     "echasnovski/mini.nvim",
     version = false,
     lazy = false,
+    dependencies = { "nvim-tree/nvim-web-devicons" },
     -- Load before NvChad's UI so the devicons mock is in place when the
     -- tabufline/statusline render for the first time.
     priority = 1000,
     config = function()
+      -- Merge nvim-web-devicons' icon set into mini.icons so the combined list
+      -- (nerd-font glyphs + web-devicons colors) is what nvim uses everywhere.
+      local merged = { extension = {}, file = {}, os = {} }
+      local ok, webdevicons = pcall(require, "nvim-web-devicons")
+      if ok then
+        pcall(webdevicons.setup, {})
+        local function convert(data)
+          if type(data) ~= "table" or type(data.icon) ~= "string" then return nil end
+          return { glyph = data.icon, hl = (type(data.name) == "string") and ("DevIcon" .. data.name) or nil }
+        end
+        local sources = {
+          { getter = webdevicons.get_icons_by_extension, target = merged.extension },
+          { getter = webdevicons.get_icons_by_filename, target = merged.file },
+          { getter = webdevicons.get_icons_by_operating_system, target = merged.os },
+        }
+        for _, src in ipairs(sources) do
+          local pok, tbl = pcall(src.getter)
+          if pok and type(tbl) == "table" then
+            for k, v in pairs(tbl) do
+              local c = convert(v)
+              if c then src.target[tostring(k):lower()] = c end
+            end
+          end
+        end
+      end
+
       local icons = require "mini.icons"
-      icons.setup()
+      icons.setup(vim.tbl_deep_extend("force", { style = "glyph" }, merged))
       icons.mock_nvim_web_devicons()
       icons.tweak_lsp_kind()
 

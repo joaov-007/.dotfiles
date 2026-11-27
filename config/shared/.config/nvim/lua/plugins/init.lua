@@ -9,8 +9,10 @@ return {
   -- mini.files
   { "nvim-tree/nvim-tree.lua", enabled = false },
 
-  -- mini.icons mocks this module for NvChad's tabufline/statusline
-  { "nvim-tree/nvim-web-devicons", enabled = false },
+  -- Keep nvim-web-devicons available as a fallback icon provider (and as the
+  -- source merged into mini.icons). mini.icons mocks its module when mini is
+  -- active, so both can coexist.
+  { "nvim-tree/nvim-web-devicons" },
 
   -- mini.indentscope
   { "lukas-reineke/indent-blankline.nvim", enabled = false },

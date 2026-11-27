@@ -13,11 +13,11 @@ M.nvdash = {
   -- Rebuilt for mini.pick/mini.extra; the defaults call Telescope.
   buttons = function()
     return {
-      { txt = "  Find File", keys = "ff", cmd = "Pick files" },
-      { txt = "  Recent Files", keys = "fo", cmd = "Pick oldfiles" },
-      { txt = "  Find Word", keys = "fw", cmd = "Pick grep_live" },
-      { txt = "  Themes", keys = "th", cmd = [[lua require('nvchad.themes').open()]] },
-      { txt = "  Mappings", keys = "ch", cmd = "NvCheatsheet" },
+      { txt = " 󰈞 Find File", keys = "ff", cmd = "Pick files" },
+      { txt = " 󰋚 Recent Files", keys = "fo", cmd = "Pick oldfiles" },
+      { txt = " 󰦆 Find Word", keys = "fw", cmd = "Pick grep_live" },
+      { txt = " 󰸌 Themes", keys = "th", cmd = [[lua require('nvchad.themes').open()]] },
+      { txt = " 󰌌 Mappings", keys = "ch", cmd = "NvCheatsheet" },
 
       { txt = "─", hl = "NvDashFooter", no_gap = true, rep = true },
 
