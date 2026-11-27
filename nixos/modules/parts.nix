@@ -6,6 +6,18 @@
   allowedUnfreePackages = ["openbot"];
 in {
   options.flake = {
+    desktopPalette = lib.mkOption {
+      type = lib.types.attrsOf lib.types.str;
+      default = {};
+      description = "Shared Base16 color overrides for Stylix and Niri.";
+    };
+
+    noctaliaSettings = lib.mkOption {
+      type = lib.types.attrs;
+      default = {};
+      description = "Shared settings for the wrapped and Home Manager Noctalia configurations.";
+    };
+
     niriSettings = lib.mkOption {
       type = lib.types.functionTo lib.types.attrs;
       default = _: {};
