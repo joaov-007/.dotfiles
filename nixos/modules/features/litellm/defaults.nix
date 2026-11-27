@@ -19,6 +19,16 @@
             model: ollama/qwen3:8b
             api_base: http://127.0.0.1:11434
             num_ctx: 8192
+        - model_name: local-uncensored
+          litellm_params:
+            model: ollama/hf.co/mradermacher/Qwen2.5-3B-Instruct-abliterated-GGUF:Q4_K_M
+            api_base: http://127.0.0.1:11434
+            num_ctx: 8192
+        - model_name: local-dolphin
+          litellm_params:
+            model: ollama/hf.co/bartowski/Dolphin3.0-Llama3.2-3B-GGUF:Q4_K_M
+            api_base: http://127.0.0.1:11434
+            num_ctx: 8192
         - model_name: cloud-groq
           litellm_params:
             model: groq/openai/gpt-oss-20b
@@ -65,6 +75,8 @@
         request_timeout: 120
         fallbacks:
           - local-medium: ["local-general"]
+          - local-uncensored: ["local-dolphin", "local-medium", "local-general"]
+          - local-dolphin: ["local-uncensored", "local-medium", "local-general"]
           - cloud-groq: ["cloud-mistral", "cloud-free", "local-medium", "local-general"]
           - cloud-groq-big: ["cloud-groq", "cloud-free", "local-medium", "local-general"]
           - cloud-mistral: ["cloud-groq", "cloud-free", "local-medium", "local-general"]
@@ -86,6 +98,8 @@
         "qwen2.5:1.5b"
         "qwen2.5-coder:1.5b"
         "qwen3:8b"
+        "hf.co/mradermacher/Qwen2.5-3B-Instruct-abliterated-GGUF:Q4_K_M"
+        "hf.co/bartowski/Dolphin3.0-Llama3.2-3B-GGUF:Q4_K_M"
       ];
       environmentVariables = {
         OLLAMA_MAX_LOADED_MODELS = "1";
