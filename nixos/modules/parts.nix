@@ -4,12 +4,6 @@
   ...
 }: {
   options.flake = {
-    yaziSettings = lib.mkOption {
-      type = lib.types.attrs;
-      default = {};
-      description = "Shared settings for the wrapped Yazi package.";
-    };
-
     niriSettings = lib.mkOption {
       type = lib.types.functionTo lib.types.attrs;
       default = _: {};

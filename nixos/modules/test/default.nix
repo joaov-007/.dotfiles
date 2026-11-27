@@ -38,8 +38,6 @@
     "The dark Papirus icon theme must be applied to Joaov's GTK configuration";
     assert lib.asserts.assertMsg (home.home.file.".config/nvim".source != null)
     "Joaov's editable Neovim configuration must be linked by Home Manager";
-    assert lib.asserts.assertMsg self.yaziSettings.yazi.mgr.show_hidden
-    "The shared Yazi settings must be present";
     assert lib.asserts.assertMsg (niriSettings.layout.gaps == 8)
     "The shared Niri settings must be present";
     assert lib.asserts.assertMsg
@@ -51,7 +49,7 @@
         Stylix fonts and cursor: OK
         Desktop icons and nwg-look: OK
         Editable Neovim configuration: OK
-        Shared Niri and Yazi settings: OK
+        Shared Niri settings: OK
       '';
   in {
     # Building the NixOS closure also evaluates every imported NixOS and Home
