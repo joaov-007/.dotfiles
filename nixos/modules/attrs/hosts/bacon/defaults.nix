@@ -14,6 +14,7 @@
       desktop
       home
       nixIndexDatabase
+      litellm
       doas
     ];
   };
