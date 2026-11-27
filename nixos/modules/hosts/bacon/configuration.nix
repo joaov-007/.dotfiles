@@ -12,7 +12,6 @@
     imports = [
       ./_hardware-configuration.nix
       inputs.self.modules.nixos.nix
-      inputs.self.modules.nixos.intelDrivers
     ];
 
     networking.hostName = "bacon";
@@ -24,11 +23,7 @@
     services.udisks2.enable = true;
 
     environment.systemPackages = with pkgs; [
-      git
-      btop
       file
-      github-cli
-      foot
     ];
 
     # Some programs need SUID wrappers, can be configured further or are
