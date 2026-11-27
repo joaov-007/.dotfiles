@@ -20,6 +20,46 @@
         package: (package.pname or "") == "nwg-look"
       )
       bacon.environment.systemPackages;
+    wlClipboardInstalled =
+      builtins.any (
+        package: (package.pname or "") == "wl-clipboard"
+      )
+      bacon.environment.systemPackages;
+    xclipInstalled =
+      builtins.any (
+        package: (package.pname or "") == "xclip"
+      )
+      bacon.environment.systemPackages;
+    neovimInstalled =
+      builtins.any (
+        package: lib.hasInfix "neovim" (package.pname or "")
+      )
+      home.home.packages;
+    nixdInstalled =
+      builtins.any (
+        package: (package.pname or "") == "nixd"
+      )
+      home.home.packages;
+    alejandraInstalled =
+      builtins.any (
+        package: (package.pname or "") == "alejandra"
+      )
+      home.home.packages;
+    luaLsInstalled =
+      builtins.any (
+        package: (package.pname or "") == "lua-language-server"
+      )
+      home.home.packages;
+    marksmanInstalled =
+      builtins.any (
+        package: (package.pname or "") == "marksman"
+      )
+      home.home.packages;
+    devenvInstalled =
+      builtins.any (
+        package: (package.pname or "") == "devenv"
+      )
+      home.home.packages;
     configuration = assert lib.asserts.assertMsg bacon.stylix.enable
     "Stylix must be enabled in the Bacon configuration";
     assert lib.asserts.assertMsg
@@ -34,6 +74,24 @@
     "JetBrainsMono Nerd Font must be used for every text font family";
     assert lib.asserts.assertMsg nwgLookInstalled
     "nwg-look must be installed in the Bacon system profile";
+    assert lib.asserts.assertMsg wlClipboardInstalled
+    "wl-clipboard must be installed for Wayland clipboard support";
+    assert lib.asserts.assertMsg xclipInstalled
+    "xclip must be installed as an X11 clipboard fallback";
+    assert lib.asserts.assertMsg neovimInstalled
+    "Neovim must be available in the user profile";
+    assert lib.asserts.assertMsg nixdInstalled
+    "nixd must be available for Nix language support";
+    assert lib.asserts.assertMsg alejandraInstalled
+    "alejandra must be available for Nix formatting";
+    assert lib.asserts.assertMsg luaLsInstalled
+    "lua-language-server must be available for Lua support";
+    assert lib.asserts.assertMsg marksmanInstalled
+    "marksman must be available for Markdown support";
+    assert lib.asserts.assertMsg devenvInstalled
+    "devenv must be installed for development environments";
+    assert lib.asserts.assertMsg (home.home.file.".config/nvim".recursive == false)
+    "Neovim configuration must be linked as an editable directory";
     assert lib.asserts.assertMsg (home.gtk.iconTheme.name == "Papirus-Dark")
     "The dark Papirus icon theme must be applied to Joaov's GTK configuration";
     assert lib.asserts.assertMsg (home.home.file.".config/nvim".source != null)
@@ -49,6 +107,8 @@
         Stylix fonts and cursor: OK
         Desktop icons and nwg-look: OK
         Editable Neovim configuration: OK
+        Clipboard tools: OK
+        Neovim language servers: OK
         Shared Niri settings: OK
       '';
   in {
