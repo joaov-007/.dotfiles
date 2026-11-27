@@ -2,7 +2,9 @@
   inputs,
   lib,
   ...
-}: {
+}: let
+  allowedUnfreePackages = ["openbot"];
+in {
   options.flake = {
     niriSettings = lib.mkOption {
       type = lib.types.functionTo lib.types.attrs;
@@ -23,7 +25,17 @@
       "aarch64-darwin"
     ];
 
-    perSystem = {pkgs, ...}: {
+    perSystem = {
+      pkgs,
+      system,
+      ...
+    }: {
+      _module.args.pkgs = import inputs.nixpkgs {
+        inherit system;
+        config.allowUnfreePredicate = pkg:
+          builtins.elem (lib.getName pkg) allowedUnfreePackages;
+      };
+
       formatter = pkgs.alejandra;
     };
   };
