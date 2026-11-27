@@ -22,12 +22,52 @@
           litellm_params:
             model: openrouter/liquid/lfm-3-1.7b:free
             api_key: os.environ/OPENROUTER_API_KEY
+        - model_name: cloud-groq-big
+          litellm_params:
+            model: groq/openai/gpt-oss-120b
+            api_key: os.environ/GROQ_API_KEY
+        - model_name: cloud-mistral
+          litellm_params:
+            model: mistral/mistral-small-latest
+            api_key: os.environ/MISTRAL_API_KEY
+        - model_name: cloud-mistral-mini
+          litellm_params:
+            model: mistral/ministral-8b-latest
+            api_key: os.environ/MISTRAL_API_KEY
+        - model_name: cloud-code
+          litellm_params:
+            model: mistral/codestral-latest
+            api_key: os.environ/MISTRAL_API_KEY
+        - model_name: cloud-nemotron
+          litellm_params:
+            model: openrouter/nvidia/nemotron-3.5-lightning:free
+            api_key: os.environ/OPENROUTER_API_KEY
+        - model_name: cloud-gemma
+          litellm_params:
+            model: openrouter/google/gemma-4-31b-it:free
+            api_key: os.environ/OPENROUTER_API_KEY
+        - model_name: cloud-free
+          litellm_params:
+            model: openrouter/openrouter/free
+            api_key: os.environ/OPENROUTER_API_KEY
 
       general_settings:
         master_key: os.environ/LITELLM_MASTER_KEY
 
       litellm_settings:
         drop_params: true
+        num_retries: 2
+        request_timeout: 120
+        fallbacks:
+          - cloud-groq: ["cloud-mistral", "cloud-free", "local-general"]
+          - cloud-groq-big: ["cloud-groq", "cloud-free", "local-general"]
+          - cloud-mistral: ["cloud-groq", "cloud-free", "local-general"]
+          - cloud-mistral-mini: ["cloud-mistral", "cloud-free", "local-general"]
+          - cloud-code: ["local-code"]
+          - cloud-openrouter: ["cloud-free", "local-general"]
+          - cloud-nemotron: ["cloud-gemma", "cloud-free", "local-general"]
+          - cloud-gemma: ["cloud-nemotron", "cloud-free", "local-general"]
+          - cloud-free: ["cloud-groq", "local-general"]
     '';
   in {
     imports = [self.modules.nixos.podman];
