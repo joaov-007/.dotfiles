@@ -41,9 +41,6 @@
       EDITOR = "nvim";
       VISUAL = "nvim";
     };
-    services = {
-      avahi.enable = true;
-    };
     system.stateVersion = "26.05";
   };
 }
