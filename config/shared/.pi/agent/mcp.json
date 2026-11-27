@@ -15,6 +15,21 @@
       "url": "https://mcp.exa.ai/mcp",
       "description": "Web search, content fetching, and multi-step research via Exa."
     },
+    "sequential-thinking": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-sequential-thinking"],
+      "description": "Step-by-step structured reasoning helper. No API key."
+    },
+    "fetch": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-fetch"],
+      "description": "Fetch and convert web pages to markdown/text. No API key."
+    },
+    "youtube-transcript": {
+      "command": "npx",
+      "args": ["-y", "@kimtaeyoon83/mcp-server-youtube-transcript"],
+      "description": "Download YouTube video transcripts. No API key."
+    },
     "tavily": {
       "url": "https://mcp.tavily.com/mcp",
       "headers": {

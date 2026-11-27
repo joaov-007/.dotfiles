@@ -73,6 +73,30 @@
           "uvx",
           "markitdown-mcp"
         ]
+      },
+      "sequential-thinking": {
+        "type": "local",
+        "command": [
+          "npx",
+          "-y",
+          "@modelcontextprotocol/server-sequential-thinking"
+        ]
+      },
+      "fetch": {
+        "type": "local",
+        "command": [
+          "npx",
+          "-y",
+          "@modelcontextprotocol/server-fetch"
+        ]
+      },
+      "youtube-transcript": {
+        "type": "local",
+        "command": [
+          "npx",
+          "-y",
+          "@kimtaeyoon83/mcp-server-youtube-transcript"
+        ]
       }
     }
   },
@@ -80,5 +104,25 @@
     "opencode-memory"
   ],
   "formatter": {},
-  "lsp": {}
+  "lsp": {},
+  "providers": {
+    "litellm": {
+      "name": "LiteLLM (local proxy)",
+      "env": ["LITELLM_MASTER_KEY"],
+      "package": "@opencode/ai/providers/openai-compatible",
+      "settings": {
+        "baseURL": "http://127.0.0.1:4000/v1",
+        "apiKey": "{env:LITELLM_MASTER_KEY}"
+      },
+      "models": {
+        "local-general": { "name": "Local General" },
+        "local-code": { "name": "Local Code" },
+        "cloud-groq": { "name": "Groq gpt-oss-20b" },
+        "cloud-groq-big": { "name": "Groq gpt-oss-120b" },
+        "cloud-mistral": { "name": "Mistral Small" },
+        "cloud-code": { "name": "Codestral" },
+        "cloud-free": { "name": "OpenRouter Free" }
+      }
+    }
+  }
 }
