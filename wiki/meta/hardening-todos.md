@@ -16,8 +16,8 @@ type: runbook
 status: needs-action
 confidence: high
 created: 2026-10-10
-updated: 2026-10-10
-last_reviewed: 2026-10-10
+updated: 2026-11-27
+last_reviewed: 2026-11-27
 review_after: 2027-04-10
 language: en
 audience: maintainer
@@ -138,3 +138,18 @@ so findings can be recorded and the note status moved from needs-action.
 ### Resolved
 - Folder depth: user approved 3 levels for `arch-linux/hardening/<domain>/`; Vault Conventions
   §6 amended to "up to three levels" (2026-10-10).
+
+## Phase 7 — NixOS bacon security hardening (2026-11-27)
+- [x] 7.1 Inspect NixOS dotfiles security modules and bacon host wiring
+- [x] 7.2 Research: NixOS Wiki Security/Hardening, nixpkgs hardened profile, ArchWiki Security, nix-book/community posts
+- [x] 7.3 Verify nixpkgs availability: `clamav`, `aide`, `lynis`, `unhide` present; `rkhunter` not found; `chkrootkit` removed from nixpkgs
+- [x] 7.4 Create factual wiki note: `wiki/inbox/nixos-security-hardening.md` (draft/needs-action)
+- [x] 7.5 Wire `security` module into `nixos/modules/attrs/hosts/bacon/defaults.nix` (Nix Ninja; verified)
+- [x] 7.6 Improve ClamAV desktop virus notification in `nixos/modules/system/security/clamav.nix` (Nix Ninja; verified)
+- [x] 7.7 Add available security tools (`lynis`, `unhide`) declaratively in NixOS modules (`system/security/tools.nix`, Nix Ninja; verified)
+- [x] 7.8 Validate NixOS build without sudo; report switch command (Nix Ninja; build result `/nix/store/x8plmiaafi21mnlsfl6vymgcqy9k49dw-nixos-system-bacon-26.11.20261121.2786a2a` verified)
+
+### Notes
+- `flake.modules.nixos.security` is now wired into `nixosConfigurations.bacon`.
+- rkhunter requested by user ("rk") but unavailable in nixpkgs; chkrootkit removed. Not installed; limitation documented in config comment and wiki.
+- ClamAV desktop notification enhanced: critical notify, security-high icon, recent FOUND/INFECTED/ERROR/Eicar lines from `journalctl -u clamdscan`, DBUS/XDG_RUNTIME fallback, logger fallback. Switch still required to apply on running system.
