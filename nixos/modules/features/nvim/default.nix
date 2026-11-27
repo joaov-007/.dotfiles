@@ -5,11 +5,10 @@
     symlinkRoot,
     ...
   }: {
-    programs.neovim.enable = true;
-
     # Keep language servers and formatters reproducible, with their NixOS
     # runtime dependencies supplied by Nix rather than downloaded binaries.
     home.packages = with pkgs; [
+      neovim
       nixd
       alejandra
       lua-language-server
