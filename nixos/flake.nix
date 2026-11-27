@@ -29,8 +29,6 @@
 
     neovim-nightly.url = "github:nix-community/neovim-nightly-overlay";
 
-    nixos-anywhere.url = "github:nix-community/nixos-anywhere";
-
     noctalia = {
       url = "github:noctalia-dev/noctalia";
       inputs.nixpkgs.follows = "nixpkgs";
