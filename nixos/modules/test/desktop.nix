@@ -23,6 +23,12 @@
       "The dark Papirus icon theme must be applied to Joaov's GTK configuration";
       assert lib.asserts.assertMsg bacon.programs.seahorse.enable
       "Seahorse must be enabled in the Bacon configuration";
+      assert lib.asserts.assertMsg
+      (home.programs.noctalia.settings.shell.launch_apps_as_systemd_services == self.noctaliaSettings.shell.launch_apps_as_systemd_services)
+      "Noctalia must inherit the shared application launch setting";
+      assert lib.asserts.assertMsg
+      (home.programs.noctalia.settings.theme.templates.community_ids == self.noctaliaSettings.theme.templates.community_ids)
+      "Noctalia must inherit the shared template settings";
         pkgs.runCommand "desktop-check" {} "touch $out";
     };
   };

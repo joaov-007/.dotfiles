@@ -17,6 +17,7 @@
 
   flake.modules.homeManager.desktop = {...}: {
     imports = with self.modules.homeManager; [
+      stylix
       niri
       noctalia
       udiskie

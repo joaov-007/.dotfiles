@@ -2,12 +2,14 @@
   flake.niriSettings = {
     pkgs,
     noctalia,
+    colors,
   }: let
     # wrapper-modules DSL: "key" = _: { props = {...}; content = {...}; }
     mkBind = title: content: _: {
       props."hotkey-overlay-title" = title;
       content = content;
     };
+    mkAlias = mkBind null;
     mkAction = title: name: mkBind title {${name} = _: {};};
     mkSpawn = title: argv: mkBind title {spawn = argv;};
     mkSpawnSh = title: cmd: mkBind title {"spawn-sh" = cmd;};
@@ -95,15 +97,15 @@
       {
         # launcher / panels / windows
         "Mod+O" = mkAction "Toggle Window Opacity" "toggle-window-rule-opacity";
-        "Mod+Space" = mkSpawnSh "Run an Application: Launcher" "noctalia msg panel-toggle launcher";
+        "Mod+Space" = mkSpawnSh "Launcher: Open" "noctalia msg panel-toggle launcher";
         "Mod+S" = mkSpawnSh "Toggle Control Center" "noctalia msg panel-toggle control-center";
         "Mod+Comma" = mkSpawnSh "Toggle Settings" "noctalia msg settings-toggle";
         "Alt+Tab" = mkSpawnSh "Window Switcher" "noctalia msg window-switcher";
-        "Mod+D" = mkSpawnSh "Run an Application: Launcher" "noctalia msg panel-toggle launcher";
+        "Mod+D" = mkAlias {"spawn-sh" = "noctalia msg panel-toggle launcher";};
         "Mod+Shift+Space" = mkSpawnSh "Toggle Clipboard History" "noctalia msg panel-toggle clipboard";
         "Mod+Ctrl+W" = mkSpawnSh "Browse Wallpapers" "noctalia msg panel-toggle wallpaper";
-        "Mod+Ctrl+S" = mkSpawnSh "Session Menu" "noctalia msg panel-toggle session";
-        "Super+Alt+L" = mkSpawnSh "Lock the Screen" "noctalia msg session lock";
+        "Mod+Ctrl+S" = mkSpawnSh "Session: Menu" "noctalia msg panel-toggle session";
+        "Mod+Alt+L" = mkSpawnSh "Session: Lock" "noctalia msg session lock";
 
         # focus / move columns & windows
         "Mod+H" = mkAction "Focus Column Left" "focus-column-left";
@@ -130,16 +132,16 @@
         "Mod+Shift+I" = mkAction "Move Workspace Up" "move-workspace-up";
         "Mod+Ctrl+U" = mkAction "Move Column to Workspace Down" "move-column-to-workspace-down";
         "Mod+Ctrl+I" = mkAction "Move Column to Workspace Up" "move-column-to-workspace-up";
-        "Mod+Page_Down" = mkAction "Focus Workspace Down" "focus-workspace-down";
-        "Mod+Page_Up" = mkAction "Focus Workspace Up" "focus-workspace-up";
+        "Mod+Page_Down" = mkAlias {"focus-workspace-down" = _: {};};
+        "Mod+Page_Up" = mkAlias {"focus-workspace-up" = _: {};};
         "Mod+Tab" = mkAction "Focus Previous Workspace" "focus-workspace-previous";
 
         # window actions
         "Mod+Q" = mkAction "Close Window" "close-window";
         "Mod+Shift+Q" = _: {
           props.repeat = false;
-          props."hotkey-overlay-title" = "Quit Niri";
-          content.quit = _: {};
+          props."hotkey-overlay-title" = null;
+          content."spawn-sh" = "noctalia msg panel-toggle session";
         };
         "Mod+Escape" = mkAction "Toggle Shortcuts Inhibit" "toggle-keyboard-shortcuts-inhibit";
         "Mod+V" = mkAction "Toggle Window Floating" "toggle-window-floating";
@@ -162,30 +164,29 @@
         "Mod+Ctrl+J" = mkBind "Shrink Window Height" {"set-window-height" = ["-10%"];};
         "Mod+Ctrl+K" = mkBind "Grow Window Height" {"set-window-height" = ["+10%"];};
         # resize (fallback: -/+=)
-        "Mod+Minus" = mkBind "Shrink Column" {"set-column-width" = ["-10%"];};
-        "Mod+Equal" = mkBind "Grow Column" {"set-column-width" = ["+10%"];};
-        "Mod+Shift+Minus" = mkBind "Shrink Window Height" {"set-window-height" = ["-10%"];};
-        "Mod+Shift+Equal" = mkBind "Grow Window Height" {"set-window-height" = ["+10%"];};
+        "Mod+Minus" = mkAlias {"set-column-width" = ["-10%"];};
+        "Mod+Equal" = mkAlias {"set-column-width" = ["+10%"];};
+        "Mod+Shift+Minus" = mkAlias {"set-window-height" = ["-10%"];};
+        "Mod+Shift+Equal" = mkAlias {"set-window-height" = ["+10%"];};
 
         # apps (vim-style: Return for terminal)
-        "Mod+Return" = mkSpawn "Open a Terminal: alacritty" [(pkgs.lib.getExe pkgs.alacritty)];
-        "Mod+T" = mkSpawn "Open a Terminal: alacritty" [(pkgs.lib.getExe pkgs.alacritty)];
-        "Mod+B" = mkSpawn "Open a Browser: LibreWolf" ["flatpak" "run" "io.gitlab.librewolf-community"];
-        "Mod+E" = mkSpawn "Open File Manager: Nautilus" ["nautilus"];
-        "Mod+Shift+B" = mkSpawn "Open Bitwarden" ["flatpak" "run" "com.bitwarden.desktop"];
-        "Mod+Shift+E" = mkSpawn "Open Calibre" ["flatpak" "run" "com.calibre_ebook.calibre"];
-        "Mod+Shift+O" = mkSpawn "Open Obsidian" ["flatpak" "run" "md.obsidian.Obsidian"];
-        "Mod+A" = mkSpawn "Open Anki" ["flatpak" "run" "net.ankiweb.Anki"];
-        "Mod+G" = mkSpawn "Open Calculator" ["flatpak" "run" "org.gnome.Calculator"];
-        "Mod+X" = mkSpawn "Open ONLYOFFICE" ["flatpak" "run" "org.onlyoffice.desktopeditors"];
+        "Mod+Return" = mkSpawn "Terminal: Alacritty" [(pkgs.lib.getExe pkgs.alacritty)];
+        "Mod+T" = mkAlias {spawn = [(pkgs.lib.getExe pkgs.alacritty)];};
+        "Mod+B" = mkSpawn "Browser: LibreWolf" ["flatpak" "run" "io.gitlab.librewolf-community"];
+        "Mod+E" = mkSpawn "Files: Nautilus" ["nautilus"];
+        "Mod+Shift+B" = mkSpawn "Passwords: Bitwarden" ["flatpak" "run" "com.bitwarden.desktop"];
+        "Mod+Shift+E" = mkSpawn "Books: Calibre" ["flatpak" "run" "com.calibre_ebook.calibre"];
+        "Mod+Shift+O" = mkSpawn "Notes: Obsidian" ["flatpak" "run" "md.obsidian.Obsidian"];
+        "Mod+A" = mkSpawn "Flashcards: Anki" ["flatpak" "run" "net.ankiweb.Anki"];
+        "Mod+G" = mkSpawn "Calculator: Open" ["flatpak" "run" "org.gnome.Calculator"];
+        "Mod+X" = mkSpawn "Office: ONLYOFFICE" ["flatpak" "run" "org.onlyoffice.desktopeditors"];
 
         # screenshots
         "Print" = mkAction "Screenshot" "screenshot";
         "Ctrl+Print" = mkAction "Screenshot Screen" "screenshot-screen";
         "Alt+Print" = mkAction "Screenshot Window" "screenshot-window";
 
-        # theme / wallpaper / notifications
-        "Mod+Shift+T" = mkSpawnSh "Toggle Dark/Light Theme" "niri msg action do-screen-transition; noctalia msg theme-mode-toggle";
+        # wallpaper / notifications
         "Mod+Shift+W" = mkSpawnSh "Next Wallpaper" "noctalia msg wallpaper-next";
         "Mod+N" = mkSpawnSh "Toggle Night Light" "noctalia msg nightlight-toggle";
         "Mod+Shift+N" = mkSpawnSh "Toggle Do Not Disturb" "noctalia msg notification-dnd-toggle";
@@ -197,6 +198,16 @@
     layout = {
       gaps = 8;
       background-color = "transparent";
+      focus-ring = {
+        width = 2;
+        active-color = "#${colors.base0D}";
+        inactive-color = "#${colors.base03}";
+      };
+      border = {
+        width = 1;
+        active-color = "#${colors.base0D}";
+        inactive-color = "#${colors.base03}";
+      };
     };
     input = {
       focus-follows-mouse = _: {};
@@ -249,19 +260,15 @@
         place-within-backdrop true
       }
       blur {
-        passes 2
+        passes 1
         offset 3.0
         noise 0.03
         saturation 1.0
       }
-      window-rule {
-        background-effect {
-          blur true
-        }
-      }
       layer-rule {
         match namespace="^noctalia-(bar-[^\"]+|notification|dock|panel|attached-panel|osd)$"
         background-effect {
+          blur true
           xray false
         }
       }
