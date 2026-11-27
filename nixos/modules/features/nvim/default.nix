@@ -13,6 +13,7 @@
       alejandra
       lua-language-server
       marksman
+      ansible-language-server
     ];
 
     # Keep Neovim configuration editable in the dotfiles checkout.

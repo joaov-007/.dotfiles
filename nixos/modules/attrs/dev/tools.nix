@@ -9,6 +9,18 @@
 
       # Ansible (nixpkgs exposes ansible-core as `ansible`)
       ansible
+      ansible-lint
+      ansible-navigator
+      ansible-language-server
+      molecule
+      python3Packages.molecule-plugins
+      sshpass
+      wget
+
+      # Python helpers used by Ansible/Jinja and modules
+      python3Packages.jmespath
+      python3Packages.netaddr
+      python3Packages.passlib
 
       # Search & data
       ripgrep

@@ -3,6 +3,7 @@
 return {
   ensure_installed = {
     -- Language servers
+    "ansible-language-server",
     "awk-language-server",
     "bash-language-server",
     "clangd",

@@ -20,6 +20,7 @@ return {
         "nix",
         "printf",
         "python",
+        "yaml",
         "tsx",
         "typescript",
         "vim",

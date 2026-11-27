@@ -25,6 +25,18 @@ if #nix_linters > 0 then
   lint.linters_by_ft.nix = nix_linters
 end
 
+-- Ansible/YAML: ansible-lint and yamllint when their executables are available.
+local yaml_linters = {}
+if vim.fn.executable "yamllint" == 1 then
+  yaml_linters[#yaml_linters + 1] = "yamllint"
+end
+if vim.fn.executable "ansible-lint" == 1 then
+  yaml_linters[#yaml_linters + 1] = "ansible_lint"
+end
+if #yaml_linters > 0 then
+  lint.linters_by_ft.yaml = yaml_linters
+end
+
 -- Linting on save is opt-in to avoid noisy diagnostics on every write.
 vim.g.lint_auto = false
 

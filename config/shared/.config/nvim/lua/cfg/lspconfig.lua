@@ -60,6 +60,7 @@ require("nvchad.configs.lspconfig").defaults()
 
 -- Only overrides live here; cmd/filetypes/root_markers come from lspconfig.
 local servers = {
+  ansiblels = {},
   awk_ls = {},
   bashls = {},
   clangd = {
