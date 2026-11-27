@@ -1,0 +1,24 @@
+{
+  "$schema": "https://pi.dev/schemas/models.schema.json",
+  "providers": {
+    "litellm": {
+      "name": "LiteLLM (local proxy)",
+      "baseUrl": "http://127.0.0.1:4000/v1",
+      "api": "openai-completions",
+      "apiKey": "!grep '^LITELLM_MASTER_KEY=' /etc/litellm.env | cut -d= -f2-",
+      "models": [
+        { "id": "local-general", "name": "Local General (qwen2.5 1.5b)", "reasoning": false, "input": ["text"], "cost": {"input":0,"output":0,"cacheRead":0,"cacheWrite":0}, "contextWindow": 32768, "maxTokens": 8192 },
+        { "id": "local-code", "name": "Local Code (qwen2.5-coder 1.5b)", "reasoning": false, "input": ["text"], "cost": {"input":0,"output":0,"cacheRead":0,"cacheWrite":0}, "contextWindow": 32768, "maxTokens": 8192 },
+        { "id": "cloud-groq", "name": "Groq gpt-oss-20b", "reasoning": false, "input": ["text"], "cost": {"input":0,"output":0,"cacheRead":0,"cacheWrite":0}, "contextWindow": 131072, "maxTokens": 8192 },
+        { "id": "cloud-groq-big", "name": "Groq gpt-oss-120b", "reasoning": false, "input": ["text"], "cost": {"input":0,"output":0,"cacheRead":0,"cacheWrite":0}, "contextWindow": 131072, "maxTokens": 8192 },
+        { "id": "cloud-mistral", "name": "Mistral Small", "reasoning": false, "input": ["text"], "cost": {"input":0,"output":0,"cacheRead":0,"cacheWrite":0}, "contextWindow": 131072, "maxTokens": 8192 },
+        { "id": "cloud-mistral-mini", "name": "Mistral Ministral 8B", "reasoning": false, "input": ["text"], "cost": {"input":0,"output":0,"cacheRead":0,"cacheWrite":0}, "contextWindow": 131072, "maxTokens": 8192 },
+        { "id": "cloud-code", "name": "Codestral", "reasoning": false, "input": ["text"], "cost": {"input":0,"output":0,"cacheRead":0,"cacheWrite":0}, "contextWindow": 131072, "maxTokens": 8192 },
+        { "id": "cloud-nemotron", "name": "Nemotron 3.5 Lightning (free)", "reasoning": false, "input": ["text"], "cost": {"input":0,"output":0,"cacheRead":0,"cacheWrite":0}, "contextWindow": 131072, "maxTokens": 8192 },
+        { "id": "cloud-gemma", "name": "Gemma 4 31B IT (free)", "reasoning": false, "input": ["text"], "cost": {"input":0,"output":0,"cacheRead":0,"cacheWrite":0}, "contextWindow": 131072, "maxTokens": 8192 },
+        { "id": "cloud-free", "name": "OpenRouter Free", "reasoning": false, "input": ["text"], "cost": {"input":0,"output":0,"cacheRead":0,"cacheWrite":0}, "contextWindow": 131072, "maxTokens": 8192 },
+        { "id": "cloud-openrouter", "name": "LFM 3 1.7B (free)", "reasoning": false, "input": ["text"], "cost": {"input":0,"output":0,"cacheRead":0,"cacheWrite":0}, "contextWindow": 32768, "maxTokens": 8192 }
+      ]
+    }
+  }
+}

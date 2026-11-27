@@ -144,6 +144,10 @@
         config.lib.file.mkOutOfStoreSymlink
         "${symlinkRoot}/config/shared/.pi/agent/mcp.json";
 
+      home.file.".pi/agent/models.json".source =
+        config.lib.file.mkOutOfStoreSymlink
+        "${symlinkRoot}/config/shared/.pi/agent/models.json";
+
       home.file.".pi/agent/pi-fff.json".source =
         config.lib.file.mkOutOfStoreSymlink
         "${symlinkRoot}/config/shared/.pi/agent/pi-fff.json";
