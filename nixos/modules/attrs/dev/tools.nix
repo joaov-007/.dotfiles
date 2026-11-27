@@ -5,7 +5,6 @@
 }: {
   flake.modules.nixos.developmentTools = moduleWithSystem ({pkgs, ...}: {
     environment.systemPackages = with pkgs; [
-      opencode
       devenv
     ];
   });
@@ -25,6 +24,5 @@
       enable = true;
       enableBashIntegration = true;
     };
-    programs.herdr.enable = true;
   });
 }
