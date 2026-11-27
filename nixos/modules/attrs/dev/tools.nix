@@ -6,6 +6,33 @@
   flake.modules.nixos.developmentTools = moduleWithSystem ({pkgs, ...}: {
     environment.systemPackages = with pkgs; [
       devenv
+
+      # Search & data
+      ripgrep
+      fd
+      jq
+      yq-go
+
+      # Docs
+      pandoc
+
+      # Formatters
+      nixfmt-rfc-style
+      shfmt
+      prettier
+      ruff
+      taplo
+
+      # Linters
+      shellcheck
+      statix
+      deadnix
+      markdownlint-cli
+      yamllint
+      codespell
+      actionlint
+      hadolint
+      treefmt
     ];
   });
 
