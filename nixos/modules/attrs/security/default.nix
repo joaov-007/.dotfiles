@@ -8,6 +8,7 @@
       securityBase
       aide
       clamav
+      securityTools
     ];
   in {
     imports = modules;

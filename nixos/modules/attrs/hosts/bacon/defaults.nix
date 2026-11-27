@@ -16,6 +16,7 @@
       nixIndexDatabase
       litellm
       doas
+      security
     ];
   };
 }

@@ -33,6 +33,27 @@ config/shared/.pi/agent/tmp/
 config/shared/.pi/agent/npm/
 config/shared/.pi/agent/git/
 
+# Secrets / env files - never commit credentials or key material.
+.env
+.env.*
+!.env.example
+!.env.template
+!.env.sample
+*.pem
+*.p12
+*.pfx
+*.key
+*.age
+*secret*.env
+*secrets*.env
+secrets/
+.secrets/
+.envrc.local
+
+# Nix build artifacts
+result
+result-*
+
 **/.obsidian/*
 !/.obsidian/core-plugins.json
 

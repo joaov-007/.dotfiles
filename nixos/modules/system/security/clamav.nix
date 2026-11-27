@@ -16,12 +16,42 @@
     # Alert on detection: clamdscan exits non-zero when infected files are found
     # (no built-in NixOS alert option) — surface it as a desktop notification.
     systemd.services.clamav-notify = {
+      description = "ClamAV desktop virus notification";
+      after = ["graphical-session.target"];
       serviceConfig = {
         Type = "oneshot";
         User = "joaov";
       };
       script = ''
-        ${pkgs.libnotify}/bin/notify-send --urgency=critical "ClamAV: infected files found" "Check: journalctl -u clamdscan"
+        set -eu
+
+        uid="$(${pkgs.coreutils}/bin/id -u joaov)"
+        export DBUS_SESSION_BUS_ADDRESS="''${DBUS_SESSION_BUS_ADDRESS:-unix:path=/run/user/$uid/bus}"
+        export XDG_RUNTIME_DIR="''${XDG_RUNTIME_DIR:-/run/user/$uid}"
+
+        findings="$(${pkgs.systemd}/bin/journalctl -u clamdscan --no-pager -n 80 2>/dev/null \
+          | ${pkgs.gnugrep}/bin/grep -E "FOUND|INFECTED|ERROR|Eicar|FOUND$" \
+          | ${pkgs.coreutils}/bin/tail -n 6 || true)"
+
+        if [ -z "$findings" ]; then
+          findings="No recent FOUND/INFECTED lines captured. Check: journalctl -u clamdscan -n 80"
+        fi
+
+        summary="ClamAV: possível ameaça detectada"
+        body="Arquivos possivelmente infectados foram encontrados durante o scan.
+
+$findings
+
+Ver detalhes: journalctl -u clamdscan --no-pager -n 80"
+
+        ${pkgs.libnotify}/bin/notify-send \
+          --urgency=critical \
+          --icon=security-high \
+          --app-name="ClamAV" \
+          "$summary" \
+          "$body" || true
+
+        ${pkgs.util-linux}/bin/logger -t clamav-notify -- "ClamAV detection notification triggered; findings: $findings"
       '';
     };
     systemd.services.clamdscan.onFailure = ["clamav-notify.service"];
