@@ -24,6 +24,7 @@
 
     environment.systemPackages = with pkgs; [
       file
+      self.packages.${pkgs.stdenv.hostPlatform.system}.openbot
     ];
 
     # Some programs need SUID wrappers, can be configured further or are
