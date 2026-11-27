@@ -21,8 +21,8 @@
       "description": "Step-by-step structured reasoning helper. No API key."
     },
     "fetch": {
-      "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-fetch"],
+      "command": "nix",
+      "args": ["shell", "nixpkgs#uv", "--command", "uvx", "mcp-server-fetch"],
       "description": "Fetch and convert web pages to markdown/text. No API key."
     },
     "youtube-transcript": {
@@ -50,8 +50,8 @@
       "description": "Bitwarden vault/password access via official MCP server. Requires Bitwarden CLI auth: set BW_SESSION (from 'bw unlock --raw') or BW_CLIENTID/BW_CLIENTSECRET/BW_PASSWORD for API/self-hosted auth. Local stdio only; never expose publicly."
     },
     "markitdown": {
-      "command": "uvx",
-      "args": ["markitdown-mcp"],
+      "command": "nix",
+      "args": ["shell", "nixpkgs#uv", "--command", "uvx", "markitdown-mcp"],
       "description": "Convert documents/files/URLs to Markdown via Microsoft MarkItDown MCP. Local stdio."
     }
   }
