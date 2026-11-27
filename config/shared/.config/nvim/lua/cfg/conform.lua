@@ -18,6 +18,7 @@ return {
     cpp = { "clang_format" },
     lua = { "stylua" },
     markdown = { "prettierd" },
+    nix = { "alejandra" },
     python = { "isort", "black" },
     sh = { "shfmt" },
   },

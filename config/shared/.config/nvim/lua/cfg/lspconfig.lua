@@ -9,6 +9,22 @@ local M = {}
 
 local LIST_KEYS = { "filetypes", "root_markers" }
 
+-- Prefer Nix-provided tools over copies downloaded by Mason. Falling back to
+-- PATH keeps this config portable on non-NixOS systems.
+local function system_bin(name)
+  for _, dir in ipairs(vim.split(vim.env.PATH, ":", { plain = true })) do
+    if dir ~= "" and not dir:match "/mason/bin$" then
+      local executable = dir .. "/" .. name
+      if vim.fn.executable(executable) == 1 then
+        return executable
+      end
+    end
+  end
+  return name
+end
+
+local nix_flake = string.format('builtins.getFlake "git+file://%s/.dotfiles?dir=nixos"', vim.fn.expand "~")
+
 local function append_unique(base, extra)
   local out = vim.list_extend({}, base)
   for _, item in ipairs(extra) do
@@ -75,6 +91,7 @@ local servers = {
   html = {},
   jsonls = {},
   lua_ls = {
+    cmd = { system_bin "lua-language-server" },
     settings = {
       Lua = {
         diagnostics = { globals = { "vim" } },
@@ -82,7 +99,30 @@ local servers = {
       },
     },
   },
-  marksman = {},
+  marksman = {
+    cmd = { system_bin "marksman" },
+  },
+  nixd = {
+    cmd = { system_bin "nixd" },
+    settings = {
+      nixd = {
+        nixpkgs = {
+          expr = "import (" .. nix_flake .. ").inputs.nixpkgs { }",
+        },
+        formatting = {
+          command = { "alejandra" },
+        },
+        options = {
+          nixos = {
+            expr = "(" .. nix_flake .. ").nixosConfigurations.bacon.options",
+          },
+          ["home-manager"] = {
+            expr = "(" .. nix_flake .. ").nixosConfigurations.bacon.options.home-manager.users.type.getSubOptions []",
+          },
+        },
+      },
+    },
+  },
   pyright = {
     settings = {
       python = {

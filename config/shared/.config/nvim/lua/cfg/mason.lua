@@ -11,8 +11,6 @@ return {
     "eslint-lsp",
     "html-lsp",
     "json-lsp",
-    "lua-language-server",
-    "marksman",
     "pyright",
     "terraform-ls",
     "typescript-language-server",
