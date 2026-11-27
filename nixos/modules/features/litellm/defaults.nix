@@ -14,6 +14,14 @@
           litellm_params:
             model: ollama/qwen2.5-coder:1.5b
             api_base: http://127.0.0.1:11434
+        - model_name: cloud-groq
+          litellm_params:
+            model: groq/openai/gpt-oss-20b
+            api_key: os.environ/GROQ_API_KEY
+        - model_name: cloud-openrouter
+          litellm_params:
+            model: openrouter/liquid/lfm-3-1.7b:free
+            api_key: os.environ/OPENROUTER_API_KEY
 
       general_settings:
         master_key: os.environ/LITELLM_MASTER_KEY
