@@ -1,22 +1,8 @@
-{
-  self,
-  inputs,
-  ...
-}: {
-  flake.modules.nixos.intelDrivers = {
-    pkgs,
-    lib,
-    config,
-    ...
-  }: {
+{inputs, ...}: {
+  flake.modules.nixos.intelDrivers = {pkgs, ...}: {
     imports = [
       inputs.nixos-hardware.nixosModules.common-cpu-intel
       inputs.nixos-hardware.nixosModules.common-gpu-intel
-    ];
-
-    environment.systemPackages = with pkgs; [
-      mesa
-      vulkan-tools
     ];
 
     hardware.graphics = {
