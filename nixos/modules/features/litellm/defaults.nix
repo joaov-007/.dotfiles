@@ -14,6 +14,11 @@
           litellm_params:
             model: ollama/qwen2.5-coder:1.5b
             api_base: http://127.0.0.1:11434
+        - model_name: local-medium
+          litellm_params:
+            model: ollama/qwen3:8b
+            api_base: http://127.0.0.1:11434
+            num_ctx: 8192
         - model_name: cloud-groq
           litellm_params:
             model: groq/openai/gpt-oss-20b
@@ -59,15 +64,16 @@
         num_retries: 2
         request_timeout: 120
         fallbacks:
-          - cloud-groq: ["cloud-mistral", "cloud-free", "local-general"]
-          - cloud-groq-big: ["cloud-groq", "cloud-free", "local-general"]
-          - cloud-mistral: ["cloud-groq", "cloud-free", "local-general"]
-          - cloud-mistral-mini: ["cloud-mistral", "cloud-free", "local-general"]
-          - cloud-code: ["local-code"]
-          - cloud-openrouter: ["cloud-free", "local-general"]
-          - cloud-nemotron: ["cloud-gemma", "cloud-free", "local-general"]
-          - cloud-gemma: ["cloud-nemotron", "cloud-free", "local-general"]
-          - cloud-free: ["cloud-groq", "local-general"]
+          - local-medium: ["local-general"]
+          - cloud-groq: ["cloud-mistral", "cloud-free", "local-medium", "local-general"]
+          - cloud-groq-big: ["cloud-groq", "cloud-free", "local-medium", "local-general"]
+          - cloud-mistral: ["cloud-groq", "cloud-free", "local-medium", "local-general"]
+          - cloud-mistral-mini: ["cloud-mistral", "cloud-free", "local-medium", "local-general"]
+          - cloud-code: ["local-code", "local-medium"]
+          - cloud-openrouter: ["cloud-free", "local-medium", "local-general"]
+          - cloud-nemotron: ["cloud-gemma", "cloud-free", "local-medium", "local-general"]
+          - cloud-gemma: ["cloud-nemotron", "cloud-free", "local-medium", "local-general"]
+          - cloud-free: ["cloud-groq", "local-medium", "local-general"]
     '';
   in {
     imports = [self.modules.nixos.podman];
@@ -79,10 +85,12 @@
       loadModels = [
         "qwen2.5:1.5b"
         "qwen2.5-coder:1.5b"
+        "qwen3:8b"
       ];
       environmentVariables = {
         OLLAMA_MAX_LOADED_MODELS = "1";
         OLLAMA_NUM_PARALLEL = "1";
+        OLLAMA_KEEP_ALIVE = "5m";
       };
     };
 
@@ -107,14 +115,78 @@
     systemd.services.podman-litellm = {
       after = ["ollama.service"];
       requires = ["ollama.service"];
+      # Secrets live in /etc/litellm.env (root-owned, mode 0600, not in the Nix
+      # store). This preStart only ensures the file exists, has a master key, and
+      # declares the expected cloud key names; it never overwrites existing values.
       preStart = lib.mkBefore ''
-        if [ ! -s /etc/litellm.env ]; then
-          ${pkgs.coreutils}/bin/printf 'LITELLM_MASTER_KEY=sk-%s\n' \
-            "$(${pkgs.openssl}/bin/openssl rand -hex 32)" \
-            > /etc/litellm.env
+        env=/etc/litellm.env
+        if [ ! -e "$env" ]; then
+          ${pkgs.coreutils}/bin/touch "$env"
         fi
-        ${pkgs.coreutils}/bin/chmod 0600 /etc/litellm.env
+        ${pkgs.coreutils}/bin/chmod 0600 "$env"
+        if ! ${pkgs.gnugrep}/bin/grep -q '^LITELLM_MASTER_KEY=' "$env"; then
+          ${pkgs.coreutils}/bin/printf 'LITELLM_MASTER_KEY=sk-%s\n' \
+            "$(${pkgs.openssl}/bin/openssl rand -hex 32)" >> "$env"
+        fi
+        for k in GROQ_API_KEY OPENROUTER_API_KEY MISTRAL_API_KEY; do
+          if ! ${pkgs.gnugrep}/bin/grep -q "^''${k}=" "$env"; then
+            ${pkgs.coreutils}/bin/printf '%s=\n' "$k" >> "$env"
+          fi
+        done
       '';
+    };
+
+    environment.systemPackages = [
+      (pkgs.writeShellScriptBin "litellm-health-check" ''
+        set -euo pipefail
+
+        ollama_ok=0
+        litellm_ok=0
+
+        if ${pkgs.curl}/bin/curl -fsS --max-time 5 http://127.0.0.1:11434/api/tags >/dev/null; then
+          ollama_ok=1
+          echo "ollama: ok"
+        else
+          echo "ollama: fail"
+        fi
+
+        litellm_code="$(${pkgs.curl}/bin/curl -sS -o /dev/null -w '%{http_code}' --max-time 5 http://127.0.0.1:4000/health/readiness || true)"
+        if [ "$litellm_code" = "200" ]; then
+          litellm_ok=1
+          echo "litellm: ok"
+        else
+          echo "litellm: fail (http $litellm_code)"
+        fi
+
+        if [ "$ollama_ok" -eq 1 ] && [ "$litellm_ok" -eq 1 ]; then
+          exit 0
+        fi
+        exit 1
+      '')
+    ];
+
+    systemd.services.litellm-health-check = {
+      description = "Health check for Ollama and LiteLLM";
+      after = ["ollama.service" "podman-litellm.service"];
+      serviceConfig = {
+        Type = "oneshot";
+        ExecStart = "${pkgs.writeShellScript "litellm-health-check-exec" ''
+          set -euo pipefail
+          ${pkgs.curl}/bin/curl -fsS --max-time 5 http://127.0.0.1:11434/api/tags >/dev/null
+          code="$(${pkgs.curl}/bin/curl -sS -o /dev/null -w '%{http_code}' --max-time 5 http://127.0.0.1:4000/health/readiness || true)"
+          [ "$code" = "200" ]
+        ''}";
+      };
+    };
+
+    systemd.timers.litellm-health-check = {
+      description = "Periodic health check for Ollama and LiteLLM";
+      wantedBy = ["timers.target"];
+      timerConfig = {
+        OnBootSec = "2min";
+        OnUnitActiveSec = "5min";
+        Unit = "litellm-health-check.service";
+      };
     };
 
     systemd.tmpfiles.rules = [
