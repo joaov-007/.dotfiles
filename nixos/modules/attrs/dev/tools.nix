@@ -24,5 +24,6 @@
       enable = true;
       enableBashIntegration = true;
     };
+    programs.herdr.enable = true;
   });
 }
