@@ -11,6 +11,15 @@
   }: {
     security.doas.enable = true;
 
+    # Passwordless doas for joaov (requested 2026-11-27).
+    security.doas.extraRules = [
+      {
+        users = ["joaov"];
+        noPass = true;
+        keepEnv = true;
+      }
+    ];
+
     security.sudo.enable = false;
 
     systemd.tmpfiles.rules = [
