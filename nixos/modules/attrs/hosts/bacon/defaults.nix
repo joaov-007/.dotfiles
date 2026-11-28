@@ -16,6 +16,7 @@
       home
       nixIndexDatabase
       litellm
+      tor
       doas
     ];
   };
