@@ -7,7 +7,7 @@
     "context7": {
       "url": "https://mcp.context7.com/mcp",
       "headers": {
-        "Authorization": "Bearer ${CONTEXT7_API_KEY}"
+        "Authorization": "!printf 'Bearer %s' \"$(cat '/home/joaov/.config/OpenBot/agent-api-keys/.vault/agent-f6488f93-3f74-4acd-aa8a-e0fe8eeb2b61/CONTEXT7_API_KEY')\""
       },
       "description": "Up-to-date, version-specific library documentation and code examples."
     },
@@ -33,16 +33,14 @@
     "tavily": {
       "url": "https://mcp.tavily.com/mcp",
       "headers": {
-        "Authorization": "Bearer ${TAVILY_API_KEY}"
+        "Authorization": "!printf 'Bearer %s' \"$(cat '/home/joaov/.config/OpenBot/agent-api-keys/.vault/agent-f6488f93-3f74-4acd-aa8a-e0fe8eeb2b61/TAVILY_API_KEY')\""
       },
       "description": "Web search, extraction, mapping, and crawling via Tavily."
     },
-    "perplexity": {
-      "url": "https://api.perplexity.ai/mcp",
-      "headers": {
-        "Authorization": "Bearer ${PERPLEXITY_API_KEY}"
-      },
-      "description": "Web search and research via Perplexity."
+    "local-deep-research": {
+      "command": "nix",
+      "args": ["shell", "nixpkgs#uv", "--command", "uvx", "--from", "local-deep-research", "ldr-mcp"],
+      "description": "Open-source, self-hosted Perplexity-style research MCP (replaces Perplexity). Supports academic search (arXiv, PubMed, Semantic Scholar) and web sources. CAVEAT: requires local setup — install/configure Local Deep Research and a search/LLM backend (see https://github.com/LearningCircuit/local-deep-research/blob/main/docs/mcp-server.md); first run may be heavy and needs models/providers configured. Not a drop-in hosted API like Perplexity."
     },
     "bitwarden": {
       "command": "npx",
