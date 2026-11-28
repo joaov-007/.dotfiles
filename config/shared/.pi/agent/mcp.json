@@ -7,7 +7,7 @@
     "context7": {
       "url": "https://mcp.context7.com/mcp",
       "headers": {
-        "Authorization": "!printf 'Bearer %s' \"$(cat '/home/joaov/.config/OpenBot/agent-api-keys/.vault/agent-f6488f93-3f74-4acd-aa8a-e0fe8eeb2b61/CONTEXT7_API_KEY')\""
+        "Authorization": "!k=\"${CONTEXT7_API_KEY:-}\"; if [ -z \"$k\" ] && [ -f \"$HOME/.env\" ]; then k=$(sed -n 's/^CONTEXT7_API_KEY=//p' \"$HOME/.env\" | head -n1); fi; k=\"${k#\\\"}\"; k=\"${k%\\\"}\"; k=\"${k#'}\"; k=\"${k%'}\"; printf 'Bearer %s' \"$k\""
       },
       "description": "Up-to-date, version-specific library documentation and code examples."
     },
@@ -16,40 +16,58 @@
       "description": "Web search, content fetching, and multi-step research via Exa."
     },
     "sequential-thinking": {
-      "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-sequential-thinking"],
+      "command": "bash",
+      "args": [
+        "-lc",
+        "set -a; [ -f \"$HOME/.env\" ] && . \"$HOME/.env\"; set +a; exec npx -y @modelcontextprotocol/server-sequential-thinking"
+      ],
       "description": "Step-by-step structured reasoning helper. No API key."
     },
     "fetch": {
-      "command": "nix",
-      "args": ["shell", "nixpkgs#uv", "--command", "uvx", "mcp-server-fetch"],
+      "command": "bash",
+      "args": [
+        "-lc",
+        "set -a; [ -f \"$HOME/.env\" ] && . \"$HOME/.env\"; set +a; exec nix shell 'nixpkgs#uv' --command uvx mcp-server-fetch"
+      ],
       "description": "Fetch and convert web pages to markdown/text. No API key."
     },
     "youtube-transcript": {
-      "command": "npx",
-      "args": ["-y", "@kimtaeyoon83/mcp-server-youtube-transcript"],
+      "command": "bash",
+      "args": [
+        "-lc",
+        "set -a; [ -f \"$HOME/.env\" ] && . \"$HOME/.env\"; set +a; exec npx -y @kimtaeyoon83/mcp-server-youtube-transcript"
+      ],
       "description": "Download YouTube video transcripts. No API key."
     },
     "tavily": {
       "url": "https://mcp.tavily.com/mcp",
       "headers": {
-        "Authorization": "!printf 'Bearer %s' \"$(cat '/home/joaov/.config/OpenBot/agent-api-keys/.vault/agent-f6488f93-3f74-4acd-aa8a-e0fe8eeb2b61/TAVILY_API_KEY')\""
+        "Authorization": "!k=\"${TAVILY_API_KEY:-}\"; if [ -z \"$k\" ] && [ -f \"$HOME/.env\" ]; then k=$(sed -n 's/^TAVILY_API_KEY=//p' \"$HOME/.env\" | head -n1); fi; k=\"${k#\\\"}\"; k=\"${k%\\\"}\"; k=\"${k#'}\"; k=\"${k%'}\"; printf 'Bearer %s' \"$k\""
       },
       "description": "Web search, extraction, mapping, and crawling via Tavily."
     },
     "local-deep-research": {
-      "command": "nix",
-      "args": ["shell", "nixpkgs#uv", "--command", "uvx", "--from", "local-deep-research", "ldr-mcp"],
+      "command": "bash",
+      "args": [
+        "-lc",
+        "set -a; [ -f \"$HOME/.env\" ] && . \"$HOME/.env\"; set +a; exec nix shell nixpkgs#uv --command uvx --from local-deep-research ldr-mcp"
+      ],
       "description": "Open-source, self-hosted Perplexity-style research MCP (replaces Perplexity). Supports academic search (arXiv, PubMed, Semantic Scholar) and web sources. CAVEAT: requires local setup — install/configure Local Deep Research and a search/LLM backend (see https://github.com/LearningCircuit/local-deep-research/blob/main/docs/mcp-server.md); first run may be heavy and needs models/providers configured. Not a drop-in hosted API like Perplexity."
     },
     "bitwarden": {
-      "command": "npx",
-      "args": ["-y", "@bitwarden/mcp-server"],
+      "command": "bash",
+      "args": [
+        "-lc",
+        "set -a; [ -f \"$HOME/.env\" ] && . \"$HOME/.env\"; set +a; exec npx -y @bitwarden/mcp-server"
+      ],
       "description": "Bitwarden vault/password access via official MCP server. Requires Bitwarden CLI auth: set BW_SESSION (from 'bw unlock --raw') or BW_CLIENTID/BW_CLIENTSECRET/BW_PASSWORD for API/self-hosted auth. Local stdio only; never expose publicly."
     },
     "markitdown": {
-      "command": "nix",
-      "args": ["shell", "nixpkgs#uv", "--command", "uvx", "markitdown-mcp"],
+      "command": "bash",
+      "args": [
+        "-lc",
+        "set -a; [ -f \"$HOME/.env\" ] && . \"$HOME/.env\"; set +a; exec nix shell 'nixpkgs#uv' --command uvx markitdown-mcp"
+      ],
       "description": "Convert documents/files/URLs to Markdown via Microsoft MarkItDown MCP. Local stdio."
     }
   }

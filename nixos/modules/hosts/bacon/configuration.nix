@@ -42,6 +42,8 @@
         ExecStart = "${pkgs.xvfb}/bin/xvfb-run -a ${lib.getExe self.packages.${pkgs.stdenv.hostPlatform.system}.openbot}";
         Restart = "on-failure";
         RestartSec = 5;
+        # Load user env vars (API keys, MCP credentials) from home .env.
+        EnvironmentFile = "-%h/.env";
         # Virtual X display, not the user's Wayland session.
         Environment = [
           "NIXOS_OZONE_WL="
